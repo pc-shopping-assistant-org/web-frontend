@@ -4,14 +4,18 @@ import {Menu, ShoppingCart, Sparkles, X} from "lucide-react";
 import {useTranslations} from "next-intl";
 import {useState} from "react";
 
-import {Link, usePathname} from "@/i18n/navigation";
+import {Link, usePathname, useRouter} from "@/i18n/navigation";
 import type {Locale} from "@/i18n/routing";
 import {cn} from "@/lib/utils";
+import {useLogout, useProfile} from "@/features/auth/queries";
 
 export function SiteHeader({locale}: {locale: Locale}) {
   const t = useTranslations("nav");
   const common = useTranslations("common");
   const pathname = usePathname();
+  const router = useRouter();
+  const profile = useProfile();
+  const logout = useLogout();
   const [open, setOpen] = useState(false);
   const links = [
     {href: "/" as const, label: t("home")},
@@ -20,6 +24,10 @@ export function SiteHeader({locale}: {locale: Locale}) {
   ];
 
   const otherLocale: Locale = locale === "vi" ? "en" : "vi";
+
+  async function signOut() {
+    try { await logout.mutateAsync(); } finally { router.push("/"); router.refresh(); }
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
@@ -55,12 +63,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
               {label}
             </Link>
           ))}
-          <Link href="/login" className="ml-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted">
-            {t("login")}
-          </Link>
-          <Link href="/account" className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted">
-            {t("account")}
-          </Link>
+          {profile.isSuccess ? <><Link href="/account" className="ml-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted">{profile.data.fullName ?? t("account")}</Link><button type="button" className="rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => void signOut()} disabled={logout.isPending}>{t("logout")}</button></> : <><Link href="/login" className="ml-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted">{t("login")}</Link><Link href="/register" className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted">{t("register")}</Link></>}
           <Link href={pathname} locale={otherLocale} className="ml-2 rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground">
             {otherLocale}
           </Link>
@@ -75,12 +78,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
                 {label}
               </Link>
             ))}
-            <Link href="/login" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
-              {t("login")}
-            </Link>
-            <Link href="/account" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
-              {t("account")}
-            </Link>
+            {profile.isSuccess ? <><Link href="/account" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">{profile.data.fullName ?? t("account")}</Link><button type="button" onClick={() => {setOpen(false); void signOut();}} className="rounded-lg px-3 py-3 text-left text-sm hover:bg-muted">{t("logout")}</button></> : <><Link href="/login" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">{t("login")}</Link><Link href="/register" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">{t("register")}</Link></>}
             <Link href={pathname} locale={otherLocale} onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted">
               {otherLocale}
             </Link>

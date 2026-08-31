@@ -14,8 +14,29 @@ corepack yarn install
 corepack yarn dev
 ```
 
-Open `http://localhost:3000/vi` (or `/en`). The catalog and cart are live API
-calls; there is no runtime mock data.
+Open `http://localhost:3000/vi` (or `/en`). Customer flows are live API calls;
+there is no runtime mock data.
+
+## Implemented surfaces
+
+- Storefront: product browse/search/filter, product detail with active variant
+  gallery, review read model, and add-to-cart.
+- Account: OTP registration, login/logout, password recovery/change, profile,
+  normalized saved addresses and default-address selection.
+- Checkout and orders: voucher validation, shipping/payment selection, order
+  creation, online payment-intent boundary, order history/search/detail/status,
+  cancellation and completed-order reviews.
+- AI assistant: chat, semantic search, consultation, comparison and product
+  evaluation at `/vi/assistant` or `/en/assistant`.
+- Admin workspace: role-gated dashboard, revenue/top-selling statistics,
+  catalog/customer/employee/order/discount/supplier/payment/review lists,
+  detail views, invoice search, supported status mutations and the documented
+  category/brand/product/variant/employee/discount/supplier CRUD surfaces under
+  `/vi/admin` or `/en/admin`.
+
+Protected pages use the HttpOnly access cookie and rely on backend role
+authorization. A missing/expired session is redirected to sign in; an account
+without an admin role receives a visible forbidden state.
 
 ## API contract and BFF
 

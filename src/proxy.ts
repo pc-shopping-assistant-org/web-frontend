@@ -16,7 +16,7 @@ export function proxy(request: NextRequest) {
 
   const localeMatch = pathname.match(/^\/(vi|en)(?:\/|$)/);
   const locale = localeMatch?.[1];
-  const isProtectedAccountRoute = /^\/(?:vi|en)\/account(?:\/|$)/.test(pathname);
+  const isProtectedAccountRoute = /^\/(?:vi|en)\/(?:account|checkout|orders|admin)(?:\/|$)/.test(pathname);
 
   if (isProtectedAccountRoute && !request.cookies.get("ecm_access_token")?.value) {
     const redirectUrl = request.nextUrl.clone();

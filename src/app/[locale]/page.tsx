@@ -17,7 +17,7 @@ export default function HomePage() {
             <p className="max-w-2xl text-lg leading-8 text-muted-foreground">{t("description")}</p>
             <div className="flex flex-wrap gap-3">
               <Link href="/products" className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:bg-primary/85">{t("browseProducts")}<ArrowRight className="size-4" /></Link>
-              <button type="button" disabled className="inline-flex h-10 items-center gap-2 rounded-lg border bg-background px-4 text-sm font-medium opacity-60"><Bot className="size-4" />{t("talkToAssistant")}</button>
+              <Link href="/assistant" className="inline-flex h-10 items-center gap-2 rounded-lg border bg-background px-4 text-sm font-medium hover:bg-muted"><Bot className="size-4" />{t("talkToAssistant")}</Link>
             </div>
           </div>
           <div className="relative min-h-72 overflow-hidden rounded-3xl border bg-background/80 p-6 shadow-xl shadow-primary/5">
