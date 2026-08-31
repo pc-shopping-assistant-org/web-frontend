@@ -4,6 +4,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   typedRoutes: true,
+  output: "standalone",
 };
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
