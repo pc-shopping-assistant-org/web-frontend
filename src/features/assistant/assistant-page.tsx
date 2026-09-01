@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,11 +30,11 @@ import {AiMode} from "@/lib/domain/assistant-enums";
 import { useProducts } from "@/features/catalog/queries";
 import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import {
-  chat,
   compare,
   consult,
   evaluate,
   semanticSearch,
+  streamChat,
   type ChatData,
   type CompareData,
   type ConsultData,
@@ -66,8 +66,15 @@ export function AssistantPage() {
   const [result, setResult] = useState<Result | null>(null);
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>();
+  const [streamingPrompt, setStreamingPrompt] = useState("");
+  const [streamingAnswer, setStreamingAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const streamController = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => streamController.current?.abort();
+  }, []);
 
   // Product detail pages can hand a customer into the right AI workflow. Read
   // the query only in the browser so the initial server render stays stable.
@@ -98,32 +105,52 @@ export function AssistantPage() {
     const submittedPrompt = prompt.trim();
     setLoading(true);
     setError(null);
+    streamController.current?.abort();
     try {
-      let data: Result;
-      if (mode === AiMode.Chat) data = await chat(submittedPrompt, conversationId);
-      else if (mode === AiMode.Search) data = await semanticSearch(submittedPrompt);
-      else if (mode === AiMode.Consult) data = await consult(submittedPrompt);
-      else if (mode === AiMode.Compare) {
-        data = await compare(productIds, submittedPrompt || undefined);
-      } else {
-        data = await evaluate(
-          productIds[0] ?? submittedPrompt,
-          submittedPrompt || undefined,
+      if (mode === AiMode.Chat) {
+        const controller = new AbortController();
+        streamController.current = controller;
+        setStreamingPrompt(submittedPrompt);
+        setStreamingAnswer("");
+        const data = await streamChat(
+          submittedPrompt,
+          conversationId,
+          {
+            onStart: (id) => setConversationId(id),
+            onDelta: (delta) => setStreamingAnswer((current) => current + delta),
+          },
+          controller.signal,
         );
-      }
-      setResult(data);
-      if (mode === AiMode.Chat && "conversation_id" in data) {
+        setResult(data);
         setConversationId(data.conversation_id);
         setChatTurns((current) => [
           ...current,
           {prompt: submittedPrompt, response: data},
         ]);
+        setStreamingPrompt("");
+        setStreamingAnswer("");
         setPrompt("");
+      } else {
+        let data: Result;
+        if (mode === AiMode.Search) data = await semanticSearch(submittedPrompt);
+        else if (mode === AiMode.Consult) data = await consult(submittedPrompt);
+        else if (mode === AiMode.Compare) {
+          data = await compare(productIds, submittedPrompt || undefined);
+        } else {
+          data = await evaluate(
+            productIds[0] ?? submittedPrompt,
+            submittedPrompt || undefined,
+          );
+        }
+        setResult(data);
       }
     } catch (cause) {
-      setError(cause);
+      if (!(cause instanceof DOMException && cause.name === "AbortError")) {
+        setError(cause);
+      }
     } finally {
       setLoading(false);
+      streamController.current = null;
     }
   }
 
@@ -207,9 +234,12 @@ export function AssistantPage() {
                       : "border-transparent hover:border-border hover:bg-muted/60"
                   }`}
                   onClick={() => {
+                    streamController.current?.abort();
                     setMode(value);
                     setResult(null);
                     setError(null);
+                    setStreamingPrompt("");
+                    setStreamingAnswer("");
                   }}
                   aria-pressed={selected}
                 >
@@ -248,9 +278,12 @@ export function AssistantPage() {
                       type="button"
                       className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
                       onClick={() => {
+                        streamController.current?.abort();
                         setConversationId(undefined);
                         setChatTurns([]);
                         setResult(null);
+                        setStreamingPrompt("");
+                        setStreamingAnswer("");
                         setPrompt("");
                       }}
                     >
@@ -281,8 +314,16 @@ export function AssistantPage() {
             </CardContent>
           </Card>
           {error ? <ErrorMessage error={error} /> : null}
-          {mode === AiMode.Chat && chatTurns.length > 0 ? (
-            <ChatTranscript turns={chatTurns} locale={locale} />
+          {mode === AiMode.Chat && (chatTurns.length > 0 || streamingPrompt) ? (
+            <>
+              {chatTurns.length > 0 ? <ChatTranscript turns={chatTurns} locale={locale} /> : null}
+              {streamingPrompt ? (
+                <StreamingChatTurn
+                  prompt={streamingPrompt}
+                  answer={streamingAnswer}
+                />
+              ) : null}
+            </>
           ) : result ? (
             <AssistantResult result={result} locale={locale} />
           ) : (
@@ -644,6 +685,32 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
             ) : null}
           </div>
         ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StreamingChatTurn({prompt, answer}: {prompt: string; answer: string}) {
+  const t = useTranslations("assistant");
+  return (
+    <Card className="overflow-hidden border-primary/15">
+      <CardContent className="space-y-3 p-4 sm:p-6">
+        <div className="ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground sm:max-w-[75%]">
+          <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">
+            {t("you")}
+          </p>
+          <p className="whitespace-pre-wrap">{prompt}</p>
+        </div>
+        <div className="max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
+          <div className="mb-1 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <Bot className="size-3.5 text-primary" />
+            {t("assistantLabel")}
+            <span className="size-1.5 animate-pulse rounded-full bg-primary" />
+          </div>
+          <p className="whitespace-pre-wrap">
+            {answer || t("streaming")}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

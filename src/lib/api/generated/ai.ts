@@ -21,6 +21,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/chat/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stream Chat */
+        post: operations["stream_chat_api_v1_chat_stream_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/compare": {
         parameters: {
             query?: never;
@@ -319,7 +336,7 @@ export type components = {
          * @description Stable top-level keys that the frontend maps to localized messages.
          * @enum {string}
          */
-        ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND";
+        ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_CHAT_STREAM_STARTED" | "AI_CHAT_STREAM_DELTA" | "AI_CHAT_STREAM_COMPLETED" | "AI_CHAT_STREAM_FAILED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND";
         /** SearchData */
         SearchData: {
             /** Products */
@@ -379,6 +396,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_ChatData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    stream_chat_api_v1_chat_stream_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatRequest"];
+            };
+        };
+        responses: {
+            /** @description Server-sent chat events. Every data frame is a canonical API envelope. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
                 };
             };
             /** @description Validation Error */

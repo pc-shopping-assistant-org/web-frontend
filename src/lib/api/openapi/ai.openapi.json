@@ -68,6 +68,47 @@
         }
       }
     },
+    "/api/v1/chat/stream": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Stream Chat",
+        "operationId": "stream_chat_api_v1_chat_stream_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Server-sent chat events. Every data frame is a canonical API envelope.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/search": {
       "post": {
         "tags": [
@@ -846,6 +887,10 @@
           "HTTP_ERROR",
           "INTERNAL_SERVER_ERROR",
           "AI_CHAT_COMPLETED",
+          "AI_CHAT_STREAM_STARTED",
+          "AI_CHAT_STREAM_DELTA",
+          "AI_CHAT_STREAM_COMPLETED",
+          "AI_CHAT_STREAM_FAILED",
           "AI_SEARCH_COMPLETED",
           "AI_SEARCH_NO_RESULTS",
           "AI_CONSULT_COMPLETED",
@@ -946,6 +991,10 @@
     {
       "name": "health",
       "description": "Service health and readiness endpoints."
+    },
+    {
+      "name": "assistant",
+      "description": "Catalog-grounded assistant workflows, including SSE chat streaming."
     }
   ]
 }

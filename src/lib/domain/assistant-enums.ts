@@ -8,6 +8,13 @@ export enum AiMode {
   Evaluate = "EVALUATE",
 }
 
+export enum ChatStreamEventType {
+  Start = "START",
+  Delta = "DELTA",
+  Completed = "COMPLETED",
+  Error = "ERROR",
+}
+
 export enum AnalyticsPeriod {
   Week = "WEEK",
   Month = "MONTH",
@@ -15,4 +22,5 @@ export enum AnalyticsPeriod {
 }
 
 export const AI_MODE_VALUES = enumValues(AiMode);
+export const CHAT_STREAM_EVENT_VALUES = enumValues(ChatStreamEventType);
 export const ANALYTICS_PERIOD_VALUES = enumValues(AnalyticsPeriod);

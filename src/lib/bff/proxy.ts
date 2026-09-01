@@ -15,7 +15,13 @@ import {STATIC_MESSAGE_KEYS, type ApiError, type ApiResponse} from "@/lib/api/co
 import {refreshTokenRequestSchema} from "@/features/auth/contracts/requests";
 
 type BffService = "backend" | "ai";
-type UpstreamResult = {status: number; payload: unknown; body?: Uint8Array; contentType?: string};
+type UpstreamResult = {
+  status: number;
+  payload: unknown;
+  body?: Uint8Array;
+  stream?: ReadableStream<Uint8Array>;
+  contentType?: string;
+};
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const AUTH_TOKEN_PATHS = new Set(["auth/login", "auth/google", "auth/verify-otp", "auth/refresh-token"]);
@@ -48,7 +54,7 @@ function serviceUnavailableKey(service: BffService) {
 
 function buildHeaders(request: Request, accessToken: string | undefined, sessionToken: string | undefined, body: Uint8Array | undefined) {
   const headers = new Headers();
-  headers.set("Accept", "application/json");
+  headers.set("Accept", request.headers.get("accept") ?? "application/json");
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("Content-Type", contentType);
   const requestId = request.headers.get("x-request-id");
@@ -79,6 +85,14 @@ async function requestUpstream(
       cache: "no-store",
     });
     const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.toLowerCase().includes("text/event-stream")) {
+      return {
+        status: response.status,
+        payload: null,
+        stream: response.body ?? undefined,
+        contentType,
+      };
+    }
     if (!contentType.toLowerCase().includes("application/json")) {
       return {
         status: response.status,
@@ -185,6 +199,14 @@ export async function handleBffRequest(request: Request, service: BffService, pa
     result = await requestUpstream(request, service, upstreamPath, requestBody, AUTH_TOKEN_PATHS.has(pathWithoutQuery) ? undefined : accessToken, outboundSessionToken);
   } catch {
     return NextResponse.json(envelope(null, serviceUnavailableKey(service), [{code: "UPSTREAM_UNREACHABLE"}]), {status: 503});
+  }
+
+  if (result.stream) {
+    const headers = new Headers();
+    if (result.contentType) headers.set("Content-Type", result.contentType);
+    headers.set("Cache-Control", "no-cache, no-transform");
+    headers.set("X-Accel-Buffering", "no");
+    return new Response(result.stream, {status: result.status, headers});
   }
 
   if (result.body) {

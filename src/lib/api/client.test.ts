@@ -1,7 +1,7 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 
 import {ApiClientError} from "./envelope";
-import {aiFetch, backendFetch} from "./client";
+import {aiFetch, aiStreamFetch, backendFetch} from "./client";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -24,5 +24,32 @@ describe("BFF API client", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("offline")));
 
     await expect(backendFetch("/products")).rejects.toMatchObject({status: 503, messageKey: "SERVICE_UNAVAILABLE"} satisfies Partial<ApiClientError>);
+  });
+
+  it("keeps a successful AI response body open for streaming", async () => {
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("data: {}\n\n"));
+        controller.close();
+      },
+    });
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(body, {
+        status: 200,
+        headers: {"content-type": "text/event-stream"},
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await aiStreamFetch("/chat/stream", {method: "POST"});
+
+    expect(response.body).not.toBeNull();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/ai/chat/stream",
+      expect.objectContaining({
+        credentials: "include",
+        headers: expect.objectContaining({Accept: "text/event-stream"}),
+      }),
+    );
   });
 });
