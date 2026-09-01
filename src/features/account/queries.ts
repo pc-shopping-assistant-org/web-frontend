@@ -6,8 +6,13 @@ import {createAddress, deleteAddress, getAddresses, setDefaultAddress, updateAdd
 
 export const accountKeys = {addresses: ["account", "addresses"] as const};
 
-export function useAddresses() {
-  return useQuery({queryKey: accountKeys.addresses, queryFn: getAddresses, retry: false});
+export function useAddresses(enabled = true) {
+  return useQuery({
+    queryKey: accountKeys.addresses,
+    queryFn: getAddresses,
+    retry: false,
+    enabled,
+  });
 }
 
 function invalidate(queryClient: ReturnType<typeof useQueryClient>) {

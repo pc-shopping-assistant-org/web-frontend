@@ -2,7 +2,7 @@
 
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
-import {changePassword, getProfile, logout, requestChangePasswordOtp, updateProfile} from "./api";
+import {changePassword, getProfile, logout, requestChangePasswordOtp, updateProfile, uploadProfileAvatar} from "./api";
 
 export const authKeys = {
   profile: ["auth", "profile"] as const,
@@ -22,6 +22,10 @@ export function useUpdateProfile() {
     mutationFn: updateProfile,
     onSuccess: (profile) => queryClient.setQueryData(authKeys.profile, profile),
   });
+}
+
+export function useUploadProfileAvatar() {
+  return useMutation({ mutationFn: uploadProfileAvatar });
 }
 
 export function useLogout() {

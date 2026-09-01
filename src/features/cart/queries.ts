@@ -6,8 +6,8 @@ import {addToCart, clearCart, getCart, removeCartItem, updateCartItem} from "./a
 
 export const cartKeys = {all: ["cart"] as const};
 
-export function useCart() {
-  return useQuery({queryKey: cartKeys.all, queryFn: getCart});
+export function useCart(enabled = true) {
+  return useQuery({queryKey: cartKeys.all, queryFn: getCart, enabled});
 }
 
 export function useAddToCart() {
