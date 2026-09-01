@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   addVariantImage,
@@ -96,6 +96,7 @@ export function useRevenueChart(
     queryKey: ["admin", "revenue-chart", filter],
     queryFn: () => getRevenueChart(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useTopSelling(limit = 5, fromDate?: string, toDate?: string) {
@@ -112,6 +113,7 @@ export function useAdminProducts(
     queryKey: ["admin", "products", filter],
     queryFn: () => getAdminProducts(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminCustomers(
@@ -121,6 +123,7 @@ export function useAdminCustomers(
     queryKey: ["admin", "customers", filter],
     queryFn: () => getCustomers(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminEmployees(
@@ -130,6 +133,7 @@ export function useAdminEmployees(
     queryKey: ["admin", "employees", filter],
     queryFn: () => getEmployees(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminSuppliers(
@@ -139,6 +143,7 @@ export function useAdminSuppliers(
     queryKey: ["admin", "suppliers", filter],
     queryFn: () => getSuppliers(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminDiscounts(
@@ -148,6 +153,7 @@ export function useAdminDiscounts(
     queryKey: ["admin", "discounts", filter],
     queryFn: () => getDiscounts(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminOrders(
@@ -157,6 +163,7 @@ export function useAdminOrders(
     queryKey: ["admin", "orders", filter],
     queryFn: () => getAdminOrders(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminPayments(
@@ -166,6 +173,7 @@ export function useAdminPayments(
     queryKey: ["admin", "payments", filter],
     queryFn: () => getAdminPayments(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminReviews(
@@ -175,6 +183,7 @@ export function useAdminReviews(
     queryKey: ["admin", "reviews", filter],
     queryFn: () => getAdminReviews(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminPaymentMethods() {
@@ -237,6 +246,7 @@ export function useInvoices(filter: Parameters<typeof getInvoices>[0] = {}) {
     queryKey: ["admin", "invoices", filter],
     queryFn: () => getInvoices(filter),
     retry: false,
+    placeholderData: keepPreviousData,
   });
 }
 export function useAdminSupplier(id: string) {

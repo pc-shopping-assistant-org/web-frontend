@@ -26,9 +26,11 @@ import {
 } from "@/components/ui/card";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { ErrorMessage } from "@/components/ui/error-message";
+import { AccountPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiClientError } from "@/lib/api/envelope";
@@ -114,15 +116,7 @@ export function AccountPage() {
   }
 
   if (profile.isPending) {
-    return (
-      <section className="page-wrap space-y-6 py-12 sm:py-16">
-        <div className="h-28 animate-pulse rounded-3xl bg-muted" />
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-          <div className="h-[28rem] animate-pulse rounded-2xl bg-muted" />
-          <div className="h-[28rem] animate-pulse rounded-2xl bg-muted" />
-        </div>
-      </section>
-    );
+    return <AccountPageSkeleton />;
   }
 
   const requiresLogin =
@@ -488,7 +482,7 @@ function AddressCard({
       </CardHeader>
       <CardContent>
         {loading ? (
-          <div className="h-24 animate-pulse rounded-xl bg-muted" />
+          <Skeleton className="h-24 rounded-xl" />
         ) : error ? (
           <ErrorMessage error={error} />
         ) : addresses.length === 0 ? (

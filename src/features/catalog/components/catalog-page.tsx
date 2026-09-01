@@ -5,9 +5,11 @@ import {useTranslations} from "next-intl";
 import {useMemo, useState} from "react";
 
 import {Button} from "@/components/ui/button";
+import {ProductGridSkeleton} from "@/components/ui/loading-skeletons";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Select} from "@/components/ui/select";
+import {Skeleton} from "@/components/ui/skeleton";
 import {useRouter} from "@/i18n/navigation";
 import {Link} from "@/i18n/navigation";
 import {ApiClientError} from "@/lib/api/envelope";
@@ -152,7 +154,7 @@ export function CatalogPage({
       </div>
 
       {categories.isPending ? (
-        <div className="mb-8 h-12 animate-pulse rounded-2xl bg-muted" />
+        <Skeleton className="mb-8 h-12 rounded-2xl" />
       ) : categories.data?.length ? (
         <div className="mb-8 rounded-2xl border border-border/70 bg-muted/20 p-2.5" aria-label={t("browseByCategory")}>
           <div className="flex items-center gap-2 overflow-x-auto pb-0.5 sm:flex-wrap sm:overflow-visible">
@@ -188,7 +190,10 @@ export function CatalogPage({
           <Button className="mt-5" variant="outline" onClick={() => void query.refetch()}>{common("retry")}</Button>
         </div>
       ) : null}
-      {!query.isPending && !query.isError ? <>
+      {!query.isPending && !query.isError ? <div
+        className={cn("transition-opacity duration-200", query.isFetching && "opacity-60")}
+        aria-busy={query.isFetching}
+      >
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">{t("resultCount", {count: query.data?.size ?? products.length})}</p>
           {activeFilters.length > 0 ? <div className="flex flex-wrap justify-end gap-2" aria-label={t("filteredResults")}>{activeFilters.map(({key, label}) => <button key={key} type="button" className="inline-flex items-center gap-1 rounded-full border bg-muted/40 px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:border-primary/35 hover:bg-primary/5 hover:text-foreground" onClick={() => removeFilter(key)} aria-label={`${t("removeFilter")}: ${label}`}>{label}<X className="size-3.5" aria-hidden="true" /></button>)}</div> : null}
@@ -198,8 +203,8 @@ export function CatalogPage({
           setCompareIds((current) => current.includes(product.id!) ? current.filter((id) => id !== product.id) : current.length < 5 ? [...current, product.id!] : current);
         }} />
         <CompareTray products={products} ids={compareIds} onClear={() => setCompareIds([])} />
-      </> : null}
-      {!query.isPending && !query.isError && (query.data?.hasPrev || query.data?.hasNext) ? <div className="mt-8 flex justify-center gap-2"><Button variant="outline" disabled={!query.data?.hasPrev || !query.data?.prevCursor} onClick={() => movePage(query.data?.prevCursor)}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!query.data?.hasNext || !query.data?.nextCursor} onClick={() => movePage(query.data?.nextCursor)}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}
+        {(query.data?.hasPrev || query.data?.hasNext) ? <div className="mt-8 flex justify-center gap-2"><Button variant="outline" disabled={!query.data?.hasPrev || !query.data?.prevCursor} onClick={() => movePage(query.data?.prevCursor)}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!query.data?.hasNext || !query.data?.nextCursor} onClick={() => movePage(query.data?.nextCursor)}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}
+      </div> : null}
     </section>
   );
 }
@@ -289,5 +294,5 @@ function quickCategories(categories: import("@/features/catalog/contracts/respon
 }
 
 function CatalogLoading() {
-  return <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{Array.from({length: 6}, (_, index) => <div key={index} className="h-96 animate-pulse rounded-2xl bg-muted" />)}</div>;
+  return <ProductGridSkeleton count={8} />;
 }

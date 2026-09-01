@@ -24,6 +24,7 @@ import {
 } from "@tabler/icons-react";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent} from "@/components/ui/card";
@@ -38,8 +39,16 @@ import {ResourceStatus} from "@/lib/domain/catalog-enums";
 import {useProfile} from "@/features/auth/queries";
 import {useCategories, useProducts} from "@/features/catalog/queries";
 import {CatalogCategoryIcon} from "@/features/catalog/components/catalog-category-icon";
-import {FeaturedProducts} from "@/features/catalog/components/featured-products";
+import {FeaturedProductsSkeleton} from "@/components/ui/loading-skeletons";
 import {HomeSearch} from "./home-search";
+
+// The category shelves are below the hero and contain the largest client-side
+// catalog surface on the home route. Keep the hero interactive first and load
+// this section as a separate chunk while its layout-preserving fallback shows.
+const FeaturedProducts = dynamic(
+  () => import("@/features/catalog/components/featured-products").then((module) => module.FeaturedProducts),
+  {loading: () => <FeaturedProductsSkeleton />},
+);
 
 export function HomeStorefront() {
   const t = useTranslations("home");
@@ -106,7 +115,11 @@ export function HomeStorefront() {
               <IconArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </div>
-          <FeaturedProducts />
+          <FeaturedProducts
+            products={featuredProducts}
+            pending={products.isPending}
+            unavailable={products.isError}
+          />
         </section>
 
         <CategoryExplorer categories={categoryLinks} counts={categoryCounts} pending={categories.isPending} error={categories.isError} />
@@ -301,7 +314,7 @@ function PopularProductRail({
   if (pending) {
     return (
       <section className="mt-9" aria-label={t("popularTitle")}>
-        <div className="mb-4 h-8 w-64 animate-pulse rounded-lg bg-muted" />
+        <Skeleton className="mb-4 h-8 w-64 rounded-lg" />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({length: 4}, (_, index) => <Skeleton key={index} className="h-28 rounded-2xl" />)}
         </div>
@@ -483,7 +496,7 @@ function FeaturedSpotlight({product, pending, unavailable}: {product?: ProductSu
               <p className="text-xl font-semibold tracking-tight sm:text-2xl">{formatMoney(price, locale)}</p>
               <p className="mt-1 text-xs text-white/60">★ {formatRating(product.ratingAverage)} · {product.reviewCount ?? 0} {t("reviews")}</p>
             </div>
-            {slug ? <Link href={`/products/${slug}`} className="inline-flex items-center gap-1 text-sm font-medium text-white underline-offset-4 hover:underline">{t("viewProduct")}<IconArrowUpRight className="size-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" /></Link> : null}
+            {slug ? <Link href={`/products/${slug}`} prefetch={false} className="inline-flex items-center gap-1 text-sm font-medium text-white underline-offset-4 hover:underline">{t("viewProduct")}<IconArrowUpRight className="size-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" /></Link> : null}
           </div>
         </div>
         <div className="relative flex h-full min-h-48 items-center justify-center">
@@ -529,7 +542,7 @@ function SideProductCard({product, index}: {product: ProductSummary; index: numb
       </CardContent>
     </Card>
   );
-  return slug ? <Link href={`/products/${slug}`} className="block" aria-label={`${t("viewProduct")}: ${name}`}>{content}</Link> : content;
+  return slug ? <Link href={`/products/${slug}`} prefetch={false} className="block" aria-label={`${t("viewProduct")}: ${name}`}>{content}</Link> : content;
 }
 
 function AssistantTile() {
@@ -600,7 +613,7 @@ function ProductArtwork({product, large = false}: {product: ProductSummary; larg
   return (
     <div className={`relative flex items-center justify-center ${large ? "size-32 sm:size-40 xl:size-48 2xl:size-52" : "size-14"}`}>
       {product.imageUrl ? (
-        <Image src={product.imageUrl} alt={product.name ?? ""} fill sizes={large ? "240px" : "64px"} unoptimized className="object-contain p-1" />
+        <Image src={product.imageUrl} alt={product.name ?? ""} fill sizes={large ? "240px" : "64px"} priority={large} unoptimized className="object-contain p-1" />
       ) : large ? (
         <div className="relative flex size-full items-center justify-center" aria-hidden="true">
           <span className="absolute inset-3 rounded-full bg-cyan-300/20 blur-3xl" />

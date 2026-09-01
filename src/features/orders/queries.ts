@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   cancelOrder,
@@ -28,6 +28,7 @@ export function useOrders(filters: OrderFilters = {}, enabled = true) {
     queryFn: () => getOrders(filters),
     retry: false,
     enabled,
+    placeholderData: keepPreviousData,
   });
 }
 export function useOrder(orderId: string, enabled = true) {

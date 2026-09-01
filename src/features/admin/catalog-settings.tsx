@@ -32,6 +32,7 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {AttributeDataType, ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
 import type {
@@ -1383,7 +1384,7 @@ function CheckField({
   );
 }
 function Loading() {
-  return <div className="h-40 animate-pulse rounded-2xl bg-muted" />;
+  return <Skeleton className="h-40 rounded-2xl" />;
 }
 function Empty({ title }: { title: string }) {
   return (

@@ -12,6 +12,7 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "@/i18n/navigation";
@@ -26,7 +27,6 @@ import { useBrands, useCategories } from "@/features/catalog/queries";
 import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import { ProductCreateForm } from "./catalog-management";
 import { ConfirmAction } from "./confirm-action";
-import { AdminInvoicesPage } from "./detail-pages";
 import { StatusSelect } from "./status-select";
 import {
   DiscountCreateForm,
@@ -64,8 +64,7 @@ export type AdminResource =
   | "suppliers"
   | "payments"
   | "payment-methods"
-  | "reviews"
-  | "invoices";
+  | "reviews";
 
 export function AdminResourcePage({ resource }: { resource: AdminResource }) {
   switch (resource) {
@@ -87,8 +86,6 @@ export function AdminResourcePage({ resource }: { resource: AdminResource }) {
       return <PaymentMethods />;
     case "reviews":
       return <Reviews />;
-    case "invoices":
-      return <AdminInvoicesPage />;
   }
 }
 
@@ -239,7 +236,7 @@ function DateFilter({
 }
 
 function Loading() {
-  return <div className="h-64 animate-pulse rounded-2xl bg-muted" />;
+  return <Skeleton className="h-64 rounded-2xl" />;
 }
 function Failure({ error }: { error: unknown }) {
   return <ErrorMessage error={error} />;

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 
 import { useCategorySpecsSchema } from "./queries";
@@ -95,7 +96,7 @@ export function SpecificationsEditor({
       </div>
 
       {schema.isPending && categoryId ? (
-        <div className="h-24 animate-pulse rounded-xl bg-muted" />
+        <Skeleton className="h-24 rounded-xl" />
       ) : hasSchema ? (
         <div className="grid gap-4 rounded-xl border bg-muted/15 p-4 lg:grid-cols-2">
           {groupAttributes(attributes).map(([groupName, groupItems]) => (

@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Link } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/format";
@@ -389,7 +390,7 @@ function ProductPicker({
         />
       </div>
       {products.isPending ? (
-        <div className="h-28 animate-pulse rounded-xl bg-muted" />
+        <Skeleton className="h-28 rounded-xl" />
       ) : products.isError ? (
         <ErrorMessage error={products.error} />
       ) : visibleProducts.length === 0 ? (

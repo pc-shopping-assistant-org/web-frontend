@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfirmAction } from "@/components/ui/confirm-action";
 import { ErrorMessage } from "@/components/ui/error-message";
+import { OrdersPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -22,6 +23,7 @@ import { Link } from "@/i18n/navigation";
 import { ApiClientError } from "@/lib/api/envelope";
 import { isStaffRole } from "@/lib/auth/roles";
 import { formatMoney } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {OrderStatus} from "@/lib/domain/commerce-enums";
 
 import { useProfile } from "@/features/auth/queries";
@@ -74,11 +76,7 @@ export function OrdersPage() {
   }
 
   if (profile.isPending) {
-    return (
-      <section className="page-wrap py-16">
-        <div className="h-72 animate-pulse rounded-2xl bg-muted" />
-      </section>
-    );
+    return <OrdersPageSkeleton />;
   }
 
   if (profile.isError && !requiresLogin) {
@@ -191,9 +189,7 @@ export function OrdersPage() {
         ) : null}
       </div>
 
-      {query.isPending ? (
-        <div className="h-64 animate-pulse rounded-2xl bg-muted" />
-      ) : null}
+      {query.isPending ? <OrdersPageSkeleton /> : null}
       {query.isError ? <ErrorMessage error={query.error} /> : null}
       {!query.isPending && !query.isError && orders.length === 0 ? (
         <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">
@@ -206,7 +202,13 @@ export function OrdersPage() {
         </div>
       ) : null}
       {!query.isPending && !query.isError && orders.length > 0 ? (
-        <div className="space-y-3">
+        <div
+          className={cn(
+            "space-y-3 transition-opacity duration-200",
+            query.isFetching && "opacity-60",
+          )}
+          aria-busy={query.isFetching}
+        >
           {orders.map((order, index) => (
             <Card
               key={order.id ?? index}

@@ -1,6 +1,6 @@
 "use client";
 
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
 import {createProductReview, getBrands, getCategories, getProductBySlug, getProductRatingSummary, getProductReviews, getProducts, type ProductFilters} from "./api";
 
@@ -22,6 +22,7 @@ export function useProducts(
     queryKey: catalogKeys.products(filters),
     queryFn: () => getProducts(filters),
     enabled: options.enabled ?? true,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -33,15 +34,24 @@ export function useBrands() {
   return useQuery({queryKey: catalogKeys.brands, queryFn: getBrands, staleTime: 300_000});
 }
 
-export function useProductReviews(productId: string, cursor?: string) {
-  return useQuery({queryKey: catalogKeys.reviews(productId, cursor), queryFn: () => getProductReviews(productId, cursor), enabled: Boolean(productId)});
+export function useProductReviews(
+  productId: string,
+  cursor?: string,
+  options: {enabled?: boolean} = {},
+) {
+  return useQuery({
+    queryKey: catalogKeys.reviews(productId, cursor),
+    queryFn: () => getProductReviews(productId, cursor),
+    enabled: Boolean(productId) && (options.enabled ?? true),
+    placeholderData: keepPreviousData,
+  });
 }
 
-export function useProductRatingSummary(productId: string) {
+export function useProductRatingSummary(productId: string, enabled = true) {
   return useQuery({
     queryKey: catalogKeys.ratingSummary(productId),
     queryFn: () => getProductRatingSummary(productId),
-    enabled: Boolean(productId),
+    enabled: Boolean(productId) && enabled,
   });
 }
 

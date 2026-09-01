@@ -23,10 +23,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ErrorMessage } from "@/components/ui/error-message";
+import { AdminPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
@@ -115,7 +117,7 @@ function BackLink({ href, children }: { href: string; children: string }) {
 }
 
 function Loading() {
-  return <div className="h-72 animate-pulse rounded-2xl bg-muted" />;
+  return <AdminPageSkeleton />;
 }
 function Failure({ error }: { error: unknown }) {
   return <ErrorMessage error={error} />;
@@ -1878,7 +1880,7 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
                   {t("invoiceUnavailable")}
                 </p>
               ) : invoice.isPending ? (
-                <div className="h-12 animate-pulse rounded-lg bg-muted" />
+                <Skeleton className="h-12 rounded-lg" />
               ) : invoice.isError ? (
                 <Failure error={invoice.error} />
               ) : invoice.data ? (

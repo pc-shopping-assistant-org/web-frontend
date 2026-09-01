@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
@@ -185,7 +186,7 @@ export function CategoryManagement() {
         </CardHeader>
         <CardContent>
           {categories.isPending ? (
-            <div className="h-24 animate-pulse rounded-xl bg-muted" />
+            <Skeleton className="h-24 rounded-xl" />
           ) : categories.isError ? (
             <ErrorMessage error={categories.error} />
           ) : flat.length === 0 ? (
@@ -494,7 +495,7 @@ export function BrandManagement() {
         </CardHeader>
         <CardContent>
           {brands.isPending ? (
-            <div className="h-24 animate-pulse rounded-xl bg-muted" />
+            <Skeleton className="h-24 rounded-xl" />
           ) : brands.isError ? (
             <ErrorMessage error={brands.error} />
           ) : (

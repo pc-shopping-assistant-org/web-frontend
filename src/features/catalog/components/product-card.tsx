@@ -111,7 +111,7 @@ export function ProductCard({
   return (
     <Card className={cn("group overflow-hidden border-border/70 transition duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-xl", compact && "hover:-translate-y-0.5 hover:shadow-lg")}>
       {productHref ? (
-        <Link href={productHref} className="block" aria-label={`${t("productDetails")}: ${name}`}>
+        <Link href={productHref} prefetch={false} className="block" aria-label={`${t("productDetails")}: ${name}`}>
           <ProductVisual product={product} name={name} theme={theme} interactive compact={compact} />
         </Link>
       ) : (
@@ -124,7 +124,7 @@ export function ProductCard({
           </p>
           <h3 className={cn("line-clamp-2 font-semibold tracking-tight", compact ? "text-sm leading-5" : "text-lg")}>
             {productHref ? (
-              <Link href={productHref} className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+              <Link href={productHref} prefetch={false} className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                 {name}
               </Link>
             ) : name}
@@ -151,7 +151,7 @@ export function ProductCard({
               </div>
             ) : null}
             {productHref ? (
-              <Link href={productHref} className={cn("inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/85", compact ? "h-8 text-xs" : "h-9")}>
+              <Link href={productHref} prefetch={false} className={cn("inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/85", compact ? "h-8 text-xs" : "h-9")}>
                 {t("productDetails")}
                 <IconArrowUpRight className="size-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>

@@ -33,6 +33,7 @@ import { useTranslations } from "next-intl";
 import { useState, type ReactNode } from "react";
 
 import { ErrorMessage } from "@/components/ui/error-message";
+import { AdminPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useLogout, useProfile } from "@/features/auth/queries";
 import { isStaffRole } from "@/lib/auth/roles";
@@ -104,12 +105,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  if (profile.isPending)
-    return (
-      <div className="page-wrap py-16">
-        <div className="h-96 animate-pulse rounded-2xl bg-muted" />
-      </div>
-    );
+  if (profile.isPending) return <AdminPageSkeleton />;
   if (profile.isError)
     return (
       <div className="page-wrap py-16">
@@ -293,6 +289,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                         <Link
                           key={key}
                           href={href}
+                          prefetch={false}
                           aria-current={active ? "page" : undefined}
                           onClick={() => setMobileOpen(false)}
                           className={cn(
@@ -325,6 +322,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <div className="border-t border-white/10 p-3">
               <Link
                 href="/"
+                prefetch={false}
                 className={cn(
                   "flex items-center rounded-xl py-2.5 text-sm text-slate-400 transition hover:bg-white/10 hover:text-white",
                   sidebarCollapsed ? "justify-center px-2" : "gap-3 px-3",
@@ -371,6 +369,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 </span>
                 <Link
                   href="/"
+                  prefetch={false}
                   className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
                 >
                   <ExternalLink className="size-3.5" />

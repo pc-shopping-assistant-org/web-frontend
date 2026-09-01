@@ -3,14 +3,16 @@
 import {ArrowLeft, ArrowLeftRight, ChevronLeft, ChevronRight, Info, Minus, PackageCheck, Plus, ShoppingCart, ShieldCheck, Sparkles, Star, type LucideIcon} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {ErrorMessage} from "@/components/ui/error-message";
+import {ProductDetailPageSkeleton} from "@/components/ui/loading-skeletons";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
+import {Skeleton} from "@/components/ui/skeleton";
 import {Link} from "@/i18n/navigation";
 import {ApiClientError} from "@/lib/api/envelope";
 import {formatMoney, formatRating} from "@/lib/format";
@@ -34,9 +36,10 @@ export function ProductDetailPage({slug}: {slug: string}) {
   const [reviewCursor, setReviewCursor] = useState<string | undefined>();
   const [quantity, setQuantity] = useState(1);
   const addMutation = useAddToCart();
+  const [belowFoldRef, belowFoldReady] = useNearViewport<HTMLDivElement>(Boolean(product));
   const relatedQuery = useProducts(
     {categoryId: product?.category?.id, limit: 8},
-    {enabled: Boolean(product?.category?.id)},
+    {enabled: Boolean(product?.category?.id) && belowFoldReady},
   );
 
   const variants = useMemo(
@@ -48,8 +51,8 @@ export function ProductDetailPage({slug}: {slug: string}) {
   );
   const selected =
     variants.find((variant) => variant.id === selectedId) ?? variants[0];
-  const reviews = useProductReviews(product?.id ?? "", reviewCursor);
-  const ratingSummary = useProductRatingSummary(product?.id ?? "");
+  const reviews = useProductReviews(product?.id ?? "", reviewCursor, {enabled: belowFoldReady});
+  const ratingSummary = useProductRatingSummary(product?.id ?? "", belowFoldReady);
   const images = useMemo(
     () =>
       (selected?.images ?? []).filter(
@@ -64,7 +67,7 @@ export function ProductDetailPage({slug}: {slug: string}) {
   const assistantHref = product?.id ? `/assistant?mode=EVALUATE&productId=${encodeURIComponent(product.id)}` : undefined;
   const compareHref = product?.id ? `/assistant?mode=COMPARE&productIds=${encodeURIComponent(product.id)}` : undefined;
 
-  if (query.isPending) return <section className="page-wrap py-16"><div className="h-[32rem] animate-pulse rounded-3xl bg-muted" /></section>;
+  if (query.isPending) return <ProductDetailPageSkeleton />;
   if (query.isError || !product) {
     return <section className="page-wrap py-16"><Link href="/products" className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />{common("back")}</Link><div className="rounded-2xl border border-dashed p-12 text-center"><h1 className="text-2xl font-semibold">{query.error instanceof ApiClientError && query.error.messageKey === ApiMessageKey.PRODUCT_NOT_FOUND ? t("productNotFound") : t("loadError")}</h1><p className="mt-2 text-sm text-muted-foreground">{query.isError ? common("unknownError") : t("productNotFound")}</p></div></section>;
   }
@@ -84,7 +87,7 @@ export function ProductDetailPage({slug}: {slug: string}) {
         <div className="relative flex min-h-[26rem] items-center justify-center overflow-hidden rounded-3xl border border-slate-200 bg-[radial-gradient(circle_at_18%_18%,rgba(56,189,248,0.36),transparent_32%),radial-gradient(circle_at_85%_80%,rgba(99,102,241,0.3),transparent_38%),linear-gradient(135deg,#eef6ff,#f8fafc_48%,#eef2ff)] p-4 shadow-sm">
           <span className="pointer-events-none absolute -left-16 -top-16 size-52 rounded-full border border-white/80 bg-white/35 blur-2xl" />
           <span className="pointer-events-none absolute -bottom-24 -right-16 size-64 rounded-full border border-white/70 bg-white/35 blur-3xl" />
-          {heroImage ? <Image src={heroImage} alt={product.name ?? ""} fill sizes="(min-width: 1024px) 45vw, 100vw" unoptimized className="relative object-contain p-8 drop-shadow-2xl" /> : <div className="relative flex h-64 w-full max-w-[28rem] items-center justify-center"><span className="absolute inset-8 rounded-full bg-indigo-400/20 blur-3xl" /><ProductIllustration kind={productArtKind(`${product.category?.name ?? ""} ${product.name ?? ""}`)} /><span className="absolute bottom-0 rounded-full bg-slate-950/75 px-3 py-1 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-white/85">{product.category?.name ?? "gearPC"}</span></div>}
+          {heroImage ? <Image src={heroImage} alt={product.name ?? ""} fill sizes="(min-width: 1024px) 45vw, 100vw" priority unoptimized className="relative object-contain p-8 drop-shadow-2xl" /> : <div className="relative flex h-64 w-full max-w-[28rem] items-center justify-center"><span className="absolute inset-8 rounded-full bg-indigo-400/20 blur-3xl" /><ProductIllustration kind={productArtKind(`${product.category?.name ?? ""} ${product.name ?? ""}`)} /><span className="absolute bottom-0 rounded-full bg-slate-950/75 px-3 py-1 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-white/85">{product.category?.name ?? "gearPC"}</span></div>}
           <div className="absolute inset-x-5 bottom-5 flex flex-wrap items-center justify-between gap-2">
             <Badge className="border-white/80 bg-white/80 text-foreground/75 backdrop-blur">{product.category?.name ?? "gearPC"}</Badge>
             {product.status === ResourceStatus.Active ? <Badge className="border-emerald-200/90 bg-emerald-50/90 text-emerald-700">{t("activeCatalog")}</Badge> : null}
@@ -149,10 +152,38 @@ export function ProductDetailPage({slug}: {slug: string}) {
         {selected ? <div className="space-y-4 rounded-2xl border bg-card p-5"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm text-muted-foreground">{t("selectedVariant")}</p><p className="text-2xl font-semibold">{formatMoney(selected.listPrice, locale)}</p><p className="mt-1 text-sm text-muted-foreground">{selected.model ?? selected.sku ?? "—"}</p></div><div className="space-y-2"><Label htmlFor="quantity">{t("quantity")}</Label><div className="flex items-center gap-1"><Button type="button" size="icon" variant="outline" aria-label={t("decreaseQuantity")} onClick={() => setQuantity((value) => Math.max(1, value - 1))}><Minus className="size-4" /></Button><Input id="quantity" className="w-16 text-center" type="number" min={1} max={selected.quantity ?? 1} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(Number(event.target.value) || 1, selected.quantity ?? 1)))} /><Button type="button" size="icon" variant="outline" aria-label={t("increaseQuantity")} onClick={() => setQuantity((value) => Math.min(selected.quantity ?? value + 1, value + 1))}><Plus className="size-4" /></Button></div></div></div><div className="grid gap-3 border-y py-4 text-sm sm:grid-cols-2"><MetaItem icon={PackageCheck} label={t("stock")} value={selected.quantity && selected.quantity > 0 ? t("stockAvailable", {count: selected.quantity ?? 0}) : t("outOfStock")} /><MetaItem icon={ShieldCheck} label={t("warranty")} value={selected.warranty ?? "—"} /><MetaItem icon={Info} label={t("sku")} value={selected.sku ?? "—"} /><MetaItem icon={Info} label={t("releaseAt")} value={selected.releaseAt ?? "—"} /></div>{addMutation.isError ? <ErrorMessage error={addMutation.error} /> : null}{addMutation.isSuccess ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700"><span>{t("addedToCart")}</span><Link href="/cart" className="font-semibold underline underline-offset-2">{t("viewCart")}</Link></div> : null}<div className="flex flex-wrap gap-2"><Button size="lg" className="min-w-48 flex-1" disabled={addMutation.isPending || !selected.quantity || selected.quantity < 1} onClick={() => void add()}><ShoppingCart className="size-4" />{addMutation.isPending ? common("loading") : t("addToCart")}</Button>{assistantHref ? <Link href={assistantHref} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition hover:bg-muted"><Sparkles className="size-4 text-primary" />{t("askAssistant")}</Link> : null}{compareHref ? <Link href={compareHref} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 text-sm font-medium text-primary transition hover:bg-primary/10"><ArrowLeftRight className="size-4" />{t("addToCompare")}</Link> : null}</div></div> : null}
       </div>
     </div>
-    {relatedQuery.data?.items?.filter((item) => item.id && item.id !== product.id).slice(0, 4).length ? <section className="mt-12" aria-labelledby="related-products-title"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">{t("relatedProducts")}</p><h2 id="related-products-title" className="mt-2 text-2xl font-semibold">{product.category?.name}</h2></div>{categoryHref ? <Link href={categoryHref} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">{t("viewCategory")}<ChevronRight className="size-4" /></Link> : null}</div><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{relatedQuery.data?.items?.filter((item) => item.id && item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} />)}</div></section> : null}
-    <section className="mt-12" aria-labelledby="specifications-title"><div className="mb-5"><p className="eyebrow">{t("specifications")}</p><h2 id="specifications-title" className="mt-2 text-2xl font-semibold">{t("technicalDetails")}</h2></div>{specifications.length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("specificationsEmpty")}</div> : <Card><CardContent className="grid gap-px overflow-hidden p-0 sm:grid-cols-2">{specifications.map(([key, value]) => <div key={key} className="flex min-h-14 items-start justify-between gap-5 border-b bg-muted/15 px-5 py-3.5 text-sm last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"><span className="font-medium text-muted-foreground">{formatSpecificationLabel(key)}</span><span className="max-w-[65%] text-right font-medium">{formatSpecificationValue(value)}</span></div>)}</CardContent></Card>}</section>
-    <section className="mt-14"><div className="mb-5 flex items-end justify-between"><div><p className="eyebrow">{t("reviews")}</p><h2 className="mt-2 text-2xl font-semibold">{t("customerReviews")}</h2></div><span className="text-sm text-muted-foreground">{product.reviewCount ?? reviews.data?.size ?? 0}</span></div>{ratingSummary.data ? <RatingSummary summary={ratingSummary.data} /> : null}{reviews.isPending ? <div className="h-24 animate-pulse rounded-2xl bg-muted" /> : reviews.isError ? <ErrorMessage error={reviews.error} /> : (reviews.data?.items ?? []).length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("noReviews")}</div> : <><div className="grid gap-4 md:grid-cols-2">{reviews.data?.items?.map((review) => <Card key={review.id}><CardContent className="space-y-2 p-5"><div className="flex items-center justify-between"><span className="font-medium">{review.customerName ?? t("verifiedBuyer")}</span><span className="flex items-center gap-1 text-sm"><Star className="size-4 fill-amber-400 text-amber-400" />{review.rating}/5</span></div><p className="text-sm leading-6 text-muted-foreground">{review.comment || "—"}</p></CardContent></Card>)}</div>{(reviews.data?.hasPrev || reviews.data?.hasNext) ? <div className="mt-6 flex justify-center gap-2"><Button variant="outline" disabled={!reviews.data?.hasPrev || !reviews.data?.prevCursor} onClick={() => setReviewCursor(reviews.data?.prevCursor)}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!reviews.data?.hasNext || !reviews.data?.nextCursor} onClick={() => setReviewCursor(reviews.data?.nextCursor)}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}</>}</section>
+    <div ref={belowFoldRef} className="[content-visibility:auto] [contain-intrinsic-size:1400px]">
+      {relatedQuery.data?.items?.filter((item) => item.id && item.id !== product.id).slice(0, 4).length ? <section className="mt-12" aria-labelledby="related-products-title"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">{t("relatedProducts")}</p><h2 id="related-products-title" className="mt-2 text-2xl font-semibold">{product.category?.name}</h2></div>{categoryHref ? <Link href={categoryHref} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">{t("viewCategory")}<ChevronRight className="size-4" /></Link> : null}</div><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{relatedQuery.data?.items?.filter((item) => item.id && item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} />)}</div></section> : null}
+      <section className="mt-12" aria-labelledby="specifications-title"><div className="mb-5"><p className="eyebrow">{t("specifications")}</p><h2 id="specifications-title" className="mt-2 text-2xl font-semibold">{t("technicalDetails")}</h2></div>{specifications.length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("specificationsEmpty")}</div> : <Card><CardContent className="grid gap-px overflow-hidden p-0 sm:grid-cols-2">{specifications.map(([key, value]) => <div key={key} className="flex min-h-14 items-start justify-between gap-5 border-b bg-muted/15 px-5 py-3.5 text-sm last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"><span className="font-medium text-muted-foreground">{formatSpecificationLabel(key)}</span><span className="max-w-[65%] text-right font-medium">{formatSpecificationValue(value)}</span></div>)}</CardContent></Card>}</section>
+      <section className="mt-14"><div className="mb-5 flex items-end justify-between"><div><p className="eyebrow">{t("reviews")}</p><h2 className="mt-2 text-2xl font-semibold">{t("customerReviews")}</h2></div><span className="text-sm text-muted-foreground">{product.reviewCount ?? reviews.data?.size ?? 0}</span></div>{ratingSummary.data ? <RatingSummary summary={ratingSummary.data} /> : null}{!belowFoldReady || reviews.isPending ? <Skeleton className="h-24 rounded-2xl" /> : reviews.isError ? <ErrorMessage error={reviews.error} /> : (reviews.data?.items ?? []).length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("noReviews")}</div> : <><div className="grid gap-4 md:grid-cols-2">{reviews.data?.items?.map((review) => <Card key={review.id}><CardContent className="space-y-2 p-5"><div className="flex items-center justify-between"><span className="font-medium">{review.customerName ?? t("verifiedBuyer")}</span><span className="flex items-center gap-1 text-sm"><Star className="size-4 fill-amber-400 text-amber-400" />{review.rating}/5</span></div><p className="text-sm leading-6 text-muted-foreground">{review.comment || "—"}</p></CardContent></Card>)}</div>{(reviews.data?.hasPrev || reviews.data?.hasNext) ? <div className="mt-6 flex justify-center gap-2"><Button variant="outline" disabled={!reviews.data?.hasPrev || !reviews.data?.prevCursor} onClick={() => setReviewCursor(reviews.data?.prevCursor)}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!reviews.data?.hasNext || !reviews.data?.nextCursor} onClick={() => setReviewCursor(reviews.data?.nextCursor)}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}</>}</section>
+    </div>
   </section>;
+}
+
+function useNearViewport<T extends HTMLElement>(active = true, rootMargin = "600px") {
+  const ref = useRef<T | null>(null);
+  const [nearViewport, setNearViewport] = useState(false);
+
+  useEffect(() => {
+    if (!active) return;
+    const element = ref.current;
+    if (!element || typeof IntersectionObserver === "undefined") {
+      setNearViewport(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setNearViewport(true);
+        observer.disconnect();
+      },
+      {rootMargin},
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [active, rootMargin]);
+
+  return [ref, nearViewport] as const;
 }
 
 function RatingSummary({summary}: {summary: import("@/features/catalog/contracts/responses").ProductRatingSummary}) {

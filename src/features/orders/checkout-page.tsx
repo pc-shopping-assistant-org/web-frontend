@@ -21,9 +21,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ErrorMessage } from "@/components/ui/error-message";
+import { CheckoutPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
 import { ApiClientError } from "@/lib/api/envelope";
@@ -186,12 +188,7 @@ export function CheckoutPage() {
     }
   }
 
-  if (profile.isPending)
-    return (
-      <section className="page-wrap py-16">
-        <div className="h-72 animate-pulse rounded-2xl bg-muted" />
-      </section>
-    );
+  if (profile.isPending) return <CheckoutPageSkeleton />;
   if (profile.isError && !requiresLogin)
     return (
       <section className="page-wrap max-w-2xl py-16">
@@ -224,12 +221,7 @@ export function CheckoutPage() {
         </Card>
       </section>
     );
-  if (cart.isPending)
-    return (
-      <section className="page-wrap py-16">
-        <div className="h-72 animate-pulse rounded-2xl bg-muted" />
-      </section>
-    );
+  if (cart.isPending) return <CheckoutPageSkeleton />;
   if (cart.isError)
     return (
       <section className="page-wrap py-16">
@@ -394,7 +386,7 @@ export function CheckoutPage() {
             </CardHeader>
             <CardContent>
               {shipping.isPending ? (
-                <div className="h-20 animate-pulse rounded-xl bg-muted" />
+                <Skeleton className="h-20 rounded-xl" />
               ) : shipping.isError ? (
                 <ErrorMessage error={shipping.error} />
               ) : shippingOptions.length === 0 ? (

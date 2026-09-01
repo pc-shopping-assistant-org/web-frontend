@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/card";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Link } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/format";
@@ -184,7 +185,7 @@ export function AdminDashboardPage({
             {revenue.isError ? (
               <ErrorMessage error={revenue.error} />
             ) : revenue.isPending ? (
-              <div className="h-52 animate-pulse rounded-xl bg-muted" />
+              <Skeleton className="h-52 rounded-xl" />
             ) : visibleRevenuePoints.length === 0 || !hasRevenueActivity ? (
               <EmptyState
                 icon={ChartNoAxesCombined}
@@ -246,7 +247,7 @@ export function AdminDashboardPage({
             {stats.isError ? (
               <ErrorMessage error={stats.error} />
             ) : stats.isPending ? (
-              <div className="h-52 animate-pulse rounded-xl bg-muted" />
+              <Skeleton className="h-52 rounded-xl" />
             ) : statusItems.length === 0 ? (
               <EmptyState />
             ) : (
@@ -306,7 +307,7 @@ export function AdminDashboardPage({
             {topSelling.isError ? (
               <ErrorMessage error={topSelling.error} />
             ) : topSelling.isPending ? (
-              <div className="h-48 animate-pulse rounded-xl bg-muted" />
+              <Skeleton className="h-48 rounded-xl" />
             ) : (topSelling.data ?? []).length === 0 ? (
               <EmptyState
                 icon={Package}
@@ -635,18 +636,18 @@ function EmptyState({
 function DashboardLoading() {
   return (
     <div className="space-y-8">
-      <div className="h-24 animate-pulse rounded-2xl bg-muted" />
+      <Skeleton className="h-24 rounded-2xl" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <div
+          <Skeleton
             key={index}
-            className="h-32 animate-pulse rounded-2xl bg-muted"
+            className="h-32 rounded-2xl"
           />
         ))}
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
-        <div className="h-80 animate-pulse rounded-2xl bg-muted" />
-        <div className="h-80 animate-pulse rounded-2xl bg-muted" />
+        <Skeleton className="h-80 rounded-2xl" />
+        <Skeleton className="h-80 rounded-2xl" />
       </div>
     </div>
   );

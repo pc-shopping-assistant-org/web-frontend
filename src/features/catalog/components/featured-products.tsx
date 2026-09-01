@@ -4,23 +4,29 @@ import {IconArrowRight} from "@tabler/icons-react";
 import {useLocale, useTranslations} from "next-intl";
 
 import {Link} from "@/i18n/navigation";
+import {FeaturedProductsSkeleton} from "@/components/ui/loading-skeletons";
 import type {ProductSummary} from "@/features/catalog/contracts/responses";
-import {useProducts} from "../queries";
 import {CatalogCategoryIcon} from "./catalog-category-icon";
 import {ProductCard} from "./product-card";
 
-export function FeaturedProducts() {
+export function FeaturedProducts({
+  products,
+  pending = false,
+  unavailable = false,
+}: {
+  products: ProductSummary[];
+  pending?: boolean;
+  unavailable?: boolean;
+}) {
   const t = useTranslations("home");
   const locale = useLocale();
-  const query = useProducts({limit: 100});
-  if (query.isPending) return <CategoryShowcaseLoading />;
-  if (query.isError) return <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">{t("catalogDescription")}</div>;
-  const products = query.data?.items ?? [];
+  if (pending) return <FeaturedProductsSkeleton />;
+  if (unavailable) return <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">{t("catalogDescription")}</div>;
   const groups = groupProducts(products, t("uncategorized"), locale);
   if (products.length === 0) return <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">{t("noProducts")}</div>;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 [content-visibility:auto] [contain-intrinsic-size:1200px]">
       <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/50 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4">
         <div className="shrink-0">
           <p className="eyebrow whitespace-nowrap">{t("categoryEyebrow")}</p>
@@ -124,15 +130,4 @@ function groupProducts(products: ProductSummary[], uncategorized: string, locale
     groups.set(id, current);
   }
   return [...groups.values()].sort((left, right) => right.products.length - left.products.length || left.name.localeCompare(right.name, locale));
-}
-
-function CategoryShowcaseLoading() {
-  return (
-    <div className="space-y-5">
-      <div className="flex h-16 animate-pulse rounded-2xl bg-muted" />
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-        {Array.from({length: 10}, (_, index) => <div key={index} className="h-80 animate-pulse rounded-2xl bg-muted" />)}
-      </div>
-    </div>
-  );
 }

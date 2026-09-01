@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import type {CategoryTree} from "@/features/catalog/contracts/responses";
 import {Gender} from "@/lib/domain/account-enums";
@@ -687,7 +688,7 @@ export function VariantTargetPicker({
       </div>
       {productId ? (
         product.isPending ? (
-          <div className="h-24 animate-pulse rounded-xl bg-muted" />
+          <Skeleton className="h-24 rounded-xl" />
         ) : product.isError ? (
           <p className="rounded-xl border border-dashed p-4 text-sm text-destructive">
             {t("variantsUnavailable")}
