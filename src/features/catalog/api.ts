@@ -1,7 +1,41 @@
 import {backendFetch} from "@/lib/api/client";
-import type {BackendSchema, Brand, CategoryTree, ProductDetail, ProductPage, Review, ReviewsPage} from "@/lib/api/types";
+import type {
+  BrandDto,
+  CategoryTreeDto,
+  ProductDetailDto,
+  ProductPageDto,
+  ProductRatingSummaryDto,
+  ReviewDto,
+  ReviewsPageDto,
+} from "@/features/catalog/contracts/dto";
+import {
+  mapBrand,
+  mapCategoryTree,
+  mapProductDetail,
+  mapProductPage,
+  mapProductRatingSummary,
+  mapReview,
+  mapReviewsPage,
+} from "@/features/catalog/mappers";
+import {
+  createReviewRequestSchema,
+  type CreateReviewRequest,
+} from "@/features/catalog/contracts/requests";
+import {parseRequest} from "@/lib/api/parse-request";
+import {ReviewStatus} from "@/lib/domain/catalog-enums";
 
-export type ProductFilters = Pick<BackendSchema["ProductFilterRequest"], "cursor" | "limit" | "categoryId" | "brandId" | "minPrice" | "maxPrice" | "keyword" | "status" | "sortBy" | "sortDirection">;
+export type ProductFilters = {
+  cursor?: string;
+  limit?: number;
+  categoryId?: string;
+  brandId?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  keyword?: string;
+  status?: string;
+  sortBy?: string;
+  sortDirection?: string;
+};
 
 export async function getProducts(filters: ProductFilters = {}) {
   const params = new URLSearchParams();
@@ -9,30 +43,50 @@ export async function getProducts(filters: ProductFilters = {}) {
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
   const query = params.toString();
-  return backendFetch<ProductPage>(`/products${query ? `?${query}` : ""}`);
+  const response = await backendFetch<ProductPageDto>(
+    `/products${query ? `?${query}` : ""}`,
+  );
+  return mapProductPage(response);
 }
 
-export function getProductBySlug(seoName: string) {
-  return backendFetch<ProductDetail>(`/products/slug/${encodeURIComponent(seoName)}`);
+export async function getProductBySlug(seoName: string) {
+  const response = await backendFetch<ProductDetailDto>(
+    `/products/slug/${encodeURIComponent(seoName)}`,
+  );
+  return mapProductDetail(response);
 }
 
-export function getCategories() {
-  return backendFetch<CategoryTree[]>("/categories");
+export async function getCategories() {
+  const response = await backendFetch<CategoryTreeDto[]>("/categories");
+  return response.map(mapCategoryTree);
 }
 
-export function getBrands() {
-  return backendFetch<Brand[]>("/brands");
+export async function getBrands() {
+  const response = await backendFetch<BrandDto[]>("/brands");
+  return response.map(mapBrand);
 }
 
-export function getProductReviews(productId: string, cursor?: string) {
-  const params = new URLSearchParams({status: "ACTIVE", limit: "10"});
+export async function getProductReviews(productId: string, cursor?: string) {
+  const params = new URLSearchParams({status: ReviewStatus.Active, limit: "10"});
   if (cursor) params.set("cursor", cursor);
-  return backendFetch<ReviewsPage>(`/products/${encodeURIComponent(productId)}/reviews?${params.toString()}`);
+  const response = await backendFetch<ReviewsPageDto>(
+    `/products/${encodeURIComponent(productId)}/reviews?${params.toString()}`,
+  );
+  return mapReviewsPage(response);
 }
 
-export function createProductReview(productId: string, request: BackendSchema["CreateReviewRequest"]) {
-  return backendFetch<Review>(`/products/${encodeURIComponent(productId)}/reviews`, {
+export async function getProductRatingSummary(productId: string) {
+  const response = await backendFetch<ProductRatingSummaryDto>(
+    `/products/${encodeURIComponent(productId)}/reviews/summary`,
+  );
+  return mapProductRatingSummary(response);
+}
+
+export async function createProductReview(productId: string, request: CreateReviewRequest) {
+  const payload = parseRequest(createReviewRequestSchema, request);
+  const response = await backendFetch<ReviewDto>(`/products/${encodeURIComponent(productId)}/reviews`, {
     method: "POST",
-    body: JSON.stringify(request),
+    body: JSON.stringify(payload),
   });
+  return mapReview(response);
 }

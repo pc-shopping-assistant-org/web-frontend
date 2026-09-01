@@ -1,20 +1,30 @@
 import {backendFetch} from "@/lib/api/client";
-import type {AddToCartRequest, Cart, UpdateCartItemRequest} from "@/lib/api/types";
+import type {CartDto} from "@/features/cart/contracts/dto";
+import {mapCart} from "@/features/cart/mappers";
+import {
+  addToCartRequestSchema,
+  type AddToCartRequest,
+  type UpdateCartItemRequest,
+  updateCartItemRequestSchema,
+} from "@/features/cart/contracts";
+import {parseRequest} from "@/lib/api/parse-request";
 
-export function getCart() {
-  return backendFetch<Cart>("/cart");
+export async function getCart() {
+  return mapCart(await backendFetch<CartDto>("/cart"));
 }
 
-export function addToCart(request: AddToCartRequest) {
-  return backendFetch<Cart>("/cart/items", {method: "POST", body: JSON.stringify(request)});
+export async function addToCart(request: AddToCartRequest) {
+  const payload = parseRequest(addToCartRequestSchema, request);
+  return mapCart(await backendFetch<CartDto>("/cart/items", {method: "POST", body: JSON.stringify(payload)}));
 }
 
-export function updateCartItem(variantId: string, request: UpdateCartItemRequest) {
-  return backendFetch<Cart>(`/cart/items/${encodeURIComponent(variantId)}`, {method: "PUT", body: JSON.stringify(request)});
+export async function updateCartItem(variantId: string, request: UpdateCartItemRequest) {
+  const payload = parseRequest(updateCartItemRequestSchema, request);
+  return mapCart(await backendFetch<CartDto>(`/cart/items/${encodeURIComponent(variantId)}`, {method: "PUT", body: JSON.stringify(payload)}));
 }
 
-export function removeCartItem(variantId: string) {
-  return backendFetch<Cart>(`/cart/items/${encodeURIComponent(variantId)}`, {method: "DELETE"});
+export async function removeCartItem(variantId: string) {
+  return mapCart(await backendFetch<CartDto>(`/cart/items/${encodeURIComponent(variantId)}`, {method: "DELETE"}));
 }
 
 export function clearCart() {

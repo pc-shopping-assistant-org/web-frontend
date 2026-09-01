@@ -1,20 +1,29 @@
 import {backendFetch} from "@/lib/api/client";
-import type {CustomerAddress, CustomerAddressRequest} from "@/lib/api/types";
+import type {CustomerAddressDto} from "@/features/account/contracts/dto";
+import {mapCustomerAddress} from "@/features/account/mappers";
+import {
+  customerAddressRequestSchema,
+  type CustomerAddressRequest,
+} from "@/features/account/contracts/requests";
+import {parseRequest} from "@/lib/api/parse-request";
 
-export function getAddresses() {
-  return backendFetch<CustomerAddress[]>("/users/addresses");
+export async function getAddresses() {
+  const response = await backendFetch<CustomerAddressDto[]>("/users/addresses");
+  return response.map(mapCustomerAddress);
 }
 
-export function createAddress(request: CustomerAddressRequest) {
-  return backendFetch<CustomerAddress>("/users/addresses", {method: "POST", body: JSON.stringify(request)});
+export async function createAddress(request: CustomerAddressRequest) {
+  const payload = parseRequest(customerAddressRequestSchema, request);
+  return mapCustomerAddress(await backendFetch<CustomerAddressDto>("/users/addresses", {method: "POST", body: JSON.stringify(payload)}));
 }
 
-export function updateAddress(addressId: string, request: CustomerAddressRequest) {
-  return backendFetch<CustomerAddress>(`/users/addresses/${encodeURIComponent(addressId)}`, {method: "PUT", body: JSON.stringify(request)});
+export async function updateAddress(addressId: string, request: CustomerAddressRequest) {
+  const payload = parseRequest(customerAddressRequestSchema, request);
+  return mapCustomerAddress(await backendFetch<CustomerAddressDto>(`/users/addresses/${encodeURIComponent(addressId)}`, {method: "PUT", body: JSON.stringify(payload)}));
 }
 
-export function setDefaultAddress(addressId: string) {
-  return backendFetch<CustomerAddress>(`/users/addresses/${encodeURIComponent(addressId)}/default`, {method: "PATCH"});
+export async function setDefaultAddress(addressId: string) {
+  return mapCustomerAddress(await backendFetch<CustomerAddressDto>(`/users/addresses/${encodeURIComponent(addressId)}/default`, {method: "PATCH"}));
 }
 
 export function deleteAddress(addressId: string) {

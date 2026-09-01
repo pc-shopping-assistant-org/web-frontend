@@ -1,6 +1,6 @@
 import {z} from "zod";
 
-import {STATIC_MESSAGE_KEYS, type ApiError, type ApiResponse, type MessageKey} from "./types";
+import {STATIC_MESSAGE_KEYS, type ApiError, type ApiResponse, type MessageKey} from "./contracts/common";
 
 const apiErrorSchema = z
   .object({

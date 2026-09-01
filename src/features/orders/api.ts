@@ -1,38 +1,104 @@
-import {backendFetch} from "@/lib/api/client";
-import type {BackendSchema, DiscountValidation, Order, OrdersPage, PaymentIntent, PaymentMethod} from "@/lib/api/types";
+import { backendFetch } from "@/lib/api/client";
+import type {
+  DiscountValidationDto,
+  OrderDto,
+  OrdersPageDto,
+  PaymentIntentDto,
+  PaymentMethodDto,
+  ShippingMethodDto,
+} from "@/features/orders/contracts/dto";
+import {
+  mapDiscountValidation,
+  mapOrder,
+  mapOrdersPage,
+  mapPaymentIntent,
+  mapPaymentMethod,
+  mapShippingMethod,
+} from "@/features/orders/mappers";
+import type {
+  CreateOrderRequest,
+  ValidateDiscountRequest,
+} from "@/features/orders/contracts/requests";
+import {
+  cancelOrderRequestSchema,
+  createOrderRequestSchema,
+  createPaymentIntentRequestSchema,
+  validateDiscountRequestSchema,
+} from "@/features/orders/contracts/requests";
+import {parseRequest} from "@/lib/api/parse-request";
+import {PaymentMethodCode} from "@/lib/domain/commerce-enums";
 
-export type OrderFilters = Pick<BackendSchema["OrderFilterRequest"], "cursor" | "limit" | "keyword" | "status">;
+export type OrderFilters = {
+  cursor?: string;
+  limit?: number;
+  keyword?: string;
+  status?: string;
+};
 
-export function createOrder(request: BackendSchema["CreateOrderRequest"]) {
-  return backendFetch<Order>("/orders", {method: "POST", body: JSON.stringify(request)});
+export async function createOrder(request: CreateOrderRequest) {
+  const payload = parseRequest(createOrderRequestSchema, request);
+  return mapOrder(await backendFetch<OrderDto>("/orders", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }));
 }
 
-export function getOrders(filters: OrderFilters = {}) {
+export async function getOrders(filters: OrderFilters = {}) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value));
-  return backendFetch<OrdersPage>(`/orders/me${params.size ? `?${params.toString()}` : ""}`);
+  for (const [key, value] of Object.entries(filters))
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  const response = await backendFetch<OrdersPageDto>(
+    `/orders/me${params.size ? `?${params.toString()}` : ""}`,
+  );
+  return mapOrdersPage(response);
 }
 
-export function getOrder(orderId: string) {
-  return backendFetch<Order>(`/orders/${encodeURIComponent(orderId)}`);
+export async function getOrder(orderId: string) {
+  return mapOrder(await backendFetch<OrderDto>(`/orders/${encodeURIComponent(orderId)}`));
 }
 
-export function cancelOrder(orderId: string, reason?: string) {
-  return backendFetch<Order>(`/orders/${encodeURIComponent(orderId)}/cancel`, {method: "PATCH", body: JSON.stringify(reason ? {reason} : {})});
+export async function cancelOrder(orderId: string, reason?: string) {
+  const payload = parseRequest(cancelOrderRequestSchema, reason ? { reason } : {});
+  return mapOrder(await backendFetch<OrderDto>(`/orders/${encodeURIComponent(orderId)}/cancel`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  }));
 }
 
-export function getPaymentMethods() {
-  return backendFetch<PaymentMethod[]>("/payment-methods");
+export async function getPaymentMethods() {
+  const response = await backendFetch<PaymentMethodDto[]>("/payment-methods");
+  return response.map(mapPaymentMethod);
 }
 
-export function validateDiscount(request: BackendSchema["ValidateDiscountRequest"]) {
-  return backendFetch<DiscountValidation>("/discounts/validate", {method: "POST", body: JSON.stringify(request)});
+export async function getShippingMethods() {
+  const response = await backendFetch<ShippingMethodDto[]>("/shipping-methods");
+  return response.map(mapShippingMethod);
 }
 
-export function createPaymentIntent(orderId: string) {
-  return backendFetch<PaymentIntent>("/payments/create-intent", {method: "POST", body: JSON.stringify({orderId, paymentMethod: "STRIPE_CARD"})});
+export async function validateDiscount(
+  request: ValidateDiscountRequest,
+) {
+  const payload = parseRequest(validateDiscountRequestSchema, request);
+  return mapDiscountValidation(await backendFetch<DiscountValidationDto>("/discounts/validate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }));
+}
+
+export async function createPaymentIntent(
+  orderId: string,
+  paymentMethod: PaymentMethodCode = PaymentMethodCode.StripeCard,
+) {
+  const payload = parseRequest(createPaymentIntentRequestSchema, {orderId, paymentMethod});
+  return mapPaymentIntent(await backendFetch<PaymentIntentDto>("/payments/create-intent", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }));
 }
 
 export function confirmCodPayment(paymentId: string) {
-  return backendFetch<string>(`/payments/${encodeURIComponent(paymentId)}/confirm-cod`, {method: "POST"});
+  return backendFetch<string>(
+    `/payments/${encodeURIComponent(paymentId)}/confirm-cod`,
+    { method: "POST" },
+  );
 }

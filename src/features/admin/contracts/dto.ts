@@ -1,0 +1,29 @@
+import type {BackendSchema} from "@/lib/api/generated/types";
+
+/** OpenAPI transport shapes kept inside admin adapters. */
+export type AttributeDefinitionDto = BackendSchema["AttributeDefinitionResponse"];
+export type AttributeSchemaItemDto = BackendSchema["AttributeSchemaItem"];
+export type CategoryAttributeGroupDto = BackendSchema["CategoryAttributeGroupResponse"];
+export type CategoryAttributeDto = BackendSchema["CategoryAttributeResponse"];
+export type CategorySpecsDto = BackendSchema["CategorySpecsSchemaResponse"];
+export type GroupSchemaItemDto = BackendSchema["GroupSchemaItem"];
+export type CustomerDetailDto = BackendSchema["CustomerDetailResponse"];
+export type CustomerOrderSummaryDto = BackendSchema["CustomerOrderSummaryResponse"];
+export type CustomersPageDto = BackendSchema["CursorPageResponseCustomerDetailResponse"];
+export type DashboardOverviewDto = BackendSchema["DashboardOverviewResponse"];
+export type OrderStatusStatDto = BackendSchema["OrderStatusStatResponse"];
+export type DiscountDetailDto = BackendSchema["DiscountDetailResponse"];
+export type DiscountSummaryDto = BackendSchema["DiscountSummaryResponse"];
+export type DiscountsPageDto = BackendSchema["CursorPageResponseDiscountSummaryResponse"];
+export type EmployeeDetailDto = BackendSchema["EmployeeDetailResponse"];
+export type EmployeesPageDto = BackendSchema["CursorPageResponseEmployeeDetailResponse"];
+export type FileResponseDto = BackendSchema["FileResponse"];
+export type PaymentDetailDto = BackendSchema["PaymentDetailResponse"];
+export type PaymentsPageDto = BackendSchema["CursorPageResponsePaymentDetailResponse"];
+export type RoleDto = BackendSchema["RoleResponse"];
+export type OptionDto = BackendSchema["OptionResponse"];
+export type RevenueChartDataDto = BackendSchema["RevenueChartDataResponse"];
+export type RevenueChartPointDto = BackendSchema["RevenueChartPointResponse"];
+export type SupplierDto = BackendSchema["SupplierResponse"];
+export type SuppliersPageDto = BackendSchema["CursorPageResponseSupplierResponse"];
+export type TopSellingProductDto = BackendSchema["TopSellingProductResponse"];
