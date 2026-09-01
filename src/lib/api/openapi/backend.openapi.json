@@ -532,6 +532,40 @@
       }
     },
     "/api/v1/admin/products/{id}": {
+      "get": {
+        "tags": [
+          "admin-product-controller"
+        ],
+        "operationId": "getAdminProductById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseProductDetailResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
       "put": {
         "tags": [
           "admin-product-controller"
@@ -1171,6 +1205,49 @@
         ]
       }
     },
+    "/api/v1/users/profile/me/avatar": {
+      "post": {
+        "tags": [
+          "user-profile-controller"
+        ],
+        "operationId": "uploadMyAvatar",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseFileResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/v1/users/profile/change-password/otp": {
       "post": {
         "tags": [
@@ -1777,6 +1854,36 @@
         }
       }
     },
+    "/api/v1/auth/google": {
+      "post": {
+        "tags": [
+          "auth-controller"
+        ],
+        "operationId": "googleLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseAuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/forgot-password": {
       "post": {
         "tags": [
@@ -2058,6 +2165,49 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponseOptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/files": {
+      "post": {
+        "tags": [
+          "admin-file-controller"
+        ],
+        "operationId": "uploadImage",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                },
+                "required": [
+                  "file"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseFileResponse"
                 }
               }
             }
@@ -2819,6 +2969,26 @@
         ]
       }
     },
+    "/api/v1/shipping-methods": {
+      "get": {
+        "tags": [
+          "shipping-method-controller"
+        ],
+        "operationId": "getActiveShippingMethods",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseListShippingMethodResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/products": {
       "get": {
         "tags": [
@@ -3162,6 +3332,38 @@
               "*/*": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponseOptionResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/files/{fileId}/content": {
+      "get": {
+        "tags": [
+          "admin-file-controller"
+        ],
+        "operationId": "content",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
                 }
               }
             }
@@ -5495,6 +5697,57 @@
           }
         }
       },
+      "ApiResponseFileResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FileResponse"
+          },
+          "message": {
+            "type": "string",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "example": "SUCCESS"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "FileResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storageProvider": {
+            "type": "string"
+          },
+          "originalName": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "publicUrl": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "ApiResponseString": {
         "type": "object",
         "properties": {
@@ -6241,6 +6494,18 @@
           "password"
         ]
       },
+      "GoogleLoginRequest": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "idToken"
+        ]
+      },
       "ForgotPasswordRequest": {
         "type": "object",
         "properties": {
@@ -6919,6 +7184,50 @@
             "items": {
               "$ref": "#/components/schemas/ApiError"
             }
+          }
+        }
+      },
+      "ApiResponseListShippingMethodResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShippingMethodResponse"
+            }
+          },
+          "message": {
+            "type": "string",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "example": "SUCCESS"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiError"
+            }
+          }
+        }
+      },
+      "ShippingMethodResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "fee": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "status": {
+            "type": "string"
           }
         }
       },

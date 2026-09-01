@@ -388,6 +388,22 @@ export type paths = {
         patch: operations["updateEmployeeStatus"];
         trace?: never;
     };
+    "/api/v1/admin/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/images/{imageId}": {
         parameters: {
             query?: never;
@@ -587,7 +603,7 @@ export type paths = {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["getAdminProductById"];
         put: operations["updateProduct"];
         post?: never;
         delete: operations["deleteProduct"];
@@ -798,6 +814,22 @@ export type paths = {
         get?: never;
         put?: never;
         post: operations["forgotPassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/google": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["googleLogin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1092,6 +1124,22 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/files/{fileId}/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["content"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/options": {
         parameters: {
             query?: never;
@@ -1380,6 +1428,22 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/shipping-methods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getActiveShippingMethods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/users/addresses": {
         parameters: {
             query?: never;
@@ -1470,6 +1534,22 @@ export type paths = {
         get: operations["getMyProfile"];
         put: operations["updateMyProfile"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/profile/me/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uploadMyAvatar"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1704,6 +1784,15 @@ export type components = {
              */
             message?: string;
         };
+        ApiResponseFileResponse: {
+            data?: components["schemas"]["FileResponse"];
+            errors?: components["schemas"]["ApiError"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @example SUCCESS
+             */
+            message?: string;
+        };
         ApiResponseInvoiceResponse: {
             data?: components["schemas"]["InvoiceResponse"];
             errors?: components["schemas"]["ApiError"][];
@@ -1787,6 +1876,15 @@ export type components = {
         };
         ApiResponseListRoleResponse: {
             data?: components["schemas"]["RoleResponse"][];
+            errors?: components["schemas"]["ApiError"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @example SUCCESS
+             */
+            message?: string;
+        };
+        ApiResponseListShippingMethodResponse: {
+            data?: components["schemas"]["ShippingMethodResponse"][];
             errors?: components["schemas"]["ApiError"][];
             /**
              * @description Static frontend mapping key; request-specific details belong in errors
@@ -2489,10 +2587,26 @@ export type components = {
             sanitizedLimit?: number;
             status?: string;
         };
+        FileResponse: {
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: uuid */
+            id?: string;
+            mimeType?: string;
+            originalName?: string;
+            publicUrl?: string;
+            /** Format: int64 */
+            sizeBytes?: number;
+            status?: string;
+            storageProvider?: string;
+        };
         ForgotPasswordRequest: {
             /** Format: email */
             email?: string;
             phone?: string;
+        };
+        GoogleLoginRequest: {
+            idToken: string;
         };
         GroupSchemaItem: {
             attributes?: components["schemas"]["AttributeSchemaItem"][];
@@ -2894,6 +3008,15 @@ export type components = {
             status?: string;
         };
         RoleResponse: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            status?: string;
+        };
+        ShippingMethodResponse: {
+            code?: string;
+            /** Format: int64 */
+            fee?: number;
             /** Format: uuid */
             id?: string;
             name?: string;
@@ -3889,6 +4012,33 @@ export interface operations {
             };
         };
     };
+    uploadImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseFileResponse"];
+                };
+            };
+        };
+    };
     deleteImage: {
         parameters: {
             query?: never;
@@ -4199,6 +4349,28 @@ export interface operations {
                 "application/json": components["schemas"]["CreateProductRequest"];
             };
         };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseProductDetailResponse"];
+                };
+            };
+        };
+    };
+    getAdminProductById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description OK */
             200: {
@@ -4653,6 +4825,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseString"];
+                };
+            };
+        };
+    };
+    googleLogin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleLoginRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAuthResponse"];
                 };
             };
         };
@@ -5123,6 +5319,28 @@ export interface operations {
             };
         };
     };
+    content: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                fileId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
+                };
+            };
+        };
+    };
     getOptions: {
         parameters: {
             query?: {
@@ -5586,6 +5804,26 @@ export interface operations {
             };
         };
     };
+    getActiveShippingMethods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListShippingMethodResponse"];
+                };
+            };
+        };
+    };
     list: {
         parameters: {
             query?: never;
@@ -5784,6 +6022,33 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseUserProfileResponse"];
+                };
+            };
+        };
+    };
+    uploadMyAvatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseFileResponse"];
                 };
             };
         };
