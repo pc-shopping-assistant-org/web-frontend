@@ -25,6 +25,7 @@ import {
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import {useSyncExternalStore} from "react";
 
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent} from "@/components/ui/card";
@@ -50,12 +51,25 @@ const FeaturedProducts = dynamic(
   {loading: () => <FeaturedProductsSkeleton />},
 );
 
+const subscribeToHydration = () => () => {};
+const getHydratedSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
+
 export function HomeStorefront() {
   const t = useTranslations("home");
   const profile = useProfile();
   const categories = useCategories();
   const products = useProducts({limit: 100});
-  const isStaff = isStaffRole(profile.data?.role);
+  // The profile query can already be populated in the browser (for example
+  // after logging in and navigating back home) while the server-rendered RSC
+  // tree has no profile data. Keep role-dependent links on the guest shape
+  // until hydration has completed so both trees produce identical markup.
+  const hasMounted = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getServerHydrationSnapshot,
+  );
+  const isStaff = hasMounted && isStaffRole(profile.data?.role);
   const categoryLinks = getActiveCategories(categories.data ?? []);
   const featuredProducts = products.data?.items ?? [];
   const categoryCounts = getCategoryCounts(featuredProducts, categories.data ?? []);
