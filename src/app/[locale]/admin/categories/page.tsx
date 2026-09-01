@@ -1,3 +1,3 @@
-import {CategoryManagement} from "@/features/admin/catalog-management";
+import {CategoryManagementRouteClient} from "../admin-route-client";
 
-export default function AdminCategoriesRoute() { return <CategoryManagement />; }
+export default function AdminCategoriesRoute() { return <CategoryManagementRouteClient />; }

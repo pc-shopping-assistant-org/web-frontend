@@ -1,5 +1,5 @@
-import { CatalogSettingsPage } from "@/features/admin/catalog-settings";
+import {CatalogSettingsRouteClient} from "../admin-route-client";
 
 export default function AdminCatalogSettingsRoute() {
-  return <CatalogSettingsPage />;
+  return <CatalogSettingsRouteClient />;
 }

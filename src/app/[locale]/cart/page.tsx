@@ -1,9 +1,9 @@
 import type {Metadata} from "next";
 
-import {CartPage} from "@/features/cart/cart-page";
+import {CartRouteClient} from "../customer-route-client";
 
 export const metadata: Metadata = {title: "Cart"};
 
 export default function CartRoute() {
-  return <CartPage />;
+  return <CartRouteClient />;
 }

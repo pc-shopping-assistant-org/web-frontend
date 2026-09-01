@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 
-import {OrdersPage} from "@/features/orders/orders-page";
+import {OrdersRouteClient} from "../customer-route-client";
 
 export const metadata: Metadata = {title: "Orders"};
-export default function OrdersRoute() { return <OrdersPage />; }
+export default function OrdersRoute() { return <OrdersRouteClient />; }

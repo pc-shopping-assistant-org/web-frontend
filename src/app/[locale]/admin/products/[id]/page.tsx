@@ -1,10 +1,10 @@
 import type {Metadata} from "next";
 
-import {AdminProductDetailPage} from "@/features/admin/detail-pages";
+import {AdminProductDetailRouteClient} from "../../admin-route-client";
 
 export const metadata: Metadata = {title: "Product"};
 
 export default async function AdminProductRoute({params}: {params: Promise<{id: string}>}) {
   const {id} = await params;
-  return <AdminProductDetailPage productId={id} />;
+  return <AdminProductDetailRouteClient productId={id} />;
 }

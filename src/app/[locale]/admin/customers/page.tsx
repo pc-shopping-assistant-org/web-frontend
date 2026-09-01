@@ -1,2 +1,2 @@
-import {AdminResourcePage} from "@/features/admin/resource-page";
-export default function AdminCustomersRoute() { return <AdminResourcePage resource="customers" />; }
+import {AdminResourceRouteClient} from "../admin-route-client";
+export default function AdminCustomersRoute() { return <AdminResourceRouteClient resource="customers" />; }

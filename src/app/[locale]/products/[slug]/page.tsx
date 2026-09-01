@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 
-import {ProductDetailPage} from "@/features/catalog/components/product-detail-page";
+import {ProductDetailRouteClient} from "../../catalog-route-client";
 
 type Props = {params: Promise<{slug: string}>};
 
@@ -11,5 +11,5 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 
 export default async function ProductPage({params}: Props) {
   const {slug} = await params;
-  return <ProductDetailPage slug={slug} />;
+  return <ProductDetailRouteClient slug={slug} />;
 }

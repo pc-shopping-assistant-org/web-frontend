@@ -1,8 +1,9 @@
 import type {Metadata} from "next";
-import {AccountPage as AccountDashboard} from "@/features/account/account-page";
+
+import {AccountRouteClient} from "../customer-route-client";
 
 export const metadata: Metadata = {title: "Account"};
 
 export default function AccountPage() {
-  return <AccountDashboard />;
+  return <AccountRouteClient />;
 }

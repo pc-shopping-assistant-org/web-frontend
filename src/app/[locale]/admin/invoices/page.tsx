@@ -1,9 +1,9 @@
 import type {Metadata} from "next";
 
-import {AdminInvoicesPage} from "@/features/admin/detail-pages";
+import {AdminInvoicesRouteClient} from "../admin-route-client";
 
 export const metadata: Metadata = {title: "Invoices"};
 
 export default function AdminInvoicesRoute() {
-  return <AdminInvoicesPage />;
+  return <AdminInvoicesRouteClient />;
 }

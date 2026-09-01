@@ -1,2 +1,2 @@
-import {AdminResourcePage} from "@/features/admin/resource-page";
-export default function AdminPaymentMethodsRoute() { return <AdminResourcePage resource="payment-methods" />; }
+import {AdminResourceRouteClient} from "../admin-route-client";
+export default function AdminPaymentMethodsRoute() { return <AdminResourceRouteClient resource="payment-methods" />; }

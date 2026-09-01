@@ -1,3 +1,3 @@
-import {BrandManagement} from "@/features/admin/catalog-management";
+import {BrandManagementRouteClient} from "../admin-route-client";
 
-export default function AdminBrandsRoute() { return <BrandManagement />; }
+export default function AdminBrandsRoute() { return <BrandManagementRouteClient />; }

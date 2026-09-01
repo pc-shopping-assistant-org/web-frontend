@@ -1,10 +1,10 @@
 import type {Metadata} from "next";
 
-import {AdminSupplierDetailPage} from "@/features/admin/detail-pages";
+import {AdminSupplierDetailRouteClient} from "../../admin-route-client";
 
 export const metadata: Metadata = {title: "Supplier"};
 
 export default async function AdminSupplierRoute({params}: {params: Promise<{id: string}>}) {
   const {id} = await params;
-  return <AdminSupplierDetailPage supplierId={id} />;
+  return <AdminSupplierDetailRouteClient supplierId={id} />;
 }

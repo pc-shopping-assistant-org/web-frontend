@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 
-import {AdminDashboardPage} from "@/features/admin/dashboard-page";
+import {AdminDashboardRouteClient} from "../admin-route-client";
 
 export const metadata: Metadata = {title: "Statistics"};
 
@@ -9,5 +9,5 @@ export const metadata: Metadata = {title: "Statistics"};
  * but has its own stable route so operators can bookmark and share reports.
  */
 export default function AdminStatisticsRoute() {
-  return <AdminDashboardPage mode="statistics" />;
+  return <AdminDashboardRouteClient mode="statistics" />;
 }

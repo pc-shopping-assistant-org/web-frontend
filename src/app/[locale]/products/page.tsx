@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 
-import {CatalogPage} from "@/features/catalog/components/catalog-page";
+import {CatalogRouteClient} from "../catalog-route-client";
 
 export const metadata: Metadata = {title: "Products"};
 
@@ -17,7 +17,7 @@ export default async function ProductsPage({searchParams}: {searchParams: Promis
   const sortDirection = value("sortDirection");
 
   return (
-    <CatalogPage
+    <CatalogRouteClient
       key={[value("keyword"), value("categoryId"), value("brandId"), value("minPrice"), value("maxPrice"), sortBy, sortDirection].join("|")}
       initialKeyword={value("keyword")}
       initialCategoryId={value("categoryId")}

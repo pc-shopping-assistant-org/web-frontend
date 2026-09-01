@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 
-import {AdminDashboardPage} from "@/features/admin/dashboard-page";
+import {AdminDashboardRouteClient} from "./admin-route-client";
 
 export const metadata: Metadata = {title: "Admin dashboard"};
-export default function AdminRoute() { return <AdminDashboardPage />; }
+export default function AdminRoute() { return <AdminDashboardRouteClient />; }

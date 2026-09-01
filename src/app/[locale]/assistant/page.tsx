@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 
-import {AssistantPage} from "@/features/assistant/assistant-page";
+import {AssistantRouteClient} from "./assistant-route-client";
 
 export const metadata: Metadata = {title: "AI assistant"};
-export default function AssistantRoute() { return <AssistantPage />; }
+export default function AssistantRoute() { return <AssistantRouteClient />; }
