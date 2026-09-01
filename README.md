@@ -1,6 +1,6 @@
-# PC Shopping Assistant — Web Frontend
+# gearPC — Web Frontend
 
-Next.js 16 App Router frontend for the PC Shopping Assistant storefront.
+Next.js 16 App Router frontend for the gearPC PC hardware storefront.
 
 ## Local development
 
@@ -16,6 +16,12 @@ corepack yarn dev
 
 Open `http://localhost:3000/vi` (or `/en`). Customer flows are live API calls;
 there is no runtime mock data.
+
+To enable Google Login, create a Google Identity Services web client and set
+the same client ID in `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (browser) and backend
+`GOOGLE_CLIENT_ID` (server). The backend verifies the ID token and links it to
+an existing local account; local registration remains required for the phone
+and address fields in this MVP.
 
 ## Implemented surfaces
 
@@ -60,6 +66,36 @@ corepack yarn api:check
 
 `openapi-typescript` generates schemas and operation/path types only. Feature
 adapters use a small BFF HTTP client instead of a generated runtime client.
+
+## Contract organization
+
+Runtime request validation and app-facing response aliases are colocated with
+their bounded context:
+
+```text
+src/features/<context>/contracts/
+  requests.ts    # Zod schemas + inferred request types
+  dto.ts         # transport aliases over generated OpenAPI schemas
+  responses.ts   # stable frontend-owned response model exports
+  models.ts      # UI/query models; never mirror OpenAPI optionals blindly
+  mappers.ts     # DTO -> model normalization at the adapter boundary
+```
+
+The current contexts are `auth`, `account`, `cart`, `orders`, `catalog`,
+`assistant`, and `admin` (admin requests are split into catalog, commerce, and
+analytics modules). Shared request primitives and the common response envelope
+live in `src/lib/api/contracts/`, while generated OpenAPI access is isolated in
+`src/lib/api/generated/types.ts`.
+Generated types are intentionally confined to `contracts/dto.ts` (and request
+filter aliases at the adapter boundary). API adapters map DTOs before returning
+data to queries and components, so OpenAPI regeneration cannot silently change
+the UI model. `src/lib/api/request-schemas.ts` and `src/lib/api/types.ts` remain
+compatibility barrels for older imports; new code should import the focused
+context contract.
+
+Domain enums follow the same rule under `src/lib/domain/` and are grouped by
+account, catalog, commerce, assistant, and API message keys. The old
+`src/lib/domain/enums.ts` path is a compatibility barrel only.
 
 ## Verification
 
