@@ -11,13 +11,18 @@ import {
 } from "@/lib/auth/cookies";
 import {getServerEnv} from "@/lib/config/env";
 import {envelope, normalizeMessage} from "@/lib/api/envelope";
-import {STATIC_MESSAGE_KEYS, type ApiError, type ApiResponse} from "@/lib/api/types";
+import {STATIC_MESSAGE_KEYS, type ApiError, type ApiResponse} from "@/lib/api/contracts/common";
+import {refreshTokenRequestSchema} from "@/features/auth/contracts/requests";
 
 type BffService = "backend" | "ai";
-type UpstreamResult = {status: number; payload: unknown};
+type UpstreamResult = {status: number; payload: unknown; body?: Uint8Array; contentType?: string};
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
-const AUTH_TOKEN_PATHS = new Set(["auth/login", "auth/verify-otp", "auth/refresh-token"]);
+const AUTH_TOKEN_PATHS = new Set(["auth/login", "auth/google", "auth/verify-otp", "auth/refresh-token"]);
+
+function jsonBody(value: unknown) {
+  return new TextEncoder().encode(JSON.stringify(value));
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -73,6 +78,15 @@ async function requestUpstream(
       signal: controller.signal,
       cache: "no-store",
     });
+    const contentType = response.headers.get("content-type") ?? "";
+    if (!contentType.toLowerCase().includes("application/json")) {
+      return {
+        status: response.status,
+        payload: null,
+        body: new Uint8Array(await response.arrayBuffer()),
+        contentType,
+      };
+    }
     const text = await response.text();
     let payload: unknown = null;
     if (text) {
@@ -143,19 +157,40 @@ export async function handleBffRequest(request: Request, service: BffService, pa
   const upstreamPath = parsePath(pathSegments, new URL(request.url).search);
   const bodyBuffer = ["GET", "HEAD"].includes(request.method) ? undefined : new Uint8Array(await request.arrayBuffer());
 
+  // A guest cart must have an owner before the first read or mutation. The
+  // backend deliberately rejects an anonymous cart request without either an
+  // account or a session token, so mint the browser session before forwarding
+  // the request instead of waiting for a successful mutation (which can never
+  // happen without the token). The cookie is only issued for cart routes and
+  // is never used when an authenticated account owns the cart.
+  const guestCartSession =
+    service === "backend" &&
+    pathWithoutQuery.startsWith("cart") &&
+    !accessToken &&
+    !sessionToken
+      ? crypto.randomUUID()
+      : undefined;
+  const outboundSessionToken = sessionToken ?? guestCartSession;
+
   let requestBody = bodyBuffer;
   if (service === "backend" && pathWithoutQuery === "auth/refresh-token" && refreshToken) {
-    requestBody = new TextEncoder().encode(JSON.stringify({refreshToken}));
+    requestBody = jsonBody(refreshTokenRequestSchema.parse({refreshToken}));
   }
   if (service === "backend" && pathWithoutQuery === "auth/logout" && refreshToken && (!requestBody || requestBody.byteLength === 0)) {
-    requestBody = new TextEncoder().encode(JSON.stringify({refreshToken}));
+    requestBody = jsonBody(refreshTokenRequestSchema.parse({refreshToken}));
   }
 
   let result: UpstreamResult;
   try {
-    result = await requestUpstream(request, service, upstreamPath, requestBody, AUTH_TOKEN_PATHS.has(pathWithoutQuery) ? undefined : accessToken, sessionToken);
+    result = await requestUpstream(request, service, upstreamPath, requestBody, AUTH_TOKEN_PATHS.has(pathWithoutQuery) ? undefined : accessToken, outboundSessionToken);
   } catch {
     return NextResponse.json(envelope(null, serviceUnavailableKey(service), [{code: "UPSTREAM_UNREACHABLE"}]), {status: 503});
+  }
+
+  if (result.body) {
+    const headers = new Headers();
+    if (result.contentType) headers.set("Content-Type", result.contentType);
+    return new NextResponse(result.body as BodyInit, {status: result.status, headers});
   }
 
   let parsed = toEnvelope(result, service);
@@ -168,7 +203,7 @@ export async function handleBffRequest(request: Request, service: BffService, pa
         refreshRequest,
         "backend",
         "/auth/refresh-token",
-        new TextEncoder().encode(JSON.stringify({refreshToken})),
+        jsonBody(refreshTokenRequestSchema.parse({refreshToken})),
         undefined,
         undefined,
       );
@@ -177,7 +212,7 @@ export async function handleBffRequest(request: Request, service: BffService, pa
       if (refreshResult.status < 300 && tokens?.accessToken) {
         accessToken = tokens.accessToken;
         refreshed = true;
-        result = await requestUpstream(request, service, upstreamPath, requestBody, accessToken, sessionToken);
+        result = await requestUpstream(request, service, upstreamPath, requestBody, accessToken, outboundSessionToken);
         parsed = toEnvelope(result, service);
       } else {
         parsed = refreshPayload;
@@ -204,10 +239,8 @@ export async function handleBffRequest(request: Request, service: BffService, pa
     clearAuthCookies(response);
   }
 
-  if (service === "backend" && pathWithoutQuery.startsWith("cart") && !accessToken && !sessionToken && result.status < 300) {
-    // The backend accepts an anonymous cart session through X-Cart-Session.
-    // The session is issued by the cart mutation contract when that feature is enabled.
-    response.cookies.set(CART_SESSION_COOKIE, crypto.randomUUID(), cartSessionCookieOptions);
+  if (guestCartSession && result.status < 300) {
+    response.cookies.set(CART_SESSION_COOKIE, guestCartSession, cartSessionCookieOptions);
   }
 
   return response;

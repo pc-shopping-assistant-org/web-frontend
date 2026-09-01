@@ -21,7 +21,11 @@ export function proxy(request: NextRequest) {
   if (isProtectedAccountRoute && !request.cookies.get("ecm_access_token")?.value) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = `/${locale ?? routing.defaultLocale}/login`;
-    redirectUrl.searchParams.set("redirect", pathname);
+    // The next-intl router accepts an internal pathname (without the locale).
+    // Keeping the locale in this value makes a successful login attempt to
+    // navigate to `/vi/vi/admin` when the protected route was opened directly.
+    const internalPath = pathname.replace(/^\/(?:vi|en)(?=\/|$)/, "") || "/";
+    redirectUrl.searchParams.set("redirect", internalPath);
     return NextResponse.redirect(redirectUrl);
   }
 
