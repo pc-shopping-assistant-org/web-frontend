@@ -3,8 +3,9 @@
 import {useTranslations} from "next-intl";
 
 import {ApiClientError} from "@/lib/api/envelope";
+import {ApiMessageKey} from "@/lib/domain/message-keys";
 
-export function ErrorMessage({error, fallback = "UNKNOWN"}: {error: unknown; fallback?: string}) {
+export function ErrorMessage({error, fallback = ApiMessageKey.UNKNOWN}: {error: unknown; fallback?: string}) {
   const t = useTranslations("errors");
   const common = useTranslations("common");
   const key = error instanceof ApiClientError ? error.messageKey : fallback;

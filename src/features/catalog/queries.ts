@@ -2,7 +2,7 @@
 
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
-import {createProductReview, getBrands, getCategories, getProductBySlug, getProductReviews, getProducts, type ProductFilters} from "./api";
+import {createProductReview, getBrands, getCategories, getProductBySlug, getProductRatingSummary, getProductReviews, getProducts, type ProductFilters} from "./api";
 
 export const catalogKeys = {
   all: ["catalog"] as const,
@@ -11,12 +11,17 @@ export const catalogKeys = {
   categories: ["catalog", "categories"] as const,
   brands: ["catalog", "brands"] as const,
   reviews: (productId: string, cursor?: string) => ["catalog", "reviews", productId, cursor] as const,
+  ratingSummary: (productId: string) => ["catalog", "rating-summary", productId] as const,
 };
 
-export function useProducts(filters: ProductFilters = {}) {
+export function useProducts(
+  filters: ProductFilters = {},
+  options: {enabled?: boolean} = {},
+) {
   return useQuery({
     queryKey: catalogKeys.products(filters),
     queryFn: () => getProducts(filters),
+    enabled: options.enabled ?? true,
   });
 }
 
@@ -32,9 +37,20 @@ export function useProductReviews(productId: string, cursor?: string) {
   return useQuery({queryKey: catalogKeys.reviews(productId, cursor), queryFn: () => getProductReviews(productId, cursor), enabled: Boolean(productId)});
 }
 
+export function useProductRatingSummary(productId: string) {
+  return useQuery({
+    queryKey: catalogKeys.ratingSummary(productId),
+    queryFn: () => getProductRatingSummary(productId),
+    enabled: Boolean(productId),
+  });
+}
+
 export function useCreateProductReview() {
   const queryClient = useQueryClient();
-  return useMutation({mutationFn: ({productId, request}: {productId: string; request: Parameters<typeof createProductReview>[1]}) => createProductReview(productId, request), onSuccess: (_review, variables) => queryClient.invalidateQueries({queryKey: ["catalog", "reviews", variables.productId]})});
+  return useMutation({mutationFn: ({productId, request}: {productId: string; request: Parameters<typeof createProductReview>[1]}) => createProductReview(productId, request), onSuccess: (_review, variables) => {
+    void queryClient.invalidateQueries({queryKey: ["catalog", "reviews", variables.productId]});
+    void queryClient.invalidateQueries({queryKey: catalogKeys.ratingSummary(variables.productId)});
+  }});
 }
 
 export function useProductBySlug(slug: string) {

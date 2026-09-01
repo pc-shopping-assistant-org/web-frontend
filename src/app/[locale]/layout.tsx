@@ -5,8 +5,7 @@ import {hasLocale} from "next-intl";
 import {getMessages} from "next-intl/server";
 import type {ReactNode} from "react";
 
-import {SiteFooter} from "@/components/layout/site-footer";
-import {SiteHeader} from "@/components/layout/site-header";
+import {LocaleChrome} from "@/components/layout/locale-chrome";
 import {routing, type Locale} from "@/i18n/routing";
 import {QueryProvider} from "@/providers/query-provider";
 
@@ -14,10 +13,10 @@ import "../globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "PC Shopping Assistant",
-    template: "%s · PC Shopping Assistant",
+    default: "gearPC",
+    template: "%s · gearPC",
   },
-  description: "A catalog-grounded PC shopping experience.",
+  description: "gearPC — khám phá và chọn thiết bị PC phù hợp.",
 };
 
 export function generateStaticParams() {
@@ -43,11 +42,7 @@ export default async function LocaleLayout({
       <body className="min-h-screen bg-background text-foreground antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <QueryProvider>
-            <div className="flex min-h-screen flex-col">
-              <SiteHeader locale={locale as Locale} />
-              <main className="flex-1">{children}</main>
-              <SiteFooter />
-            </div>
+            <LocaleChrome locale={locale as Locale}>{children}</LocaleChrome>
           </QueryProvider>
         </NextIntlClientProvider>
       </body>

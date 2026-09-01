@@ -1,10 +1,33 @@
-import {Badge} from "./badge";
+import { useTranslations } from "next-intl";
 
-const positive = new Set(["ACTIVE", "COMPLETED", "CONFIRMED", "PAID"]);
-const warning = new Set(["PENDING_PAYMENT", "PENDING_CONFIRMATION", "PENDING", "SHIPPING"]);
-const negative = new Set(["CANCELLED", "FAILED", "INACTIVE", "LOCKED", "DELETED"]);
+import { Badge } from "./badge";
+import {AccountStatus} from "@/lib/domain/account-enums";
+import {OrderStatus, PaymentStatus} from "@/lib/domain/commerce-enums";
+import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-export function StatusBadge({status, label}: {status?: string | null; label?: string}) {
+const positive = new Set<string>([ResourceStatus.Active, OrderStatus.Completed, OrderStatus.Confirmed, PaymentStatus.Paid]);
+const warning = new Set<string>([
+  OrderStatus.PendingPayment,
+  OrderStatus.PendingConfirmation,
+  PaymentStatus.Pending,
+  OrderStatus.Shipping,
+]);
+const negative = new Set<string>([
+  OrderStatus.Cancelled,
+  PaymentStatus.Failed,
+  AccountStatus.Inactive,
+  AccountStatus.Locked,
+  ResourceStatus.Deleted,
+]);
+
+export function StatusBadge({
+  status,
+  label,
+}: {
+  status?: string | null;
+  label?: string;
+}) {
+  const t = useTranslations("admin");
   const value = status?.toUpperCase() ?? "—";
   const className = positive.has(value)
     ? "border-emerald-200 bg-emerald-50 text-emerald-700"
@@ -13,5 +36,9 @@ export function StatusBadge({status, label}: {status?: string | null; label?: st
       : negative.has(value)
         ? "border-rose-200 bg-rose-50 text-rose-700"
         : "";
-  return <Badge className={className}>{label ?? value}</Badge>;
+  const translated =
+    !label && status && t.has(`statusValues.${value}`)
+      ? t(`statusValues.${value}`)
+      : (label ?? value);
+  return <Badge className={className}>{translated}</Badge>;
 }

@@ -55,27 +55,27 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.55 0.22 257);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.96 0.02 257);
+  --secondary-foreground: oklch(0.28 0.08 257);
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --accent: oklch(0.96 0.02 257);
+  --accent-foreground: oklch(0.28 0.08 257);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: oklch(0.55 0.22 257);
+  --chart-1: oklch(0.62 0.21 257);
+  --chart-2: oklch(0.68 0.16 195);
+  --chart-3: oklch(0.7 0.16 150);
+  --chart-4: oklch(0.72 0.17 75);
+  --chart-5: oklch(0.65 0.2 320);
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.55 0.22 257);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
@@ -131,10 +131,36 @@
 
 @layer components {
   .page-wrap {
-    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8;
+  }
+
+  /*
+   * Storefront surfaces need more horizontal room than forms and detail
+   * pages. Keep a separate wrapper so those pages retain a readable line
+   * length while the home merchandising layout can use wide displays.
+   */
+  .storefront-wrap {
+    @apply mx-auto w-full max-w-[1920px] px-4 sm:px-6 lg:px-8 2xl:px-10;
   }
 
   .eyebrow {
     @apply text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground;
   }
+}
+
+/* The storefront is customer-facing, so its base and secondary copy should
+ * not be rendered at the tiny admin-dashboard scale used elsewhere. */
+.storefront-wrap {
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.storefront-wrap .text-sm {
+  font-size: 0.9375rem;
+  line-height: 1.5rem;
+}
+
+.storefront-wrap .text-xs {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
 }
