@@ -1690,6 +1690,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@stripe/react-stripe-js@npm:^6.8.2":
+  version: 6.8.2
+  resolution: "@stripe/react-stripe-js@npm:6.8.2"
+  dependencies:
+    prop-types: "npm:^15.7.2"
+  peerDependencies:
+    "@stripe/stripe-js": ">=9.5.0 <10.0.0"
+    react: ">=16.8.0 <20.0.0"
+    react-dom: ">=16.8.0 <20.0.0"
+  checksum: 10c0/435c06ab78bf1975037f29e2cf7b199c99ae30b302e8af859b35044088de0fd6322fa9e105052f59949994df30db638dab38902b56ad0be5940a23113dc4e184
+  languageName: node
+  linkType: hard
+
+"@stripe/stripe-js@npm:^9.15.0":
+  version: 9.15.0
+  resolution: "@stripe/stripe-js@npm:9.15.0"
+  checksum: 10c0/b2b024c0cca857661c97128013693c41dabf7ed393cd3d4c2adc9b8b5c29074aa801468d137b3f87fdb8c7fdd06c82d36ad2211cc6a497c7911d3231f5697231
+  languageName: node
+  linkType: hard
+
 "@swc/core-darwin-arm64@npm:1.16.1":
   version: 1.16.1
   resolution: "@swc/core-darwin-arm64@npm:1.16.1"
@@ -1848,6 +1868,24 @@ __metadata:
   dependencies:
     "@swc/counter": "npm:^0.1.3"
   checksum: 10c0/7f2e959a7ee000ec4216acc6b7634e2d2fbe404b6ad3adf72bb91970a67359d7d429f60556342784dbe66912c7c987426683159e749332581a87e04de0524357
+  languageName: node
+  linkType: hard
+
+"@tabler/icons-react@npm:^3.46.0":
+  version: 3.46.0
+  resolution: "@tabler/icons-react@npm:3.46.0"
+  dependencies:
+    "@tabler/icons": "npm:3.46.0"
+  peerDependencies:
+    react: ">= 16"
+  checksum: 10c0/8fab7d3a9ec6b62724a1628b8bad68a7b503979e4418f97d057c442adc5257b227a08185a884d452d171983648e36fa92cd7bfe9457f693e9b67bbf4ecf8ec24
+  languageName: node
+  linkType: hard
+
+"@tabler/icons@npm:3.46.0":
+  version: 3.46.0
+  resolution: "@tabler/icons@npm:3.46.0"
+  checksum: 10c0/c9671449c2f53fa7e329c487162f89a28417cdd5ce96cfa290fe21388724da303dd2297af3b39a88a74b02c36ce55598bc3cf6537dbddf548881da2c05f35f5e
   languageName: node
   linkType: hard
 
@@ -6828,7 +6866,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prop-types@npm:^15.8.1":
+"prop-types@npm:^15.7.2, prop-types@npm:^15.8.1":
   version: 15.8.1
   resolution: "prop-types@npm:15.8.1"
   dependencies:
@@ -8468,6 +8506,9 @@ __metadata:
   dependencies:
     "@base-ui/react": "npm:^1.7.0"
     "@hookform/resolvers": "npm:^5.9.1"
+    "@stripe/react-stripe-js": "npm:^6.8.2"
+    "@stripe/stripe-js": "npm:^9.15.0"
+    "@tabler/icons-react": "npm:^3.46.0"
     "@tailwindcss/postcss": "npm:^4"
     "@tanstack/eslint-plugin-query": "npm:^5.102.8"
     "@tanstack/react-query": "npm:^5.102.8"
