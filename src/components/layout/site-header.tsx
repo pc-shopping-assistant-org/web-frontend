@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  IconChevronDown,
   IconLayoutGrid,
   IconLayoutDashboard,
   IconClipboardList,
@@ -337,10 +338,13 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
 
   return (
     <details className="group relative hidden shrink-0 md:block">
-      <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-background px-3 text-sm font-semibold transition hover:border-primary/30 hover:bg-primary/5 [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-background pl-3 pr-2.5 text-sm font-semibold transition hover:border-primary/30 hover:bg-primary/5 [&::-webkit-details-marker]:hidden">
         <IconLayoutGrid className="size-4 text-primary" aria-hidden="true" />
         {t("catalogMenu")}
-        <span className="text-muted-foreground transition group-open:rotate-180">⌄</span>
+        <IconChevronDown
+          className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
+          aria-hidden="true"
+        />
       </summary>
       <div className="absolute left-0 top-[calc(100%+0.65rem)] z-50 w-[25rem] rounded-2xl border bg-background p-3 shadow-2xl shadow-slate-950/10">
         <div className="flex items-center justify-between gap-3 border-b px-2 pb-3">

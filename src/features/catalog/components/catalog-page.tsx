@@ -2,7 +2,7 @@
 
 import {ChevronLeft, ChevronRight, Search, SlidersHorizontal, X} from "lucide-react";
 import {useTranslations} from "next-intl";
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 
 import {Button} from "@/components/ui/button";
 import {ProductGridSkeleton} from "@/components/ui/loading-skeletons";
@@ -63,6 +63,13 @@ export function CatalogPage({
   const categories = useCategories();
   const brands = useBrands();
   const products = query.data?.items ?? [];
+  // `SiteHeader` shares the `catalog/categories` query key, and this page is
+  // lazy loaded, so its chunk can hydrate after the header has already resolved
+  // that query: the server prerenders the category-bar skeleton while the client
+  // renders the loaded bar, which fails hydration. Holding the skeleton until
+  // after mount keeps the first client pass identical to the server pass.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   function applyFilters() {
     const min = draft.minPrice;
@@ -148,12 +155,15 @@ export function CatalogPage({
             syncCatalogUrl(router, next);
           }}
         >
-          <Input value={term} onChange={(event) => setTerm(event.target.value)} placeholder={t("searchPlaceholder")} aria-label={t("searchPlaceholder")} />
-          <Button type="submit"><Search className="size-4" />{t("search")}</Button>
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input value={term} onChange={(event) => setTerm(event.target.value)} placeholder={t("searchPlaceholder")} aria-label={t("searchPlaceholder")} className="pl-10" />
+          </div>
+          <Button type="submit" className="h-10 gap-2 px-4"><Search className="size-4" />{t("search")}</Button>
         </form>
       </div>
 
-      {categories.isPending ? (
+      {!hydrated || categories.isPending ? (
         <Skeleton className="mb-8 h-12 rounded-2xl" />
       ) : categories.data?.length ? (
         <div className="mb-8 rounded-2xl border border-border/70 bg-muted/20 p-2.5" aria-label={t("browseByCategory")}>
