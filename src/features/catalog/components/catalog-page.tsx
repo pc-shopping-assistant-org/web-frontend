@@ -2,7 +2,7 @@
 
 import {ChevronLeft, ChevronRight, Search, SlidersHorizontal, X} from "lucide-react";
 import {useTranslations} from "next-intl";
-import {useEffect, useMemo, useState} from "react";
+import {useMemo, useState, useSyncExternalStore} from "react";
 
 import {Button} from "@/components/ui/button";
 import {ProductGridSkeleton} from "@/components/ui/loading-skeletons";
@@ -20,6 +20,9 @@ import {ResourceStatus} from "@/lib/domain/catalog-enums";
 import {useBrands, useCategories, useProducts} from "../queries";
 import {CatalogCategoryIcon} from "./catalog-category-icon";
 import {ProductGrid} from "./product-grid";
+
+// Never changes after mount, so the store never needs to notify.
+const subscribeNoop = () => () => {};
 
 type CatalogPageProps = {
   initialKeyword?: string;
@@ -68,8 +71,7 @@ export function CatalogPage({
   // that query: the server prerenders the category-bar skeleton while the client
   // renders the loaded bar, which fails hydration. Holding the skeleton until
   // after mount keeps the first client pass identical to the server pass.
-  const [hydrated, setHydrated] = useState(false);
-  useEffect(() => setHydrated(true), []);
+  const hydrated = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   function applyFilters() {
     const min = draft.minPrice;
@@ -159,7 +161,7 @@ export function CatalogPage({
             <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
             <Input value={term} onChange={(event) => setTerm(event.target.value)} placeholder={t("searchPlaceholder")} aria-label={t("searchPlaceholder")} className="pl-10" />
           </div>
-          <Button type="submit" className="h-10 gap-2 px-4"><Search className="size-4" />{t("search")}</Button>
+          <Button type="submit" size="field"><Search className="size-4" />{t("search")}</Button>
         </form>
       </div>
 

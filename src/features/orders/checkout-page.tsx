@@ -411,9 +411,6 @@ export function CheckoutPage() {
                       <span className="font-medium">
                         {option.name ?? option.code}
                       </span>
-                      <span className="mt-1 block text-xs text-muted-foreground">
-                        {option.code}
-                      </span>
                       <span className="mt-3 block font-semibold">
                         {formatMoney(option.fee, locale)}
                       </span>
@@ -448,13 +445,8 @@ export function CheckoutPage() {
                       checked={selectedPaymentCode === method.code}
                       onChange={() => setPaymentMethod((method.code ?? PaymentMethodCode.Cod) as PaymentMethodCode)}
                     />
-                    <span>
-                      <span className="block font-medium">
-                        {method.name ?? method.code}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {method.code}
-                      </span>
+                    <span className="font-medium">
+                      {method.name ?? method.code}
                     </span>
                   </label>
                 ))

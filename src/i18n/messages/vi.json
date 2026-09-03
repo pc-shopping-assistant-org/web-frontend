@@ -320,7 +320,7 @@
     "cancel": "Hủy",
     "close": "Đóng",
     "changePassword": "Đổi mật khẩu",
-    "changePasswordDescription": "Gửi OTP, sau đó xác nhận mật khẩu hiện tại và mật khẩu mới.",
+    "changePasswordDescription": "Gửi mã OTP về email đăng ký, sau đó xác nhận mật khẩu hiện tại và mật khẩu mới.",
     "oldPassword": "Mật khẩu hiện tại",
     "newPassword": "Mật khẩu mới",
     "otp": "Mã OTP",

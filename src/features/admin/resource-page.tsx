@@ -162,12 +162,12 @@ function FilterBar({
               />
             </div>
             <div className="flex gap-2">
-              <Button type="submit">
+              <Button type="submit" size="field">
                 <Search className="size-4" />
                 {t("search")}
               </Button>
               {onReset ? (
-                <Button type="button" variant="outline" onClick={onReset}>
+                <Button type="button" size="field" variant="outline" onClick={onReset}>
                   {t("clearFilters")}
                 </Button>
               ) : null}

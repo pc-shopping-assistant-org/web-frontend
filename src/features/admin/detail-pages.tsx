@@ -2376,8 +2376,8 @@ export function AdminInvoicesPage() {
               value={toDate}
               onChange={(event) => setToDate(event.target.value)}
             />
-            <Button type="submit">{t("search")}</Button>
-            <Button type="button" variant="outline" onClick={reset}>
+            <Button type="submit" size="field">{t("search")}</Button>
+            <Button type="button" size="field" variant="outline" onClick={reset}>
               {t("clearFilters")}
             </Button>
           </form>

@@ -171,12 +171,12 @@ export function OrdersPage() {
               </option>
             ))}
           </Select>
-          <Button type="submit">
+          <Button type="submit" size="field">
             <Search className="size-4" />
             {t("search")}
           </Button>
           {hasFilters ? (
-            <Button type="button" variant="ghost" onClick={clearFilters}>
+            <Button type="button" size="field" variant="ghost" onClick={clearFilters}>
               <X className="size-4" />
               {t("clearFilters")}
             </Button>

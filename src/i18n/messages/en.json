@@ -320,7 +320,7 @@
     "cancel": "Cancel",
     "close": "Close",
     "changePassword": "Change password",
-    "changePasswordDescription": "Request an OTP, then confirm your current and new password.",
+    "changePasswordDescription": "Send an OTP to your registered email, then confirm your current and new password.",
     "oldPassword": "Current password",
     "newPassword": "New password",
     "otp": "One-time code",
