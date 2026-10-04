@@ -1,376 +1,145 @@
 "use client";
 
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Bot,
-  Check,
-  MessageCircle,
-  PackageSearch,
-  Search,
-  Sparkles,
-  X,
-  type LucideIcon,
-} from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import {ArrowRight, ArrowUpRight, Bot, Check, MessageCircle, PackageSearch, Search, Sparkles, X} from "lucide-react";
+import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {useEffect, useRef, useState, type FormEvent} from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ErrorMessage } from "@/components/ui/error-message";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { Link } from "@/i18n/navigation";
-import { formatMoney } from "@/lib/format";
-import {AiMode} from "@/lib/domain/assistant-enums";
+import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {ErrorMessage} from "@/components/ui/error-message";
+import {Input} from "@/components/ui/input";
+import {Skeleton} from "@/components/ui/skeleton";
+import {Textarea} from "@/components/ui/textarea";
+import {Link} from "@/i18n/navigation";
+import {formatMoney} from "@/lib/format";
+import {useProducts} from "@/features/catalog/queries";
+import {CatalogCategoryIcon} from "@/features/catalog/components/catalog-category-icon";
+import {compare, evaluate, streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
 
-import { useProducts } from "@/features/catalog/queries";
-import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
-import {
-  compare,
-  consult,
-  evaluate,
-  semanticSearch,
-  streamChat,
-  type ChatData,
-  type CompareData,
-  type ConsultData,
-  type EvaluateData,
-  type SearchData,
-} from "./api";
-
-type Mode = AiMode;
 type Result = ChatData | SearchData | ConsultData | CompareData | EvaluateData;
-type ChatTurn = {prompt: string; response: ChatData};
+type ChatTurn = {prompt: string; response: Result};
 
-const modes = Object.values(AiMode) as Mode[];
-
-const modeVisuals: Record<Mode, {icon: LucideIcon; tone: string}> = {
-  [AiMode.Chat]: {icon: MessageCircle, tone: "bg-blue-500/12 text-blue-700"},
-  [AiMode.Search]: {icon: Search, tone: "bg-cyan-500/12 text-cyan-700"},
-  [AiMode.Consult]: {icon: Bot, tone: "bg-emerald-500/12 text-emerald-700"},
-  [AiMode.Compare]: {icon: Sparkles, tone: "bg-violet-500/12 text-violet-700"},
-  [AiMode.Evaluate]: {icon: PackageSearch, tone: "bg-amber-500/12 text-amber-700"},
-};
-
-export function AssistantPage() {
+export function AssistantPage({initialProductIds = [], initialPrompt = "", invalidBuild = false}: {initialProductIds?: string[]; initialPrompt?: string; invalidBuild?: boolean}) {
   const t = useTranslations("assistant");
   const common = useTranslations("common");
   const locale = useLocale();
-  const [mode, setMode] = useState<Mode>(AiMode.Chat);
-  const [prompt, setPrompt] = useState("");
-  const [productIds, setProductIds] = useState<string[]>([]);
-  const [result, setResult] = useState<Result | null>(null);
+  const [prompt, setPrompt] = useState(initialPrompt);
+  const [productIds, setProductIds] = useState<string[]>(initialProductIds);
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
-  const [conversationId, setConversationId] = useState<string | undefined>();
+  const [conversationId, setConversationId] = useState<string>();
   const [streamingPrompt, setStreamingPrompt] = useState("");
   const [streamingAnswer, setStreamingAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const streamController = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    return () => streamController.current?.abort();
-  }, []);
-
-  // Product detail pages can hand a customer into the right AI workflow. Read
-  // the query only in the browser so the initial server render stays stable.
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const params = new URLSearchParams(window.location.search);
-      const requestedMode = params.get("mode");
-      const requestedProductId = params.get("productId");
-      const requestedProductIds = params.get("productIds");
-      if (isMode(requestedMode)) setMode(requestedMode);
-      if (requestedProductIds) {
-        setProductIds(
-          [...new Set(requestedProductIds.split(",").filter(Boolean))].slice(
-            0,
-            5,
-          ),
-        );
-      } else if (requestedProductId) {
-        setProductIds([requestedProductId]);
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
+  useEffect(() => () => streamController.current?.abort(), []);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!prompt.trim() && mode !== AiMode.Compare && mode !== AiMode.Evaluate) return;
-    const submittedPrompt = prompt.trim();
+    if (streamController.current || (!prompt.trim() && !productIds.length)) return;
+    const submittedPrompt = prompt.trim() || t(productIds.length > 1 ? "defaultCompare" : "defaultEvaluate");
+    const controller = new AbortController();
+    streamController.current = controller;
     setLoading(true);
     setError(null);
-    streamController.current?.abort();
+    setStreamingPrompt(submittedPrompt);
+    setStreamingAnswer("");
     try {
-      if (mode === AiMode.Chat) {
-        const controller = new AbortController();
-        streamController.current = controller;
-        setStreamingPrompt(submittedPrompt);
-        setStreamingAnswer("");
-        const data = await streamChat(
-          submittedPrompt,
-          conversationId,
-          {
-            onStart: (id) => setConversationId(id),
-            onDelta: (delta) => setStreamingAnswer((current) => current + delta),
-          },
-          controller.signal,
-        );
-        setResult(data);
-        setConversationId(data.conversation_id);
-        setChatTurns((current) => [
-          ...current,
-          {prompt: submittedPrompt, response: data},
-        ]);
+      let data: Result;
+      if (productIds.length > 1) {
+        data = await compare(productIds, submittedPrompt);
+      } else if (productIds.length === 1) {
+        data = await evaluate(productIds[0], submittedPrompt);
+      } else {
+        const chat = await streamChat(submittedPrompt, conversationId, {
+          onStart: id => {if (!controller.signal.aborted) setConversationId(id);},
+          onDelta: delta => {if (!controller.signal.aborted) setStreamingAnswer(current => current + delta);},
+        }, controller.signal);
+        data = chat;
+        if (!controller.signal.aborted) setConversationId(chat.conversation_id);
+      }
+      if (controller.signal.aborted) return;
+      setChatTurns(current => [...current, {prompt: submittedPrompt, response: data}]);
+      setStreamingPrompt("");
+      setStreamingAnswer("");
+      setPrompt("");
+    } catch (cause) {
+      if (!controller.signal.aborted) {
+        setError(cause);
         setStreamingPrompt("");
         setStreamingAnswer("");
-        setPrompt("");
-      } else {
-        let data: Result;
-        if (mode === AiMode.Search) data = await semanticSearch(submittedPrompt);
-        else if (mode === AiMode.Consult) data = await consult(submittedPrompt);
-        else if (mode === AiMode.Compare) {
-          data = await compare(productIds, submittedPrompt || undefined);
-        } else {
-          data = await evaluate(
-            productIds[0] ?? submittedPrompt,
-            submittedPrompt || undefined,
-          );
-        }
-        setResult(data);
-      }
-    } catch (cause) {
-      if (!(cause instanceof DOMException && cause.name === "AbortError")) {
-        setError(cause);
       }
     } finally {
-      setLoading(false);
-      streamController.current = null;
+      if (!controller.signal.aborted) setLoading(false);
+      if (streamController.current === controller) streamController.current = null;
     }
   }
 
-  const isProductMode = mode === AiMode.Compare || mode === AiMode.Evaluate;
-  const isCompare = mode === AiMode.Compare;
-  const canSubmit =
-    !loading &&
-    (!isProductMode ||
-      (isCompare ? productIds.length >= 2 : productIds.length === 1));
-
-  const ActiveIcon = modeVisuals[mode].icon;
+  function newConversation() {
+    setConversationId(undefined);
+    setChatTurns([]);
+    setProductIds([]);
+    setError(null);
+    setPrompt("");
+  }
 
   return (
-    <section className="page-wrap py-8 sm:py-12">
-      <div className="relative mb-7 overflow-hidden rounded-[2rem] bg-slate-950 px-6 py-8 text-white shadow-xl shadow-slate-950/10 sm:px-9 sm:py-10">
-        <div className="pointer-events-none absolute -right-24 -top-32 size-96 rounded-full bg-blue-500/25 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-40 left-1/3 size-96 rounded-full bg-violet-500/20 blur-3xl" />
-        <div className="relative grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-end">
-          <div className="max-w-3xl space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge className="border-white/15 bg-white/10 text-white">
-                <Sparkles className="mr-1.5 size-3.5" />
-                {t("eyebrow")}
-              </Badge>
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-2.5 py-1 text-xs font-medium text-emerald-100">
-                <span className="size-1.5 rounded-full bg-emerald-300" />
-                {t("liveCatalog")}
-              </span>
+    <section className="storefront-wrap py-7 sm:py-10">
+      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Bot className="size-8" /></span>
+          <div><h1 className="text-3xl font-semibold tracking-tight">{t("chatTitle")}</h1><p className="mt-1 text-sm text-muted-foreground">{t("unifiedDescription")}</p></div>
+        </div>
+        <div className="flex gap-3">
+          <Link href="/products" className="inline-flex items-center gap-1 text-sm font-medium text-primary">{t("browseCatalog")}<ArrowUpRight className="size-4" /></Link>
+          <Button variant="outline" onClick={newConversation} disabled={loading}>{t("newConversation")}</Button>
+        </div>
+      </header>
+
+      <div className="rounded-2xl border bg-background shadow-sm">
+        {invalidBuild && <p role="alert" className="m-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{t("invalidBuild")}</p>}
+        <div className="min-h-64 space-y-5 p-4 sm:p-6" aria-live="polite">
+          {chatTurns.length ? <ChatTranscript turns={chatTurns} locale={locale} /> : !streamingPrompt ? (
+            <div className="flex min-h-60 flex-col items-center justify-center gap-4 text-center">
+              <Sparkles className="size-9 text-primary" />
+              <h2 className="text-xl font-semibold">{t("chatWelcome")}</h2>
+              <p className="max-w-xl text-sm leading-6 text-muted-foreground">{t("unifiedDescription")}</p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {["suggestionLaptop", "suggestionBuild", "suggestionCompare"].map(key => <button key={key} className="rounded-xl border bg-muted/30 px-4 py-3 text-sm hover:border-primary/40" onClick={() => setPrompt(t(key))}>{t(key)}</button>)}
+              </div>
             </div>
-            <h1 className="max-w-2xl text-3xl font-semibold leading-tight tracking-[-0.04em] sm:text-4xl lg:text-5xl">
-              {t("title")}
-            </h1>
-            <p className="max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
-              {t("description")}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2">
-            <WorkspaceStat value="5" label={t("workflowCount")} />
-            <WorkspaceStat value="24/7" label={t("assistantAvailable")} />
-            <WorkspaceStat value="LIVE" label={t("groundingLabel")} muted />
-            <Link
-              href="/products"
-              className="group flex min-h-20 items-center justify-between rounded-2xl border border-white/10 bg-white/10 p-4 text-sm font-medium transition hover:bg-white/15"
-            >
-              <span>{t("browseCatalog")}</span>
-              <ArrowUpRight className="size-4 text-slate-300 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="eyebrow">{t("modes")}</p>
-          <h2 className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{t("workspaceTitle")}</h2>
-        </div>
-        <p className="max-w-md text-right text-sm leading-5 text-muted-foreground">{t("workspaceDescription")}</p>
-      </div>
-
-      <div className="grid gap-5 xl:grid-cols-[20rem_minmax(0,1fr)]">
-        <Card className="h-fit rounded-2xl border-border/70 shadow-sm">
-          <CardHeader className="border-b bg-muted/20 pb-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Sparkles className="size-4" />
-              </span>
-              {t("chooseWorkflow")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-2 p-3">
-            {modes.map((value) => {
-              const Icon = modeVisuals[value].icon;
-              const selected = mode === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  className={`group flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${
-                    selected
-                      ? "border-primary/25 bg-primary/7 shadow-sm ring-1 ring-primary/10"
-                      : "border-transparent hover:border-border hover:bg-muted/60"
-                  }`}
-                  onClick={() => {
-                    streamController.current?.abort();
-                    setMode(value);
-                    setResult(null);
-                    setError(null);
-                    setStreamingPrompt("");
-                    setStreamingAnswer("");
-                  }}
-                  aria-pressed={selected}
-                >
-                  <span className={`flex size-9 shrink-0 items-center justify-center rounded-xl ${selected ? "bg-primary text-primary-foreground" : modeVisuals[value].tone}`}>
-                    <Icon className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="block text-sm font-semibold">{t(`mode.${value}.title`)}</span>
-                      {selected ? <span className="size-1.5 rounded-full bg-primary" /> : null}
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">{t(`mode.${value}.description`)}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </CardContent>
-        </Card>
-
-        <div className="min-w-0 space-y-5">
-          <Card className="overflow-hidden rounded-2xl border-primary/15 shadow-lg shadow-primary/5">
-            <div className="h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500" />
-            <CardContent className="p-5 sm:p-7">
-              <form className="space-y-5" onSubmit={(event) => void submit(event)}>
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className={`flex size-10 items-center justify-center rounded-2xl ${modeVisuals[mode].tone}`}>
-                    <ActiveIcon className="size-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t("promptLabel")}</p>
-                    <p className="mt-0.5 truncate font-semibold">{t(`mode.${mode}.title`)}</p>
-                  </div>
-                  <Badge className="ml-auto border-primary/15 bg-primary/5 text-primary">{t("catalogGrounded")}</Badge>
-                  {conversationId ? (
-                    <button
-                      type="button"
-                      className="text-xs font-medium text-muted-foreground hover:text-foreground hover:underline"
-                      onClick={() => {
-                        streamController.current?.abort();
-                        setConversationId(undefined);
-                        setChatTurns([]);
-                        setResult(null);
-                        setStreamingPrompt("");
-                        setStreamingAnswer("");
-                        setPrompt("");
-                      }}
-                    >
-                      {t("newConversation")}
-                    </button>
-                  ) : null}
-                </div>
-                {isProductMode ? (
-                  <ProductPicker mode={mode} value={productIds} onChange={setProductIds} locale={locale} />
-                ) : null}
-                <Textarea
-                  className="min-h-32 resize-y rounded-2xl border-border/80 bg-muted/20 p-4 text-base leading-7 shadow-inner focus:bg-background"
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  placeholder={t(`mode.${mode}.placeholder`)}
-                  rows={4}
-                />
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="max-w-xl text-xs leading-5 text-muted-foreground">
-                    {isCompare ? t("compareHint") : mode === AiMode.Evaluate ? t("evaluateHint") : mode === AiMode.Search ? t("searchHint") : t("catalogGroundedHint")}
-                  </p>
-                  <Button type="submit" className="min-w-28" disabled={!canSubmit}>
-                    {loading ? common("loading") : t("send")}
-                    {!loading ? <ArrowRight className="size-4" /> : null}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          ) : null}
+          {streamingPrompt ? <StreamingChatTurn prompt={streamingPrompt} answer={streamingAnswer} /> : null}
           {error ? <ErrorMessage error={error} /> : null}
-          {mode === AiMode.Chat && (chatTurns.length > 0 || streamingPrompt) ? (
-            <>
-              {chatTurns.length > 0 ? <ChatTranscript turns={chatTurns} locale={locale} /> : null}
-              {streamingPrompt ? (
-                <StreamingChatTurn
-                  prompt={streamingPrompt}
-                  answer={streamingAnswer}
-                />
-              ) : null}
-            </>
-          ) : result ? (
-            <AssistantResult result={result} locale={locale} />
-          ) : (
-            <Card className="rounded-2xl border-dashed bg-muted/15">
-              <CardContent className="grid gap-6 p-6 sm:grid-cols-[auto_1fr] sm:items-center sm:p-8">
-                <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Bot className="size-7" />
-                </span>
-                <div>
-                  <p className="font-medium">{t("empty")}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {["suggestionLaptop", "suggestionBuild", "suggestionCompare"].map((key) => (
-                      <button key={key} type="button" className="rounded-full border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5" onClick={() => setPrompt(t(key))}>
-                        {t(key)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
+
+        <form onSubmit={event => void submit(event)} className="border-t bg-muted/15 p-4 sm:p-6">
+          <fieldset disabled={loading}>
+            <details className="mb-4 rounded-xl border bg-background p-3" open={productIds.length > 0 || undefined}>
+              <summary className="cursor-pointer text-sm font-medium">{t("attachProducts")}{productIds.length ? ` (${productIds.length}/5)` : ""}</summary>
+              <p className="mb-3 mt-2 text-xs leading-5 text-muted-foreground">{t("attachmentHint")}</p>
+              <ProductPicker value={productIds} onChange={setProductIds} locale={locale} />
+            </details>
+            <Textarea aria-label={t("promptLabel")} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder={t("unifiedPlaceholder")} rows={3} maxLength={productIds.length ? 1000 : 4000} className="min-h-24 resize-y rounded-xl bg-background p-4 text-base" />
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="text-xs leading-5 text-muted-foreground">{t("catalogGroundedHint")}</p>
+              <Button type="submit" className="h-11 min-w-28" disabled={loading || (!prompt.trim() && !productIds.length)}>{loading ? common("loading") : t("send")}<ArrowRight className="size-4" /></Button>
+            </div>
+          </fieldset>
+        </form>
       </div>
     </section>
   );
 }
 
-function WorkspaceStat({value, label, muted = false}: {value: string; label: string; muted?: boolean}) {
-  return (
-    <div className="min-h-20 rounded-2xl border border-white/10 bg-white/10 p-4">
-      <p className={`text-xl font-semibold tracking-tight ${muted ? "text-slate-300" : "text-white"}`}>{value}</p>
-      <p className="mt-1 text-xs text-slate-400">{label}</p>
-    </div>
-  );
-}
-
-function isMode(value: string | null): value is Mode {
-  return value !== null && modes.includes(value as Mode);
-}
-
 function ProductPicker({
-  mode,
   value,
   onChange,
   locale,
 }: {
-  mode: AiMode.Compare | AiMode.Evaluate;
   value: string[];
   onChange: (value: string[]) => void;
   locale: string;
@@ -378,7 +147,7 @@ function ProductPicker({
   const t = useTranslations("assistant");
   const [keyword, setKeyword] = useState("");
   const products = useProducts({ limit: 100 });
-  const max = mode === AiMode.Compare ? 5 : 1;
+  const max = 5;
   const allProducts = products.data?.items ?? [];
   const visibleProducts = allProducts.filter((product) =>
     [product.name, product.brandName, product.categoryName]
@@ -392,10 +161,6 @@ function ProductPicker({
   );
 
   function toggle(productId: string) {
-    if (mode === AiMode.Evaluate) {
-      onChange([productId]);
-      return;
-    }
     if (value.includes(productId)) {
       onChange(value.filter((id) => id !== productId));
     } else if (value.length < max) {
@@ -412,9 +177,7 @@ function ProductPicker({
             {t("productPickerTitle")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {mode === AiMode.Compare
-              ? t("comparePickerHint")
-              : t("evaluatePickerHint")}
+            {t("attachmentHint")}
           </p>
         </div>
         <Badge className="bg-background">
@@ -617,7 +380,7 @@ function AssistantResult({
                         <ArrowUpRight className="size-3.5" />
                       </Link>
                       <Link
-                        href={`/assistant?mode=EVALUATE&productId=${encodeURIComponent(id)}`}
+                        href={`/assistant?productId=${encodeURIComponent(id)}`}
                         className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
                       >
                         <Sparkles className="size-3.5" />
@@ -626,7 +389,7 @@ function AssistantResult({
                     </div>
                   ) : id ? (
                     <Link
-                      href={`/assistant?mode=EVALUATE&productId=${encodeURIComponent(id)}`}
+                      href={`/assistant?productId=${encodeURIComponent(id)}`}
                       className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
                     >
                       <Sparkles className="size-3.5" />
@@ -659,7 +422,7 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
       </CardHeader>
       <CardContent className="space-y-6 p-4 sm:p-6">
         {turns.map((turn, index) => (
-          <div key={`${turn.response.conversation_id}-${index}`} className="space-y-3">
+          <div key={index} className="space-y-3">
             <div className="ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground sm:max-w-[75%]">
               <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">
                 {t("you")}
@@ -670,15 +433,15 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
               <div className="mb-1 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 <Bot className="size-3.5 text-primary" />
                 {t("assistantLabel")}
-                {turn.response.intent ? (
+                {"intent" in turn.response && turn.response.intent ? (
                   <Badge className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">
                     {turn.response.intent}
                   </Badge>
                 ) : null}
               </div>
-              <p className="whitespace-pre-wrap">{turn.response.answer}</p>
+              <p className="whitespace-pre-wrap">{"answer" in turn.response ? turn.response.answer : t("noAnswer")}</p>
             </div>
-            {turn.response.products?.length ? (
+            {("products" in turn.response && turn.response.products?.length) || ("product" in turn.response && turn.response.product) ? (
               <div className="ml-0 sm:ml-4">
                 <AssistantResult result={turn.response} locale={locale} hideAnswer />
               </div>

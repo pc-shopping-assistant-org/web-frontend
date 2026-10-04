@@ -442,6 +442,15 @@
     }
   },
   "assistant": {
+    "invalidBuild": "Cấu hình gửi từ Build PC không hợp lệ. Hãy quay lại chọn linh kiện và thử lại.",
+    "chatTitle": "Trò chuyện với gearPC AI",
+    "unifiedDescription": "Hỏi tự nhiên để tìm sản phẩm, nhận tư vấn, so sánh hoặc hiểu rõ lựa chọn của bạn.",
+    "chatWelcome": "Bạn đang tìm gear gì?",
+    "unifiedPlaceholder": "Ví dụ: Tôi cần laptop lập trình dưới 25 triệu…",
+    "attachProducts": "Đính kèm sản phẩm từ catalog",
+    "attachmentHint": "Đính kèm một sản phẩm để hỏi thêm, hoặc 2–5 sản phẩm để so sánh. Không cần chọn chế độ.",
+    "defaultCompare": "So sánh các sản phẩm đã đính kèm, nêu ưu điểm và đánh đổi.",
+    "defaultEvaluate": "Giải thích sản phẩm đã đính kèm, nêu ưu điểm và đánh đổi.",
     "eyebrow": "AI bám theo catalog",
     "title": "Tìm và hiểu cấu hình tiếp theo",
     "description": "Hỏi về sản phẩm, tìm theo nhu cầu, so sánh sản phẩm hoặc yêu cầu giải thích.",

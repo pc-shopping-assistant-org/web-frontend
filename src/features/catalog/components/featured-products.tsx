@@ -95,7 +95,7 @@ function CategoryShelf({group}: {group: ProductGroup}) {
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <Link
-            href={`/assistant?mode=CONSULT`}
+            href={`/assistant`}
             className="inline-flex items-center gap-1.5 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
           >
             {t("categoryRailAi")}

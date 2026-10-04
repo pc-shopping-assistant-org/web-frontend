@@ -442,6 +442,15 @@
     }
   },
   "assistant": {
+    "invalidBuild": "The build context is invalid. Return to Build PC, select parts and try again.",
+    "chatTitle": "Chat with gearPC AI",
+    "unifiedDescription": "Ask naturally to find products, get advice, compare options or understand your next purchase.",
+    "chatWelcome": "What gear are you looking for?",
+    "unifiedPlaceholder": "For example: I need a coding laptop under 25 million VND…",
+    "attachProducts": "Attach products from the catalog",
+    "attachmentHint": "Attach one product to ask about it, or 2–5 products to compare. No mode selection needed.",
+    "defaultCompare": "Compare the attached products, including strengths and trade-offs.",
+    "defaultEvaluate": "Explain the attached product, including strengths and trade-offs.",
     "eyebrow": "Catalog-grounded AI",
     "title": "Find and understand your next setup",
     "description": "Ask about products, search by need, compare catalog items, or request a product explanation.",

@@ -225,7 +225,7 @@ function CompareTray({
   );
   if (ids.length === 0) return null;
 
-  const compareHref = `/assistant?mode=COMPARE&productIds=${encodeURIComponent(ids.join(","))}`;
+  const compareHref = `/assistant?productIds=${encodeURIComponent(ids.join(","))}`;
   return (
     <div className="sticky bottom-4 z-20 mt-7 rounded-2xl border border-primary/20 bg-background/95 p-3 shadow-xl shadow-slate-950/10 backdrop-blur sm:p-4" role="region" aria-label={t("compareTray")}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -246,7 +246,7 @@ function CompareTray({
             {t("clearCompare")}
           </Button>
           <Link
-            href={ids.length >= 2 ? compareHref : "/assistant?mode=COMPARE"}
+            href={ids.length >= 2 ? compareHref : "/assistant"}
             aria-disabled={ids.length < 2}
             tabIndex={ids.length < 2 ? -1 : undefined}
             className={`inline-flex h-7 items-center justify-center gap-1 rounded-lg px-2.5 text-[0.8rem] font-medium whitespace-nowrap transition-all ${ids.length >= 2 ? "bg-primary text-primary-foreground hover:bg-primary/80" : "pointer-events-none bg-muted text-muted-foreground"}`}

@@ -201,7 +201,7 @@ export function ProductCard({
                 </button>
               ) : product.id ? (
                 <Link
-                  href={`/assistant?mode=COMPARE&productIds=${encodeURIComponent(product.id)}`}
+                  href={`/assistant?productIds=${encodeURIComponent(product.id)}`}
                   className={cn("inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10", compact ? "h-8" : "h-9")}
                   aria-label={t("addToCompare")}
                   title={t("addToCompare")}
@@ -210,7 +210,7 @@ export function ProductCard({
                 </Link>
               ) : <span />}
               {product.id ? (
-                <Link href={`/assistant?mode=EVALUATE&productId=${encodeURIComponent(product.id)}`} className={cn("inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10", compact ? "h-8" : "h-9")} aria-label={t("askAssistant")} title={t("askAssistant")}>
+                <Link href={`/assistant?productId=${encodeURIComponent(product.id)}`} className={cn("inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10", compact ? "h-8" : "h-9")} aria-label={t("askAssistant")} title={t("askAssistant")}>
                   <IconSparkles className="size-4" />
                 </Link>
               ) : <span />}
