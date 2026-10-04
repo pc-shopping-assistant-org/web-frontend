@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  IconDeviceDesktop,
   IconLayoutGrid,
   IconLayoutDashboard,
   IconClipboardList,
@@ -43,6 +44,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const links = [
     { href: "/" as const, label: t("home") },
     { href: "/products" as const, label: t("products"), icon: IconLayoutGrid },
+    { href: "/build-pc" as const, label: "Build PC", icon: IconDeviceDesktop },
     { href: "/assistant" as const, label: t("assistant"), icon: IconRobot },
     ...(!isStaff
       ? [{ href: "/cart" as const, label: t("cart"), icon: IconShoppingCart }]
@@ -371,7 +373,7 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
         ) : (
           <p className="px-2 py-5 text-sm text-muted-foreground">{t("catalogMenuEmpty")}</p>
         )}
-        <Link href="/assistant?mode=CONSULT" className="mt-3 flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/85">
+        <Link href="/assistant" className="mt-3 flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/85">
           <IconRobot className="size-4" aria-hidden="true" />
           {t("catalogMenuAssistant")}
         </Link>
