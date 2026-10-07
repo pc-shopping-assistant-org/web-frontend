@@ -6,6 +6,7 @@ import {useTranslations} from "next-intl";
 import {useForm} from "react-hook-form";
 import {useState, type FormEvent} from "react";
 import type {UseFormRegisterReturn} from "react-hook-form";
+import {useQueryClient} from "@tanstack/react-query";
 import {z} from "zod";
 
 import {Button} from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {ErrorMessage} from "@/components/ui/error-message";
 import {Input as InputPrimitive} from "@/components/ui/input";
 
 import {register, resendOtp, verifyRegistrationOtp} from "./api";
+import {resyncIdentityCaches} from "@/features/auth/queries";
 import {registerRequestSchema} from "@/features/auth/contracts/requests";
 import {AuthUiMessage, Gender, OtpPurpose} from "@/lib/domain/account-enums";
 
@@ -24,6 +26,7 @@ export function RegisterForm() {
   const t = useTranslations("auth");
   const common = useTranslations("common");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [pending, setPending] = useState<RegisterFormValues | null>(null);
   const [otp, setOtp] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -47,6 +50,7 @@ export function RegisterForm() {
       setError(null);
       try {
         await verifyRegistrationOtp({email: pending.email, otp});
+        await resyncIdentityCaches(queryClient);
         router.push("/account");
         router.refresh();
       } catch (error) {

@@ -6,6 +6,7 @@ import {Link} from "@/i18n/navigation";
 import {useTranslations} from "next-intl";
 import {useForm} from "react-hook-form";
 import {useState} from "react";
+import {useQueryClient} from "@tanstack/react-query";
 import {z} from "zod";
 
 import {Button} from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {ErrorMessage} from "@/components/ui/error-message";
 
 import {login} from "./api";
 import {GoogleLoginButton} from "./google-login-button";
+import {resyncIdentityCaches} from "@/features/auth/queries";
 import {loginRequestSchema} from "@/features/auth/contracts/requests";
 
 type LoginFormValues = z.infer<typeof loginRequestSchema>;
@@ -23,12 +25,14 @@ export function LoginForm({redirectTo}: {redirectTo?: string} = {}) {
   const t = useTranslations("auth");
   const common = useTranslations("common");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [error, setError] = useState<unknown>(null);
   const form = useForm<LoginFormValues>({resolver: zodResolver(loginRequestSchema), defaultValues: {identifier: "", password: ""}});
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {
       await login(values);
+      await resyncIdentityCaches(queryClient);
       router.push(redirectTo?.startsWith("/") ? redirectTo : "/account");
       router.refresh();
     } catch (error) {

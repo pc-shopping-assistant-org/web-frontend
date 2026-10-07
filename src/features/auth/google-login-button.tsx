@@ -4,11 +4,13 @@ import Script from "next/script";
 import {useRouter} from "@/i18n/navigation";
 import {useTranslations} from "next-intl";
 import {useCallback, useEffect, useRef, useState} from "react";
+import {useQueryClient} from "@tanstack/react-query";
 
 import {ErrorMessage} from "@/components/ui/error-message";
 import {ApiMessageKey} from "@/lib/domain/message-keys";
 
 import {loginWithGoogle} from "./api";
+import {resyncIdentityCaches} from "@/features/auth/queries";
 import type {GoogleLoginRequest} from "@/features/auth/contracts/requests";
 
 type GoogleCredentialResponse = {credential: string};
@@ -46,6 +48,7 @@ const GOOGLE_SCRIPT = "https://accounts.google.com/gsi/client";
 export function GoogleLoginButton({redirectTo}: {redirectTo?: string} = {}) {
   const t = useTranslations("auth");
   const router = useRouter();
+  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef(false);
   const pendingRef = useRef(false);
@@ -62,6 +65,7 @@ export function GoogleLoginButton({redirectTo}: {redirectTo?: string} = {}) {
     try {
       const request: GoogleLoginRequest = {idToken: response.credential};
       await loginWithGoogle(request);
+      await resyncIdentityCaches(queryClient);
       router.push(redirectTo?.startsWith("/") ? redirectTo : "/account");
       router.refresh();
     } catch (cause) {
@@ -70,7 +74,7 @@ export function GoogleLoginButton({redirectTo}: {redirectTo?: string} = {}) {
       pendingRef.current = false;
       setPending(false);
     }
-  }, [redirectTo, router]);
+  }, [redirectTo, router, queryClient]);
 
   const renderButton = useCallback(() => {
     if (!clientId || !scriptReady || !window.google || !containerRef.current || initializedRef.current) return;
