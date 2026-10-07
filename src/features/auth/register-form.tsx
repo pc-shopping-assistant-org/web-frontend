@@ -18,7 +18,7 @@ import {Input as InputPrimitive} from "@/components/ui/input";
 import {register, resendOtp, verifyRegistrationOtp} from "./api";
 import {resyncIdentityCaches} from "@/features/auth/queries";
 import {registerRequestSchema} from "@/features/auth/contracts/requests";
-import {AuthUiMessage, Gender, OtpPurpose} from "@/lib/domain/account-enums";
+import {AuthUiMessage, Gender} from "@/lib/domain/account-enums";
 
 type RegisterFormValues = z.input<typeof registerRequestSchema>;
 
@@ -31,14 +31,13 @@ export function RegisterForm() {
   const [otp, setOtp] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const form = useForm<RegisterFormValues>({resolver: zodResolver(registerRequestSchema), defaultValues: {fullName: "", email: "", phone: "", password: "", address: "", gender: "", birthday: ""}});
+  const form = useForm<RegisterFormValues>({resolver: zodResolver(registerRequestSchema), defaultValues: {firstName: "", lastName: "", email: "", phone: "", password: "", address: "", gender: "", birthday: ""}});
   const submit = form.handleSubmit(async (values) => {
     setError(null);
     try {
       const payload = registerRequestSchema.parse(values);
       await register(payload);
       setPending(values);
-      setMessage(AuthUiMessage.OTP_SENT);
     } catch (error) {
       setError(error);
     }
@@ -59,7 +58,7 @@ export function RegisterForm() {
     };
     const resend = async () => {
       try {
-        await resendOtp({email: pending.email, purpose: OtpPurpose.Registration});
+        await resendOtp({email: pending.email});
         setError(null);
         setMessage(AuthUiMessage.OTP_SENT);
       } catch (error) {
@@ -77,7 +76,7 @@ export function RegisterForm() {
   }
 
   return <form className="space-y-4" onSubmit={(event) => void submit(event)} noValidate>
-    <Field id="fullName" label={t("fullName")} register={form.register("fullName")} error={form.formState.errors.fullName != null} errorMessage={common("validation")} />
+    <div className="grid gap-4 sm:grid-cols-2"><Field id="lastName" label={t("lastName")} register={form.register("lastName")} error={form.formState.errors.lastName != null} errorMessage={common("validation")} /><Field id="firstName" label={t("firstName")} register={form.register("firstName")} error={form.formState.errors.firstName != null} errorMessage={common("validation")} /></div>
     <Field id="email" type="email" label={t("email")} register={form.register("email")} error={form.formState.errors.email != null} errorMessage={common("validation")} />
     <Field id="phone" label={t("phone")} register={form.register("phone")} error={form.formState.errors.phone != null} errorMessage={common("validation")} />
     <Field id="password" type="password" label={t("password")} register={form.register("password")} error={form.formState.errors.password != null} errorMessage={common("validation")} />

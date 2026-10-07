@@ -1,4 +1,3 @@
-import {mapCustomerAddress} from "@/features/account/mappers";
 import type {
   AttributeDefinitionDto,
   AttributeSchemaItemDto,
@@ -145,7 +144,13 @@ export function mapCustomerDetail(dto: CustomerDetailDto): CustomerDetail {
     gender: dto.gender,
     status: dto.status,
     createdAt: dto.createdAt,
-    addresses: (dto.addresses ?? []).map(mapCustomerAddress),
+    addresses: (dto.addresses ?? []).map((address) => ({
+      id: address.id ?? "",
+      addressLine: address.addressLine ?? "",
+      default: address.default ?? false,
+      phone: address.phone ?? "",
+      recipientName: address.recipientName ?? "",
+    })),
     totalOrders: number(dto.totalOrders),
     totalSpent: number(dto.totalSpent),
   };

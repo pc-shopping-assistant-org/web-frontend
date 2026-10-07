@@ -18,7 +18,8 @@ export function parseRequest<TSchema extends z.ZodTypeAny>(
   const errors: ApiError[] = result.error.issues.map((issue) => ({
     field: issue.path.length ? issue.path.join(".") : null,
     code: issue.code,
-    message: issue.message,
+    // A pattern failure would otherwise leak the raw regular expression
+    message: issue.code === "invalid_format" ? "Invalid format" : issue.message,
   }));
   throw new ApiClientError(400, ApiMessageKey.VALIDATION_ERROR, errors);
 }

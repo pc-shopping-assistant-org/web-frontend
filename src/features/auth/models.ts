@@ -1,19 +1,24 @@
 export type UserSummary = {
   accountId: string;
-  id: string;
-  email?: string;
-  fullName?: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  /** Family name then given name (Vietnamese order), for display. */
+  fullName: string;
   phone?: string;
-  role?: string;
+  role: string;
 };
 
 export type UserProfile = UserSummary & {
-  address?: string;
-  avatarFileId?: string;
   birthday?: string;
-  createdAt?: string;
   gender?: string;
-  status?: string;
+  avatarFileId?: string;
+  avatarUrl?: string;
+};
+
+export type UploadedImage = {
+  id: string;
+  url: string;
 };
 
 export type AuthResponse = {

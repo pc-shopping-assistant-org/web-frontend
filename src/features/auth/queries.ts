@@ -4,7 +4,7 @@ import {useMutation, useQuery, useQueryClient, type QueryClient} from "@tanstack
 
 import {cartKeys} from "@/features/cart/queries";
 
-import {changePassword, getProfile, logout, requestChangePasswordOtp, updateProfile, uploadProfileAvatar} from "./api";
+import {changePassword, getProfile, logout, updateProfile, uploadAvatar, verifyPasswordChange} from "./api";
 
 export const authKeys = {
   profile: ["auth", "profile"] as const,
@@ -45,8 +45,8 @@ export function useUpdateProfile() {
   });
 }
 
-export function useUploadProfileAvatar() {
-  return useMutation({ mutationFn: uploadProfileAvatar });
+export function useUploadAvatar() {
+  return useMutation({mutationFn: uploadAvatar});
 }
 
 export function useLogout() {
@@ -63,6 +63,6 @@ export function useChangePassword() {
   return useMutation({mutationFn: changePassword});
 }
 
-export function useRequestChangePasswordOtp() {
-  return useMutation({mutationFn: requestChangePasswordOtp});
+export function useVerifyPasswordChange() {
+  return useMutation({mutationFn: verifyPasswordChange});
 }

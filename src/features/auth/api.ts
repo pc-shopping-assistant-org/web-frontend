@@ -9,10 +9,10 @@ import type {
   ResendOtpRequest,
   UpdateProfileRequest,
   VerifyOtpRequest,
+  VerifyPasswordChangeRequest,
 } from "@/features/auth/contracts";
-import type {FileResponseDto, AuthResponseDto, UserProfileDto} from "@/features/auth/contracts/dto";
-import {mapAuthResponse, mapUserProfile} from "@/features/auth/mappers";
-import {mapFileResponse} from "@/features/admin/mappers";
+import type {AuthResponseDto, MediaFileDto, UserSummaryDto} from "@/features/auth/contracts/dto";
+import {mapAuthResponse, mapUploadedImage, mapUserProfile} from "@/features/auth/mappers";
 import {
   changePasswordRequestSchema,
   forgotPasswordRequestSchema,
@@ -23,102 +23,78 @@ import {
   resetPasswordRequestSchema,
   updateProfileRequestSchema,
   verifyOtpRequestSchema,
+  verifyPasswordChangeRequestSchema,
 } from "@/features/auth/contracts/requests";
 import {parseRequest} from "@/lib/api/parse-request";
-import {OtpPurpose} from "@/lib/domain/account-enums";
+
+const jsonPost = (payload: unknown) => ({method: "POST", body: JSON.stringify(payload)});
 
 export async function login(request: LoginRequest) {
   const payload = parseRequest(loginRequestSchema, request);
-  return mapAuthResponse(await backendFetch<AuthResponseDto>("/auth/login", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }));
+  return mapAuthResponse(await backendFetch<AuthResponseDto>("/auth/login", jsonPost(payload)));
 }
 
 export async function loginWithGoogle(request: GoogleLoginRequest) {
   const payload = parseRequest(googleLoginRequestSchema, request);
-  return mapAuthResponse(await backendFetch<AuthResponseDto>("/auth/google", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }));
+  return mapAuthResponse(await backendFetch<AuthResponseDto>("/auth/google", jsonPost(payload)));
 }
 
 export function register(request: RegisterRequest) {
   const payload = parseRequest(registerRequestSchema, request);
-  return backendFetch<string>("/auth/register", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return backendFetch<null>("/auth/register", jsonPost(payload));
 }
 
 export async function verifyRegistrationOtp(request: VerifyOtpRequest) {
-  const payload = parseRequest(verifyOtpRequestSchema, {...request, purpose: OtpPurpose.Registration});
-  return mapAuthResponse(await backendFetch<AuthResponseDto>("/auth/verify-otp", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }));
+  const payload = parseRequest(verifyOtpRequestSchema, request);
+  return mapAuthResponse(await backendFetch<AuthResponseDto>("/auth/verify-otp", jsonPost(payload)));
 }
 
 export function resendOtp(request: ResendOtpRequest) {
   const payload = parseRequest(resendOtpRequestSchema, request);
-  return backendFetch<string>("/auth/resend-otp", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return backendFetch<null>("/auth/resend-otp", jsonPost(payload));
 }
 
 export function requestPasswordReset(request: ForgotPasswordRequest) {
   const payload = parseRequest(forgotPasswordRequestSchema, request);
-  return backendFetch<string>("/auth/forgot-password", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return backendFetch<null>("/auth/forgot-password", jsonPost(payload));
 }
 
 export function resetPassword(request: ResetPasswordRequest) {
   const payload = parseRequest(resetPasswordRequestSchema, request);
-  return backendFetch<string>("/auth/reset-password", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return backendFetch<null>("/auth/reset-password", jsonPost(payload));
 }
 
 export function logout() {
-  return backendFetch<string>("/auth/logout", {method: "POST"});
+  return backendFetch<{revoked: boolean}>("/auth/logout", {method: "POST"});
 }
 
 export async function getProfile() {
-  return mapUserProfile(await backendFetch<UserProfileDto>("/users/profile/me"));
+  return mapUserProfile(await backendFetch<UserSummaryDto>("/identity-service/profile"));
 }
 
 export async function updateProfile(request: UpdateProfileRequest) {
   const payload = parseRequest(updateProfileRequestSchema, request);
-  return mapUserProfile(await backendFetch<UserProfileDto>("/users/profile/me", {
+  return mapUserProfile(await backendFetch<UserSummaryDto>("/identity-service/profile", {
     method: "PUT",
     body: JSON.stringify(payload),
   }));
 }
 
-export function uploadProfileAvatar(file: globalThis.File) {
-  const body = new FormData();
-  body.append("file", file);
-  return backendFetch<FileResponseDto>(
-    "/users/profile/me/avatar",
-    {
-      method: "POST",
-      body,
-    },
-  ).then(mapFileResponse);
-}
-
-export function requestChangePasswordOtp() {
-  return backendFetch<string>("/users/profile/change-password/otp", {method: "POST"});
-}
-
+/** Step 1 of a password change: checks the current password and emails the confirmation OTP. */
 export function changePassword(request: ChangePasswordRequest) {
   const payload = parseRequest(changePasswordRequestSchema, request);
-  return backendFetch<string>("/users/profile/change-password", {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
+  return backendFetch<null>("/auth/change-password", jsonPost(payload));
+}
+
+/** Step 2: the OTP applies the new password given in step 1. */
+export function verifyPasswordChange(request: VerifyPasswordChangeRequest) {
+  const payload = parseRequest(verifyPasswordChangeRequestSchema, request);
+  return backendFetch<null>("/auth/verify-password-change", jsonPost(payload));
+}
+
+/** Uploads the image to media-service; the returned id is then sent with the profile update. */
+export async function uploadAvatar(file: globalThis.File) {
+  const body = new FormData();
+  body.append("file", file);
+  return mapUploadedImage(await backendFetch<MediaFileDto>("/media-service/files", {method: "POST", body}));
 }

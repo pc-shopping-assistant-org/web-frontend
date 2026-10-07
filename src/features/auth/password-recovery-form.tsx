@@ -12,10 +12,9 @@ import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Link} from "@/i18n/navigation";
 
-import {requestPasswordReset, resetPassword, resendOtp} from "./api";
-import {OtpPurpose} from "@/lib/domain/account-enums";
+import {requestPasswordReset, resetPassword} from "./api";
 
-const requestSchema = z.object({identifier: z.string().trim().min(1)});
+const requestSchema = z.object({identifier: z.email()});
 const resetSchema = z.object({otp: z.string().regex(/^\d{6}$/), newPassword: z.string().min(8).regex(/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}$/), confirmPassword: z.string()}).refine((value) => value.newPassword === value.confirmPassword, {path: ["confirmPassword"], message: "PASSWORD_MISMATCH"});
 
 export function PasswordRecoveryForm() {
@@ -32,7 +31,7 @@ export function PasswordRecoveryForm() {
     setError(null);
     setResent(false);
     try {
-      await requestPasswordReset(value.includes("@") ? {email: value} : {phone: value});
+      await requestPasswordReset({email: value});
       setIdentifier(value);
     } catch (cause) {
       setError(cause);
@@ -43,7 +42,7 @@ export function PasswordRecoveryForm() {
     if (!identifier) return;
     setError(null);
     try {
-      await resetPassword(identifier.includes("@") ? {email: identifier, otp, newPassword} : {phone: identifier, otp, newPassword});
+      await resetPassword({email: identifier, otp, newPassword});
       setDone(true);
     } catch (cause) {
       setError(cause);
@@ -57,14 +56,8 @@ export function PasswordRecoveryForm() {
       setError(null);
       setResent(false);
       try {
-        // The resend endpoint intentionally accepts email only. Reusing the
-        // identifier-aware forgot-password command keeps phone-based users on
-        // the same email OTP channel defined by the backend contract.
-        if (identifier.includes("@")) {
-          await resendOtp({email: identifier, purpose: OtpPurpose.ForgotPassword});
-        } else {
-          await requestPasswordReset({phone: identifier});
-        }
+        // A new reset code is issued by asking for the reset again; the previous code is replaced.
+        await requestPasswordReset({email: identifier});
         setResent(true);
       } catch (cause) {
         setError(cause);
@@ -72,9 +65,9 @@ export function PasswordRecoveryForm() {
     };
     return <form className="space-y-5" onSubmit={(event: FormEvent) => void submitReset(event)} noValidate>
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{t("resetOtpSent", {identifier})}</div>
-      <div className="space-y-2"><Label htmlFor="otp">{t("otp")}</Label><Input id="otp" inputMode="numeric" maxLength={6} {...resetForm.register("otp")} /></div>
-      <div className="space-y-2"><Label htmlFor="new-password">{t("newPassword")}</Label><Input id="new-password" type="password" autoComplete="new-password" {...resetForm.register("newPassword")} /></div>
-      <div className="space-y-2"><Label htmlFor="confirm-password">{t("confirmPassword")}</Label><Input id="confirm-password" type="password" autoComplete="new-password" {...resetForm.register("confirmPassword")} /></div>
+      <div className="space-y-2"><Label htmlFor="otp">{t("otp")}</Label><Input id="otp" inputMode="numeric" maxLength={6} {...resetForm.register("otp")} aria-invalid={Boolean(resetForm.formState.errors.otp)} />{resetForm.formState.errors.otp ? <p className="text-xs text-destructive">{common("validation")}</p> : null}</div>
+      <div className="space-y-2"><Label htmlFor="new-password">{t("newPassword")}</Label><Input id="new-password" type="password" autoComplete="new-password" {...resetForm.register("newPassword")} aria-invalid={Boolean(resetForm.formState.errors.newPassword)} /><p className={`text-xs ${resetForm.formState.errors.newPassword ? "text-destructive" : "text-muted-foreground"}`}>{t("passwordHint")}</p></div>
+      <div className="space-y-2"><Label htmlFor="confirm-password">{t("confirmPassword")}</Label><Input id="confirm-password" type="password" autoComplete="new-password" {...resetForm.register("confirmPassword")} aria-invalid={Boolean(resetForm.formState.errors.confirmPassword)} />{resetForm.formState.errors.confirmPassword ? <p className="text-xs text-destructive">{t("passwordMismatch")}</p> : null}</div>
       {error ? <ErrorMessage error={error} /> : null}
       {resent ? <p className="text-sm text-emerald-700">{t("otpResent")}</p> : null}
       <Button type="submit" className="w-full" disabled={resetForm.formState.isSubmitting}>{resetForm.formState.isSubmitting ? common("loading") : t("resetPassword")}</Button>
@@ -83,7 +76,7 @@ export function PasswordRecoveryForm() {
   }
 
   return <form className="space-y-5" onSubmit={(event: FormEvent) => void submitRequest(event)} noValidate>
-    <div className="space-y-2"><Label htmlFor="identifier">{t("email")}/{t("phone")}</Label><Input id="identifier" autoComplete="username" placeholder={t("identifierPlaceholder")} {...requestForm.register("identifier")} /></div>
+    <div className="space-y-2"><Label htmlFor="identifier">{t("email")}</Label><Input id="identifier" type="email" autoComplete="email" placeholder={t("identifierPlaceholder")} {...requestForm.register("identifier")} aria-invalid={Boolean(requestForm.formState.errors.identifier)} />{requestForm.formState.errors.identifier ? <p className="text-xs text-destructive">{common("validation")}</p> : null}</div>
     {error ? <ErrorMessage error={error} /> : null}
     <Button type="submit" className="w-full" disabled={requestForm.formState.isSubmitting}>{requestForm.formState.isSubmitting ? common("loading") : t("sendResetOtp")}</Button>
   </form>;

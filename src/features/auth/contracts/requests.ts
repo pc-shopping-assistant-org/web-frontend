@@ -1,14 +1,10 @@
 import {z} from "zod";
 
-import {
-  GENDER_VALUES,
-  OtpPurpose,
-} from "@/lib/domain/account-enums";
+import {GENDER_VALUES} from "@/lib/domain/account-enums";
 import {
   nonEmptyText,
   optionalDate,
   optionalEnum,
-  optionalText,
   optionalUuid,
   password,
   phone,
@@ -28,11 +24,12 @@ export const refreshTokenRequestSchema = z.object({
 }).strict();
 
 export const registerRequestSchema = z.object({
-  fullName: nonEmptyText.min(2),
+  firstName: nonEmptyText.max(100),
+  lastName: nonEmptyText.max(100),
   email: z.email(),
   phone,
   password,
-  address: nonEmptyText.min(5),
+  address: nonEmptyText.max(500),
   gender: optionalEnum(GENDER_VALUES),
   birthday: optionalDate,
 }).strict();
@@ -40,42 +37,38 @@ export const registerRequestSchema = z.object({
 export const verifyOtpRequestSchema = z.object({
   email: z.email(),
   otp: z.string().regex(/^\d{6}$/),
-  purpose: z.literal(OtpPurpose.Registration).optional(),
 }).strict();
 
 export const resendOtpRequestSchema = z.object({
   email: z.email(),
-  purpose: z.enum([OtpPurpose.Registration, OtpPurpose.ForgotPassword]),
 }).strict();
 
-const identifierSchema = z.object({
-  email: z.email().optional(),
-  phone: phone.optional(),
-}).refine((value) => Boolean(value.email) !== Boolean(value.phone), {
-  message: "Exactly one of email or phone is required",
-});
+export const forgotPasswordRequestSchema = z.object({
+  email: z.email(),
+}).strict();
 
-export const forgotPasswordRequestSchema = identifierSchema.strict();
-
-export const resetPasswordRequestSchema = identifierSchema.extend({
+export const resetPasswordRequestSchema = z.object({
+  email: z.email(),
   otp: z.string().regex(/^\d{6}$/),
   newPassword: password,
 }).strict();
 
 export const changePasswordRequestSchema = z.object({
-  oldPassword: z.string().min(1),
+  currentPassword: z.string().min(1),
   newPassword: password,
+}).strict();
+
+export const verifyPasswordChangeRequestSchema = z.object({
   otp: z.string().regex(/^\d{6}$/),
 }).strict();
 
 export const updateProfileRequestSchema = z.object({
-  fullName: nonEmptyText.min(2),
-  email: z.email().optional(),
+  firstName: nonEmptyText.max(50),
+  lastName: nonEmptyText.max(50),
   phone: phone.optional(),
-  address: optionalText,
-  avatarFileId: optionalUuid,
   gender: optionalEnum(GENDER_VALUES),
   birthday: optionalDate,
+  avatarFileId: optionalUuid,
 }).strict();
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
@@ -87,4 +80,5 @@ export type ResendOtpRequest = z.infer<typeof resendOtpRequestSchema>;
 export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
 export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;
 export type ChangePasswordRequest = z.infer<typeof changePasswordRequestSchema>;
+export type VerifyPasswordChangeRequest = z.infer<typeof verifyPasswordChangeRequestSchema>;
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;
