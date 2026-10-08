@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 import {OrderStatus} from "@/lib/domain/commerce-enums";
 
 import { useProfile } from "@/features/auth/queries";
+import { useCursorTrail } from "@/lib/hooks/use-cursor-trail";
 import { useCancelOrder, useOrders } from "./queries";
 
 const statuses = ["", ...Object.values(OrderStatus)];
@@ -47,6 +48,7 @@ export function OrdersPage() {
     cursor: undefined as string | undefined,
   });
   const query = useOrders(filters, Boolean(profile.data) && !isStaff);
+  const trail = useCursorTrail(JSON.stringify({...filters, cursor: undefined}));
   const cancel = useCancelOrder();
   const orders = query.data?.items ?? [];
   const requiresLogin =
@@ -217,25 +219,22 @@ export function OrdersPage() {
               <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
                 <div className="min-w-0">
                   <p className="font-semibold">
-                    {t("orderNumber")}: {order.id?.slice(0, 8).toUpperCase() ?? "—"}
+                    {t("orderNumber")}: {order.invoiceNumber}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {order.orderTime
-                      ? new Date(order.orderTime).toLocaleString(
+                    {order.createdAt
+                      ? new Date(order.createdAt).toLocaleString(
                           locale === "vi" ? "vi-VN" : "en-US",
                         )
                       : "—"}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {order.items?.length ?? 0} {t("items")}
+                    {order.itemCount} {t("items")}
                   </p>
-                  {order.items?.length ? (
+                  {order.firstProductName ? (
                     <p className="mt-1 max-w-[36rem] truncate text-sm font-medium text-foreground/80">
-                      {order.items
-                        .slice(0, 2)
-                        .map((item) => item.productName ?? item.sku ?? "—")
-                        .join(" · ")}
-                      {order.items.length > 2 ? ` · +${order.items.length - 2}` : ""}
+                      {order.firstProductName}
+                      {order.itemCount > 1 ? ` · +${order.itemCount - 1}` : ""}
                     </p>
                   ) : null}
                 </div>
@@ -290,17 +289,15 @@ export function OrdersPage() {
 
       {!query.isPending &&
       !query.isError &&
-      (query.data?.hasPrev || query.data?.hasNext) ? (
+      (trail.hasPrev || query.data?.hasNext) ? (
         <div className="mt-8 flex justify-center gap-2">
           <Button
             variant="outline"
-            disabled={!query.data?.hasPrev || !query.data?.prevCursor}
-            onClick={() =>
-              setFilters((current) => ({
-                ...current,
-                cursor: query.data?.prevCursor,
-              }))
-            }
+            disabled={!trail.hasPrev}
+            onClick={() => {
+              setFilters((current) => ({ ...current, cursor: trail.prevCursor }));
+              trail.pop();
+            }}
           >
             <ChevronLeft className="size-4" />
             {common("back")}
@@ -308,12 +305,13 @@ export function OrdersPage() {
           <Button
             variant="outline"
             disabled={!query.data?.hasNext || !query.data?.nextCursor}
-            onClick={() =>
+            onClick={() => {
+              trail.push(filters.cursor);
               setFilters((current) => ({
                 ...current,
                 cursor: query.data?.nextCursor,
-              }))
-            }
+              }));
+            }}
           >
             {t("next")}
             <ChevronRight className="size-4" />

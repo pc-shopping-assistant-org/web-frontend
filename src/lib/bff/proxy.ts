@@ -3,10 +3,8 @@ import {NextResponse} from "next/server";
 
 import {
   ACCESS_TOKEN_COOKIE,
-  CART_SESSION_COOKIE,
   REFRESH_TOKEN_COOKIE,
   accessTokenCookieOptions,
-  cartSessionCookieOptions,
   refreshTokenCookieOptions,
 } from "@/lib/auth/cookies";
 import {getServerEnv} from "@/lib/config/env";
@@ -52,7 +50,7 @@ function serviceUnavailableKey(service: BffService) {
   return service === "backend" ? STATIC_MESSAGE_KEYS.SERVICE_UNAVAILABLE : STATIC_MESSAGE_KEYS.AI_BACKEND_UNAVAILABLE;
 }
 
-function buildHeaders(request: Request, accessToken: string | undefined, sessionToken: string | undefined, body: Uint8Array | undefined) {
+function buildHeaders(request: Request, accessToken: string | undefined, body: Uint8Array | undefined) {
   const headers = new Headers();
   headers.set("Accept", request.headers.get("accept") ?? "application/json");
   const contentType = request.headers.get("content-type");
@@ -60,7 +58,6 @@ function buildHeaders(request: Request, accessToken: string | undefined, session
   const requestId = request.headers.get("x-request-id");
   if (requestId) headers.set("X-Request-ID", requestId);
   if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-  if (sessionToken) headers.set("X-Cart-Session", sessionToken);
   if (body && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
   return headers;
 }
@@ -71,7 +68,6 @@ async function requestUpstream(
   upstreamPath: string,
   body: Uint8Array | undefined,
   accessToken: string | undefined,
-  sessionToken: string | undefined,
 ): Promise<UpstreamResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
@@ -79,7 +75,7 @@ async function requestUpstream(
   try {
     const response = await fetch(`${upstreamBaseUrl(service)}${upstreamPath}`, {
       method: request.method,
-      headers: buildHeaders(request, accessToken, sessionToken, body),
+      headers: buildHeaders(request, accessToken, body),
       body: body && !["GET", "HEAD"].includes(request.method) ? (body as unknown as BodyInit) : undefined,
       signal: controller.signal,
       cache: "no-store",
@@ -167,7 +163,6 @@ async function refreshAccessToken(request: Request, refreshToken: string) {
     "/auth/refresh-token",
     jsonBody(refreshTokenRequestSchema.parse({refreshToken})),
     undefined,
-    undefined,
   );
   const tokens = tokenData(refreshResult.payload);
   if (refreshResult.status < 300 && tokens?.accessToken) return {tokens, payload: refreshResult.payload};
@@ -198,7 +193,6 @@ export async function handleBffRequest(request: Request, service: BffService, pa
   const cookieStore = await cookies();
   let accessToken = cookieStore.get(ACCESS_TOKEN_COOKIE)?.value;
   const refreshToken = cookieStore.get(REFRESH_TOKEN_COOKIE)?.value;
-  const sessionToken = cookieStore.get(CART_SESSION_COOKIE)?.value;
   const pathWithoutQuery = pathSegments.join("/");
   const upstreamPath = parsePath(pathSegments, new URL(request.url).search);
   const bodyBuffer = ["GET", "HEAD"].includes(request.method) ? undefined : new Uint8Array(await request.arrayBuffer());
@@ -207,14 +201,10 @@ export async function handleBffRequest(request: Request, service: BffService, pa
   let refreshedTokens: {accessToken?: string; refreshToken?: string} | undefined;
   let refreshFailed = false;
 
-  // The JWT filter treats an expired/invalid bearer token on permitAll
-  // routes (e.g. cart, which must also serve anonymous guests) as "no
-  // principal" rather than a 401 — so an expired token never reaches the
-  // reactive refresh-on-401 branch below. Decoding exp locally lets a
-  // still-valid refresh token silently mint a fresh access token before the
-  // request goes out, instead of the call being misread as an anonymous
-  // guest request (or, on cart mutations, rejected outright because neither
-  // an account nor a session token is present).
+  // The JWT filter treats an expired bearer token on permitAll routes (e.g. catalog
+  // reads) as "no principal" rather than a 401, so it never reaches the refresh-on-401
+  // branch below. Decoding exp locally lets a valid refresh token mint a fresh access
+  // token before the request goes out.
   if (accessToken && canRefresh && isJwtExpired(accessToken)) {
     if (refreshToken) {
       try {
@@ -235,21 +225,6 @@ export async function handleBffRequest(request: Request, service: BffService, pa
     }
   }
 
-  // A guest cart must have an owner before the first read or mutation. The
-  // backend deliberately rejects an anonymous cart request without either an
-  // account or a session token, so mint the browser session before forwarding
-  // the request instead of waiting for a successful mutation (which can never
-  // happen without the token). The cookie is only issued for cart routes and
-  // is never used when an authenticated account owns the cart.
-  const guestCartSession =
-    service === "backend" &&
-    pathWithoutQuery.startsWith("cart") &&
-    !accessToken &&
-    !sessionToken
-      ? crypto.randomUUID()
-      : undefined;
-  const outboundSessionToken = sessionToken ?? guestCartSession;
-
   let requestBody = bodyBuffer;
   if (service === "backend" && pathWithoutQuery === "auth/refresh-token" && refreshToken) {
     requestBody = jsonBody(refreshTokenRequestSchema.parse({refreshToken}));
@@ -260,7 +235,7 @@ export async function handleBffRequest(request: Request, service: BffService, pa
 
   let result: UpstreamResult;
   try {
-    result = await requestUpstream(request, service, upstreamPath, requestBody, AUTH_TOKEN_PATHS.has(pathWithoutQuery) ? undefined : accessToken, outboundSessionToken);
+    result = await requestUpstream(request, service, upstreamPath, requestBody, AUTH_TOKEN_PATHS.has(pathWithoutQuery) ? undefined : accessToken);
   } catch {
     return NextResponse.json(envelope(null, serviceUnavailableKey(service), [{code: "UPSTREAM_UNREACHABLE"}]), {status: 503});
   }
@@ -287,7 +262,7 @@ export async function handleBffRequest(request: Request, service: BffService, pa
       if (tokens?.accessToken) {
         accessToken = tokens.accessToken;
         refreshedTokens = tokens;
-        result = await requestUpstream(request, service, upstreamPath, requestBody, accessToken, outboundSessionToken);
+        result = await requestUpstream(request, service, upstreamPath, requestBody, accessToken);
         parsed = toEnvelope(result, service);
       } else {
         parsed = toEnvelope({status: 401, payload}, "backend");
@@ -311,10 +286,6 @@ export async function handleBffRequest(request: Request, service: BffService, pa
   }
   if (service === "backend" && pathWithoutQuery === "auth/logout" && (result.status < 300 || result.status === 401)) {
     clearAuthCookies(response);
-  }
-
-  if (guestCartSession && result.status < 300) {
-    response.cookies.set(CART_SESSION_COOKIE, guestCartSession, cartSessionCookieOptions);
   }
 
   return response;

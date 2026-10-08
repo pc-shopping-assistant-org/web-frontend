@@ -16,6 +16,8 @@ const warning = new Set<string>([
 const negative = new Set<string>([
   OrderStatus.Cancelled,
   PaymentStatus.Failed,
+  PaymentStatus.Cancelled,
+  PaymentStatus.Refunded,
   AccountStatus.Inactive,
   AccountStatus.Locked,
   ResourceStatus.Deleted,

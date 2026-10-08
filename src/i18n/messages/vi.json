@@ -249,7 +249,14 @@
     "confirmRemoveDescription": "Sản phẩm này sẽ được gỡ khỏi giỏ hàng của bạn.",
     "staffTitle": "Tài khoản nhân viên không có giỏ hàng",
     "staffDescription": "Giỏ hàng và checkout dành cho tài khoản khách hàng. Bạn có thể xử lý đơn hàng trong khu vực quản trị.",
-    "openAdminOrders": "Mở quản lý đơn hàng"
+    "openAdminOrders": "Mở quản lý đơn hàng",
+    "unavailable": "Không còn bán",
+    "unavailableItem": "Sản phẩm không còn khả dụng",
+    "unavailableHint": "Sản phẩm không còn bán không được tính vào tạm tính. Hãy xóa khỏi giỏ để tiếp tục.",
+    "signInRequiredTitle": "Đăng nhập để xem giỏ hàng",
+    "signInRequiredDescription": "Giỏ hàng gắn với tài khoản khách hàng. Đăng nhập để thêm sản phẩm và đặt hàng.",
+    "signIn": "Đăng nhập",
+    "overStock": "Vượt tồn kho, hãy giảm số lượng"
   },
   "auth": {
     "loginTitle": "Đăng nhập",
@@ -404,7 +411,21 @@
     "paymentSubmitted": "Đã gửi thanh toán. Đơn sẽ được cập nhật khi backend nhận xác nhận từ Stripe.",
     "payNow": "Thanh toán ngay",
     "viewOrder": "Xem đơn hàng",
-    "continueShopping": "Tiếp tục mua sắm"
+    "continueShopping": "Tiếp tục mua sắm",
+    "itemDiscountLabel": "Giảm giá sản phẩm",
+    "voucherDiscountLabel": "Voucher",
+    "unavailableItems": "Giỏ có sản phẩm không còn bán. Hãy xóa chúng khỏi giỏ hàng trước khi đặt.",
+    "itemUnavailable": "Không còn bán",
+    "invoiceNumber": "Mã hóa đơn",
+    "awaitingPaymentNote": "Đơn đang chờ thanh toán online. Đơn sẽ được cập nhật khi cổng thanh toán xác nhận.",
+    "awaitingConfirmationNote": "Đơn thanh toán khi nhận hàng đang chờ cửa hàng xác nhận.",
+    "removeVoucher": "Bỏ voucher",
+    "emptyCart": "Giỏ hàng đang trống",
+    "emptyCartDescription": "Hãy thêm sản phẩm vào giỏ trước khi đặt hàng.",
+    "vnpayRedirecting": "Đang chuyển tới cổng thanh toán VNPAY…",
+    "vnpayPreparing": "Đang chuẩn bị thanh toán VNPAY…",
+    "payWithVnpay": "Thanh toán qua VNPAY",
+    "vnpayFailed": "Chưa mở được cổng VNPAY. Bạn có thể thử lại hoặc thanh toán từ trang đơn hàng."
   },
   "orders": {
     "eyebrow": "Lịch sử mua hàng",
@@ -457,7 +478,14 @@
       "SHIPPING": "Đang giao",
       "COMPLETED": "Hoàn tất",
       "CANCELLED": "Đã hủy"
-    }
+    },
+    "notFound": "Không tìm thấy đơn hàng",
+    "notFoundDescription": "Đơn hàng không tồn tại hoặc không thuộc tài khoản của bạn.",
+    "awaitingPayment": "Đơn đang chờ thanh toán online, sẽ được cập nhật khi cổng thanh toán xác nhận.",
+    "note": "Ghi chú",
+    "cancellationReason": "Lý do hủy",
+    "payWithVnpay": "Thanh toán qua VNPAY",
+    "vnpayHint": "Đơn đang chờ thanh toán. Thanh toán qua VNPAY để cửa hàng xác nhận đơn."
   },
   "assistant": {
     "eyebrow": "AI bám theo catalog",
@@ -959,7 +987,7 @@
     "CART_EMPTY": "Giỏ hàng đang trống.",
     "CART_ITEM_NOT_FOUND": "Không tìm thấy sản phẩm trong giỏ hàng.",
     "CART_OWNER_REQUIRED": "Cần đăng nhập tài khoản khách hàng để thực hiện thao tác này.",
-    "CART_QUANTITY_TOO_LARGE": "Số lượng hoặc tổng tiền trong giỏ hàng quá lớn.",
+    "CART_QUANTITY_TOO_LARGE": "Mỗi sản phẩm trong giỏ hàng tối đa 9999.",
     "INVALID_SHIPPING_METHOD": "Phương thức vận chuyển không tồn tại hoặc không khả dụng.",
     "INVALID_PAYMENT_METHOD": "Phương thức thanh toán không tồn tại hoặc không khả dụng.",
     "INVALID_RECIPIENT": "Hãy chọn địa chỉ đã lưu hoặc nhập đủ tên, số điện thoại và địa chỉ người nhận.",
@@ -1044,5 +1072,18 @@
     "SHIPPING": "Đang giao",
     "COMPLETED": "Hoàn tất",
     "CANCELLED": "Đã hủy"
+  },
+  "vnpayReturn": {
+    "checking": "Đang xác nhận kết quả thanh toán…",
+    "paidTitle": "Thanh toán thành công",
+    "paidDescription": "VNPAY đã xác nhận thanh toán. Đơn hàng đang chờ cửa hàng xác nhận.",
+    "failedTitle": "Thanh toán không thành công",
+    "failedDescription": "VNPAY báo giao dịch không thành công nên đơn hàng đã được hủy. Bạn có thể đặt lại đơn mới.",
+    "cancelledTitle": "Bạn chưa hoàn tất thanh toán",
+    "cancelledDescription": "Đơn hàng vẫn đang chờ thanh toán. Bạn có thể thanh toán lại từ trang đơn hàng.",
+    "errorTitle": "Không xác nhận được kết quả thanh toán",
+    "amount": "Số tiền",
+    "viewOrder": "Xem đơn hàng",
+    "continueShopping": "Tiếp tục mua sắm"
   }
 }

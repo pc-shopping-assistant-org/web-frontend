@@ -13,12 +13,13 @@ import {ProductDetailPageSkeleton} from "@/components/ui/loading-skeletons";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Skeleton} from "@/components/ui/skeleton";
-import {Link} from "@/i18n/navigation";
+import {Link, usePathname, useRouter} from "@/i18n/navigation";
+import {MAX_CART_LINE_QUANTITY} from "@/lib/api/contracts/primitives";
 import {ApiClientError} from "@/lib/api/envelope";
 import {formatMoney, formatRating} from "@/lib/format";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-import {useAddToCart} from "@/features/cart/queries";
+import {useAddToCart, useCart} from "@/features/cart/queries";
 import {useCategorySpecLabels, useProductBySlug, useProductRatingSummary, useProductReviews, useProducts} from "../queries";
 import {CatalogCategoryIcon} from "./catalog-category-icon";
 import {ProductCard} from "./product-card";
@@ -35,6 +36,9 @@ export function ProductDetailPage({slug}: {slug: string}) {
   const [reviewCursor, setReviewCursor] = useState<string | undefined>();
   const [quantity, setQuantity] = useState(1);
   const addMutation = useAddToCart();
+  const cart = useCart(false);
+  const router = useRouter();
+  const pathname = usePathname();
   const [belowFoldRef, belowFoldReady] = useNearViewport<HTMLDivElement>(Boolean(product));
   const relatedQuery = useProducts(
     {categoryId: product?.category?.id, limit: 8},
@@ -69,9 +73,18 @@ export function ProductDetailPage({slug}: {slug: string}) {
     return <section className="page-wrap py-16"><Link href="/products" className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />{common("back")}</Link><div className="rounded-2xl border border-dashed p-12 text-center"><h1 className="text-2xl font-semibold">{query.error instanceof ApiClientError && query.error.status === 404 ? t("productNotFound") : t("loadError")}</h1><p className="mt-2 text-sm text-muted-foreground">{query.error instanceof ApiClientError && query.error.status === 404 ? null : common("unknownError")}</p></div></section>;
   }
 
+  // The cart holds at most MAX_CART_LINE_QUANTITY of a variant: add only what still fits, and nothing once it is full.
+  const inCart = cart.data?.items.find((item) => item.productVariantId === selected?.id)?.quantity ?? 0;
+  const room = Math.max(0, MAX_CART_LINE_QUANTITY - inCart);
+
   async function add() {
-    if (!selected?.id || !selected.quantity || selected.quantity < 1) return;
-    await addMutation.mutateAsync({productVariantId: selected.id, quantity});
+    if (!selected?.id || !selected.quantity || selected.quantity < 1 || room === 0) return;
+    try {
+      await addMutation.mutateAsync({productVariantId: selected.id, quantity: Math.min(quantity, room)});
+    } catch (cause) {
+      // Only a signed-in customer has a cart: send everyone else to sign in and bring them back here.
+      if (cause instanceof ApiClientError && cause.status === 401) router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+    }
   }
 
   return <section className="page-wrap py-12 sm:py-16">
@@ -146,7 +159,7 @@ export function ProductDetailPage({slug}: {slug: string}) {
             </div>
           </div>
         ) : null}
-        {selected ? <div className="space-y-4 rounded-2xl border bg-card p-5"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm text-muted-foreground">{t("selectedVariant")}</p><p className="text-2xl font-semibold">{formatMoney(selected.price, locale)}</p><p className="mt-1 text-sm text-muted-foreground">{selected.model ?? selected.sku ?? "—"}</p></div><div className="space-y-2"><Label htmlFor="quantity">{t("quantity")}</Label><div className="flex items-center gap-1"><Button type="button" size="icon" variant="outline" aria-label={t("decreaseQuantity")} onClick={() => setQuantity((value) => Math.max(1, value - 1))}><Minus className="size-4" /></Button><Input id="quantity" className="w-16 text-center" type="number" min={1} max={selected.quantity ?? 1} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(Number(event.target.value) || 1, selected.quantity ?? 1)))} /><Button type="button" size="icon" variant="outline" aria-label={t("increaseQuantity")} onClick={() => setQuantity((value) => Math.min(selected.quantity ?? value + 1, value + 1))}><Plus className="size-4" /></Button></div></div></div><div className="grid gap-3 border-y py-4 text-sm sm:grid-cols-2"><MetaItem icon={PackageCheck} label={t("stock")} value={selected.quantity && selected.quantity > 0 ? t("stockAvailable", {count: selected.quantity ?? 0}) : t("outOfStock")} /><MetaItem icon={ShieldCheck} label={t("warranty")} value={selected.warrantyMonths ? t("warrantyMonths", {count: selected.warrantyMonths}) : "—"} /><MetaItem icon={Info} label={t("sku")} value={selected.sku ?? "—"} /><MetaItem icon={Info} label={t("releaseAt")} value={selected.releaseAt ?? "—"} /></div>{addMutation.isError ? <ErrorMessage error={addMutation.error} /> : null}{addMutation.isSuccess ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700"><span>{t("addedToCart")}</span><Link href="/cart" className="font-semibold underline underline-offset-2">{t("viewCart")}</Link></div> : null}<div className="flex flex-wrap gap-2"><Button size="lg" className="min-w-48 flex-1" disabled={addMutation.isPending || !selected.quantity || selected.quantity < 1} onClick={() => void add()}><ShoppingCart className="size-4" />{addMutation.isPending ? common("loading") : t("addToCart")}</Button>{assistantHref ? <Link href={assistantHref} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition hover:bg-muted"><Sparkles className="size-4 text-primary" />{t("askAssistant")}</Link> : null}{compareHref ? <Link href={compareHref} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 text-sm font-medium text-primary transition hover:bg-primary/10"><ArrowLeftRight className="size-4" />{t("addToCompare")}</Link> : null}</div></div> : null}
+        {selected ? <div className="space-y-4 rounded-2xl border bg-card p-5"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-sm text-muted-foreground">{t("selectedVariant")}</p><p className="text-2xl font-semibold">{formatMoney(selected.price, locale)}</p><p className="mt-1 text-sm text-muted-foreground">{selected.model ?? selected.sku ?? "—"}</p></div><div className="space-y-2"><Label htmlFor="quantity">{t("quantity")}</Label><div className="flex items-center gap-1"><Button type="button" size="icon" variant="outline" aria-label={t("decreaseQuantity")} onClick={() => setQuantity((value) => Math.max(1, value - 1))}><Minus className="size-4" /></Button><Input id="quantity" className="w-16 text-center" type="number" min={1} max={Math.min(selected.quantity ?? 1, MAX_CART_LINE_QUANTITY)} value={quantity} onChange={(event) => setQuantity(Math.max(1, Math.min(Number(event.target.value) || 1, selected.quantity ?? 1, MAX_CART_LINE_QUANTITY)))} /><Button type="button" size="icon" variant="outline" aria-label={t("increaseQuantity")} onClick={() => setQuantity((value) => Math.min(selected.quantity ?? value + 1, MAX_CART_LINE_QUANTITY, value + 1))}><Plus className="size-4" /></Button></div></div></div><div className="grid gap-3 border-y py-4 text-sm sm:grid-cols-2"><MetaItem icon={PackageCheck} label={t("stock")} value={selected.quantity && selected.quantity > 0 ? t("stockAvailable", {count: selected.quantity ?? 0}) : t("outOfStock")} /><MetaItem icon={ShieldCheck} label={t("warranty")} value={selected.warrantyMonths ? t("warrantyMonths", {count: selected.warrantyMonths}) : "—"} /><MetaItem icon={Info} label={t("sku")} value={selected.sku ?? "—"} /><MetaItem icon={Info} label={t("releaseAt")} value={selected.releaseAt ?? "—"} /></div>{addMutation.isError ? <ErrorMessage error={addMutation.error} /> : null}{addMutation.isSuccess ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700"><span>{t("addedToCart")}</span><Link href="/cart" className="font-semibold underline underline-offset-2">{t("viewCart")}</Link></div> : null}<div className="flex flex-wrap gap-2"><Button size="lg" className="min-w-48 flex-1" disabled={addMutation.isPending || !selected.quantity || selected.quantity < 1 || room === 0} onClick={() => void add()}><ShoppingCart className="size-4" />{addMutation.isPending ? common("loading") : t("addToCart")}</Button>{assistantHref ? <Link href={assistantHref} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-3 text-sm font-medium transition hover:bg-muted"><Sparkles className="size-4 text-primary" />{t("askAssistant")}</Link> : null}{compareHref ? <Link href={compareHref} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-3 text-sm font-medium text-primary transition hover:bg-primary/10"><ArrowLeftRight className="size-4" />{t("addToCompare")}</Link> : null}</div></div> : null}
       </div>
     </div>
     <div ref={belowFoldRef} className="[content-visibility:auto] [contain-intrinsic-size:1400px]">

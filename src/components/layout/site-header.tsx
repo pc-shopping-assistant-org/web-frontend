@@ -36,7 +36,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const profile = useProfile();
   const role = profile.data?.role?.toUpperCase();
   const isStaff = isStaffRole(role);
-  const cart = useCart(!isStaff);
+  const cart = useCart(profile.isSuccess && !isStaff);
   const categories = useCategories();
   const logout = useLogout();
   const [open, setOpen] = useState(false);

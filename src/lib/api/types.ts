@@ -68,7 +68,7 @@ export type {
 export type {
   CancelOrderRequest,
   CreateOrderRequest,
-  CreatePaymentIntentRequest,
+  DiscountPreviewRequest,
   DiscountValidation,
   Invoice,
   InvoicesPage,
@@ -79,7 +79,6 @@ export type {
   PaymentMethod,
   PaymentSummary,
   ShippingMethod,
-  ValidateDiscountRequest,
 } from "@/features/orders/contracts";
 export type {
   AdminReviewPage,

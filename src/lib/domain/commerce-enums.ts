@@ -18,12 +18,13 @@ export enum PaymentStatus {
   Pending = "PENDING",
   Paid = "PAID",
   Failed = "FAILED",
+  Cancelled = "CANCELLED",
+  Refunded = "REFUNDED",
 }
 
 export enum PaymentMethodCode {
   Cod = "COD",
-  StripeCard = "STRIPE_CARD",
-  BankTransfer = "BANK_TRANSFER",
+  Vnpay = "VNPAY",
 }
 
 export enum ShippingMethodCode {

@@ -249,7 +249,14 @@
     "confirmRemoveDescription": "This product will be removed from your shopping cart.",
     "staffTitle": "Staff accounts do not have a cart",
     "staffDescription": "Cart and checkout are customer flows. Use the admin workspace to process customer orders.",
-    "openAdminOrders": "Open order management"
+    "openAdminOrders": "Open order management",
+    "unavailable": "No longer available",
+    "unavailableItem": "Item no longer available",
+    "unavailableHint": "Unavailable items are left out of the subtotal. Remove them from the cart to continue.",
+    "signInRequiredTitle": "Sign in to see your cart",
+    "signInRequiredDescription": "The cart belongs to your customer account. Sign in to add products and place orders.",
+    "signIn": "Sign in",
+    "overStock": "More than in stock, reduce the quantity"
   },
   "auth": {
     "loginTitle": "Sign in",
@@ -404,7 +411,21 @@
     "paymentSubmitted": "Payment submitted. The order will update when the backend receives Stripe confirmation.",
     "payNow": "Pay now",
     "viewOrder": "View order",
-    "continueShopping": "Continue shopping"
+    "continueShopping": "Continue shopping",
+    "itemDiscountLabel": "Item discounts",
+    "voucherDiscountLabel": "Voucher",
+    "unavailableItems": "Your cart has items that are no longer available. Remove them from the cart before ordering.",
+    "itemUnavailable": "No longer available",
+    "invoiceNumber": "Invoice number",
+    "awaitingPaymentNote": "The order is waiting for its online payment and will update when the payment gateway confirms.",
+    "awaitingConfirmationNote": "The cash-on-delivery order is waiting for the shop to confirm it.",
+    "removeVoucher": "Remove voucher",
+    "emptyCart": "Your cart is empty",
+    "emptyCartDescription": "Add products to the cart before placing an order.",
+    "vnpayRedirecting": "Taking you to the VNPAY payment gateway…",
+    "vnpayPreparing": "Preparing the VNPAY payment…",
+    "payWithVnpay": "Pay with VNPAY",
+    "vnpayFailed": "The VNPAY gateway could not be opened. Try again, or pay from the order page."
   },
   "orders": {
     "eyebrow": "Purchase history",
@@ -457,7 +478,14 @@
       "SHIPPING": "Shipping",
       "COMPLETED": "Completed",
       "CANCELLED": "Cancelled"
-    }
+    },
+    "notFound": "Order not found",
+    "notFoundDescription": "The order does not exist or does not belong to your account.",
+    "awaitingPayment": "The order is waiting for its online payment and will update when the payment gateway confirms.",
+    "note": "Note",
+    "cancellationReason": "Reason for cancelling",
+    "payWithVnpay": "Pay with VNPAY",
+    "vnpayHint": "The order is waiting for payment. Pay with VNPAY so the shop can confirm it."
   },
   "assistant": {
     "eyebrow": "Catalog-grounded AI",
@@ -959,7 +987,7 @@
     "CART_EMPTY": "Cart has no items.",
     "CART_ITEM_NOT_FOUND": "Cart item not found.",
     "CART_OWNER_REQUIRED": "An authenticated customer is required.",
-    "CART_QUANTITY_TOO_LARGE": "Cart quantity or amount is too large.",
+    "CART_QUANTITY_TOO_LARGE": "A cart line holds at most 9999 units.",
     "INVALID_SHIPPING_METHOD": "Shipping method does not exist or is not available.",
     "INVALID_PAYMENT_METHOD": "Payment method does not exist or is not available.",
     "INVALID_RECIPIENT": "Provide either a saved address or the recipient name, phone and address.",
@@ -1044,5 +1072,18 @@
     "SHIPPING": "Shipping",
     "COMPLETED": "Completed",
     "CANCELLED": "Cancelled"
+  },
+  "vnpayReturn": {
+    "checking": "Confirming the payment result…",
+    "paidTitle": "Payment successful",
+    "paidDescription": "VNPAY confirmed the payment. The order is waiting for the shop to confirm it.",
+    "failedTitle": "Payment was not successful",
+    "failedDescription": "VNPAY reported the transaction as failed, so the order was cancelled. You can place a new order.",
+    "cancelledTitle": "You did not finish the payment",
+    "cancelledDescription": "The order is still waiting for payment. You can pay again from the order page.",
+    "errorTitle": "The payment result could not be confirmed",
+    "amount": "Amount",
+    "viewOrder": "View order",
+    "continueShopping": "Continue shopping"
   }
 }

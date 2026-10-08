@@ -12,6 +12,8 @@ export const optionalPhone = z.union([phone, z.literal("")]).transform((value) =
 export const password = z.string().min(8).regex(/^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}$/);
 export const money = z.number().int().nonnegative();
 export const positiveQuantity = z.number().int().positive();
+/** Most units of one variant a cart line can hold; mirrors the order-service limit. */
+export const MAX_CART_LINE_QUANTITY = 9999;
 
 export const optionalEnum = <const T extends readonly [string, ...string[]]>(values: T) =>
   z.union([z.enum(values), z.literal("")]).transform((value) => value || undefined).optional();

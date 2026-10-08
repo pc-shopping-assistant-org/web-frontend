@@ -4,10 +4,10 @@ import {addToCartRequestSchema} from "@/features/cart/contracts/requests";
 import {loginRequestSchema} from "@/features/auth/contracts/requests";
 import {parseRequest} from "./parse-request";
 import {createDiscountRequestSchema} from "@/features/admin/contracts/commerce";
-import {createOrderRequestSchema, createPaymentIntentRequestSchema} from "@/features/orders/contracts/requests";
+import {createOrderRequestSchema, discountPreviewRequestSchema} from "@/features/orders/contracts/requests";
 import {chatRequestSchema, compareRequestSchema, evaluateRequestSchema} from "@/features/assistant/contracts/requests";
 import {ApiMessageKey} from "@/lib/domain/message-keys";
-import {DiscountScope, DiscountType, PaymentMethodCode} from "@/lib/domain/commerce-enums";
+import {DiscountScope, DiscountType} from "@/lib/domain/commerce-enums";
 
 describe("request schemas", () => {
   it("keeps the login payload explicit", () => {
@@ -24,12 +24,17 @@ describe("request schemas", () => {
     );
   });
 
-  it("rejects invalid cart and order quantities before the BFF call", () => {
+  it("rejects invalid cart quantities and incomplete orders before the BFF call", () => {
+    const id = "550e8400-e29b-41d4-a716-446655440000";
     expect(addToCartRequestSchema.safeParse({productVariantId: "not-a-uuid", quantity: 0}).success).toBe(false);
-    expect(createOrderRequestSchema.safeParse({
-      items: [{productVariantId: "not-a-uuid", quantity: 0}],
-      paymentMethod: PaymentMethodCode.Cod,
-    }).success).toBe(false);
+    const order = {idempotencyKey: "k1", shippingMethodId: id, paymentMethodId: id};
+    // no saved address and no typed-in recipient
+    expect(createOrderRequestSchema.safeParse(order).success).toBe(false);
+    // a saved address, or the whole recipient, is enough; a mix is not
+    expect(createOrderRequestSchema.safeParse({...order, customerAddressId: id}).success).toBe(true);
+    expect(createOrderRequestSchema.safeParse({...order, recipientName: "A", recipientPhone: "0912345678", deliveryAddress: "1 Street"}).success).toBe(true);
+    expect(createOrderRequestSchema.safeParse({...order, customerAddressId: id, recipientName: "A"}).success).toBe(false);
+    expect(createOrderRequestSchema.safeParse({...order, recipientName: "A", recipientPhone: "123", deliveryAddress: "1 Street"}).success).toBe(false);
   });
 
   it("enforces discount type and scope invariants", () => {
@@ -48,20 +53,10 @@ describe("request schemas", () => {
     expect(createDiscountRequestSchema.safeParse({...base, applicationScope: DiscountScope.Order, categoryIds: [categoryId]}).success).toBe(false);
   });
 
-  it("keeps payment protocol values explicit", () => {
-    const orderId = "550e8400-e29b-41d4-a716-446655440000";
-    expect(createPaymentIntentRequestSchema.safeParse({
-      orderId,
-      paymentMethod: PaymentMethodCode.StripeCard,
-    }).success).toBe(true);
-    expect(createPaymentIntentRequestSchema.safeParse({
-      orderId,
-      paymentMethod: PaymentMethodCode.Cod,
-    }).success).toBe(false);
-    expect(createOrderRequestSchema.safeParse({
-      items: [{productVariantId: orderId, quantity: 1}],
-      paymentMethod: "UNKNOWN_METHOD",
-    }).success).toBe(false);
+  it("prices a cart only with real line items", () => {
+    const id = "550e8400-e29b-41d4-a716-446655440000";
+    expect(discountPreviewRequestSchema.safeParse({orderAmount: 1000, items: []}).success).toBe(false);
+    expect(discountPreviewRequestSchema.safeParse({code: "FE10", orderAmount: 1000, items: [{productVariantId: id, quantity: 1, unitPrice: 1000}]}).success).toBe(true);
   });
 
   it("matches the AI request contract instead of accepting arbitrary IDs", () => {

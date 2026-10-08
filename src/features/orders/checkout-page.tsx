@@ -2,15 +2,8 @@
 
 import { CheckCircle2, CreditCard, KeyRound, MapPin, ShoppingBag, Truck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Image from "next/image";
-import {
-  CardElement,
-  Elements,
-  useElements,
-  useStripe,
-} from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,18 +25,19 @@ import { ApiClientError } from "@/lib/api/envelope";
 import { isStaffRole } from "@/lib/auth/roles";
 import { formatMoney } from "@/lib/format";
 import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
-import {PaymentMethodCode} from "@/lib/domain/commerce-enums";
-import {ResourceStatus} from "@/lib/domain/catalog-enums";
+import { OrderStatus, PaymentMethodCode } from "@/lib/domain/commerce-enums";
 
 import { useProfile } from "@/features/auth/queries";
 import { useAddresses } from "@/features/account/queries";
 import { useCart } from "@/features/cart/queries";
+import type { CartItem } from "@/features/cart/models";
+import type { OrderDetail } from "./models";
+import { VnpayAutoRedirect } from "./vnpay-pay";
 import {
   useCreateOrder,
-  useCreatePaymentIntent,
+  useDiscountPreview,
   usePaymentMethods,
   useShippingMethods,
-  useValidateDiscount,
 } from "./queries";
 
 export function CheckoutPage() {
@@ -55,32 +49,45 @@ export function CheckoutPage() {
   const profile = useProfile();
   const isStaff = isStaffRole(profile.data?.role);
   const requiresLogin = profile.isError && profile.error instanceof ApiClientError && profile.error.status === 401;
-  const cart = useCart(Boolean(profile.data) && !isStaff);
-  const addresses = useAddresses(Boolean(profile.data) && !isStaff);
-  const methods = usePaymentMethods();
-  const shipping = useShippingMethods();
+  const canLoad = Boolean(profile.data) && !isStaff;
+  const cart = useCart(canLoad);
+  const addresses = useAddresses(canLoad);
+  const methods = usePaymentMethods(canLoad);
+  const shipping = useShippingMethods(canLoad);
   const create = useCreateOrder();
-  const intent = useCreatePaymentIntent();
-  const validate = useValidateDiscount();
-  const items = cart.data?.items ?? [];
+  // The same key for every attempt of this checkout: a retry after a lost answer returns the order instead of a second one.
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const allItems = cart.data?.items ?? [];
+  const items = allItems.filter((item) => item.available);
+  const hasUnavailable = allItems.length > items.length;
   const subtotal = cart.data?.subtotalAmount ?? 0;
   // `null` means use the customer's default address on first render. An empty
   // string is an explicit choice to enter a one-off address for this order.
-  // Keeping those states separate prevents the controlled select from snapping
-  // back to the default whenever a customer chooses "new address".
   const [addressId, setAddressId] = useState<string | null>(null);
   const [recipientName, setRecipientName] = useState("");
   const [recipientPhone, setRecipientPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [shippingMethod, setShippingMethod] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodCode>(PaymentMethodCode.Cod);
-  const [discountCode, setDiscountCode] = useState("");
+  const [shippingId, setShippingId] = useState("");
+  const [paymentId, setPaymentId] = useState("");
+  const [voucherInput, setVoucherInput] = useState("");
+  const [appliedVoucher, setAppliedVoucher] = useState("");
   const [note, setNote] = useState("");
-  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
-  const [created, setCreated] = useState<{
-    orderId: string;
-    paymentIntent?: import("@/features/orders/contracts/responses").PaymentIntent;
-  } | null>(null);
+  const [created, setCreated] = useState<OrderDetail | null>(null);
+
+  const previewLines = items.map((item) => ({
+    productVariantId: item.productVariantId,
+    quantity: item.quantity,
+    unitPrice: item.price,
+    categoryId: item.categoryId,
+  }));
+  // The line discounts always count; the voucher is priced on top and only applies when the backend accepts the code.
+  const hasLines = canLoad && items.length > 0;
+  const linePreview = useDiscountPreview(hasLines ? { orderAmount: subtotal, items: previewLines } : null);
+  const voucherPreview = useDiscountPreview(hasLines && appliedVoucher ? { code: appliedVoucher, orderAmount: subtotal, items: previewLines } : null);
+  const voucherApplied = Boolean(appliedVoucher) && voucherPreview.isSuccess;
+  const itemDiscount = (voucherApplied ? voucherPreview.data : linePreview.data)?.itemDiscountAmount ?? 0;
+  const lineDiscounts = (voucherApplied ? voucherPreview.data : linePreview.data)?.lineDiscounts ?? {};
+  const voucherDiscount = voucherApplied ? voucherPreview.data.orderDiscountAmount : 0;
 
   const defaultAddressId =
     addresses.data?.find((item) => item.default)?.id ??
@@ -94,32 +101,11 @@ export function CheckoutPage() {
         ) ?? addresses.data?.find((address) => address.id === defaultAddressId);
   const resolvedRecipientName = recipientName || profile.data?.fullName || "";
   const resolvedRecipientPhone = recipientPhone || profile.data?.phone || "";
-  const discountAmount = validate.data?.isValid
-    ? (validate.data.discountAmount ?? 0)
-    : 0;
-  const shippingOptions = useMemo(
-    () => (shipping.data ?? []).filter((method) => method.status === ResourceStatus.Active),
-    [shipping.data],
-  );
-  const selectedShippingCode =
-    shippingOptions.find((method) => method.code === shippingMethod)?.code ??
-    shippingOptions[0]?.code ??
-    "";
-  const selectedShipping = shippingOptions.find(
-    (method) => method.code === selectedShippingCode,
-  );
-  const selectedShippingFee = selectedShipping?.fee ?? 0;
-  const estimatedTotal = Math.max(
-    0,
-    subtotal - discountAmount + selectedShippingFee,
-  );
-  const paymentOptions = useMemo(
-    () => (methods.data ?? []).filter((method) => method.status === ResourceStatus.Active),
-    [methods.data],
-  );
-  const selectedPaymentCode = (paymentOptions.find((method) => method.code === paymentMethod)?.code ??
-    paymentOptions[0]?.code ??
-    "") as PaymentMethodCode | "";
+  const shippingOptions = shipping.data ?? [];
+  const selectedShipping = shippingOptions.find((method) => method.id === shippingId) ?? shippingOptions[0];
+  const paymentOptions = methods.data ?? [];
+  const selectedPayment = paymentOptions.find((method) => method.id === paymentId) ?? paymentOptions[0];
+  const estimatedTotal = Math.max(0, subtotal - itemDiscount - voucherDiscount + (selectedShipping?.fee ?? 0));
   const hasDeliveryDetails = Boolean(
     selectedAddress ||
       (resolvedRecipientName.trim() &&
@@ -128,63 +114,40 @@ export function CheckoutPage() {
   );
   const canSubmit =
     items.length > 0 &&
+    !hasUnavailable &&
     hasDeliveryDetails &&
-    Boolean(selectedPaymentCode) &&
-    Boolean(selectedShippingCode);
-  const stripePromise = useMemo(() => {
-    const publishableKey =
-      created?.paymentIntent?.publishableKey ||
-      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-    return publishableKey ? loadStripe(publishableKey) : null;
-  }, [created]);
+    Boolean(selectedPayment) &&
+    Boolean(selectedShipping);
 
-  async function applyDiscount() {
-    if (!discountCode.trim()) return;
-    await validate.mutateAsync({
-      code: discountCode.trim(),
-      orderAmount: subtotal,
-      items: items.map((item) => ({
-        productVariantId: item.productVariantId!,
-        quantity: item.quantity!,
-        unitPrice: item.listPrice ?? 0,
-      })),
-    });
+  function applyVoucher() {
+    setAppliedVoucher(voucherInput.trim());
+  }
+
+  function clearVoucher() {
+    setVoucherInput("");
+    setAppliedVoucher("");
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (!canSubmit) return;
-    const order = await create.mutateAsync({
-      items: items.map((item) => ({
-        productVariantId: item.productVariantId!,
-        quantity: item.quantity!,
-      })),
-      paymentMethod: selectedPaymentCode as PaymentMethodCode,
-      shippingMethodCode: selectedShippingCode,
-      discountCode: discountCode.trim() || undefined,
-      note: note.trim() || undefined,
-      ...(selectedAddress
-        ? { customerAddressId: selectedAddress.id }
-        : {
-            recipientName: resolvedRecipientName.trim(),
-            recipientPhone: resolvedRecipientPhone.trim(),
-            deliveryAddress: deliveryAddress.trim(),
-          }),
-    });
-    if (!order.id) return;
-    if (selectedPaymentCode === PaymentMethodCode.StripeCard) {
-      setPaymentSubmitted(false);
-      setCreated({ orderId: order.id });
-      try {
-        const paymentIntent = await intent.mutateAsync({ orderId: order.id });
-        setCreated({ orderId: order.id, paymentIntent });
-      } catch {
-        // The order exists even when the provider intent cannot be prepared.
-        // Keep the order reference visible so the customer can retry from its
-        // detail page instead of submitting a duplicate order.
-      }
-    } else {
-      setCreated({ orderId: order.id });
+    if (!canSubmit || !selectedShipping || !selectedPayment) return;
+    try {
+      setCreated(await create.mutateAsync({
+        idempotencyKey,
+        shippingMethodId: selectedShipping.id,
+        paymentMethodId: selectedPayment.id,
+        discountCode: voucherApplied ? appliedVoucher : undefined,
+        note: note.trim() || undefined,
+        ...(selectedAddress
+          ? { customerAddressId: selectedAddress.id }
+          : {
+              recipientName: resolvedRecipientName.trim(),
+              recipientPhone: resolvedRecipientPhone.trim(),
+              deliveryAddress: deliveryAddress.trim(),
+            }),
+      }));
+    } catch {
+      // the failed mutation shows its own error next to the button
     }
   }
 
@@ -221,6 +184,42 @@ export function CheckoutPage() {
         </Card>
       </section>
     );
+  if (created)
+    return (
+      <section className="page-wrap max-w-3xl py-16">
+        <Card>
+          <CardContent className="space-y-5 p-8 text-center">
+            <CheckCircle2 className="mx-auto size-12 text-emerald-600" />
+            <h1 className="text-3xl font-semibold">{t("orderCreated")}</h1>
+            <p className="text-muted-foreground">{t("orderCreatedDescription")}</p>
+            <p className="text-sm">
+              <span className="text-muted-foreground">{t("invoiceNumber")}: </span>
+              <span className="font-semibold">{created.invoiceNumber}</span>
+              <span className="mx-2 text-muted-foreground">·</span>
+              <span className="font-semibold">{formatMoney(created.totalAmount, locale)}</span>
+            </p>
+            {created.status === OrderStatus.PendingPayment && paymentOptions.find((method) => method.id === created.paymentMethodId)?.code === PaymentMethodCode.Vnpay ? (
+              <VnpayAutoRedirect orderId={created.id} />
+            ) : (
+              <p className="rounded-xl border bg-muted/40 p-4 text-sm">
+                {created.status === OrderStatus.PendingPayment ? t("awaitingPaymentNote") : t("awaitingConfirmationNote")}
+              </p>
+            )}
+            <div className="flex flex-wrap justify-center gap-3">
+              <Button onClick={() => router.push(`/orders/${created.id}`)}>
+                {t("viewOrder")}
+              </Button>
+              <Link
+                href="/products"
+                className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted"
+              >
+                {t("continueShopping")}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+    );
   if (cart.isPending) return <CheckoutPageSkeleton />;
   if (cart.isError)
     return (
@@ -234,61 +233,15 @@ export function CheckoutPage() {
         </Link>
       </section>
     );
-  if (created)
+  if (allItems.length === 0)
     return (
-      <section className="page-wrap max-w-3xl py-16">
-        <Card>
-          <CardContent className="space-y-5 p-8 text-center">
-            <CheckCircle2 className="mx-auto size-12 text-emerald-600" />
-            <h1 className="text-3xl font-semibold">{t("orderCreated")}</h1>
-            <p className="text-muted-foreground">
-              {t("orderCreatedDescription")}
-            </p>
-            {created.paymentIntent ? (
-              <div className="rounded-xl border bg-muted/40 p-4 text-left text-sm">
-                <p className="font-medium">{t("paymentReady")}</p>
-                {paymentSubmitted ? (
-                  <p className="mt-2 text-emerald-700">
-                    {t("paymentSubmitted")}
-                  </p>
-                ) : stripePromise && created.paymentIntent.clientSecret ? (
-                  <Elements stripe={stripePromise}>
-                    <StripeCardForm
-                      clientSecret={created.paymentIntent.clientSecret}
-                      onSubmitted={() => setPaymentSubmitted(true)}
-                    />
-                  </Elements>
-                ) : (
-                  <p className="mt-2 text-muted-foreground">
-                    {t("stripeConfigurationMissing")}
-                  </p>
-                )}
-                {!paymentSubmitted ? (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {t("paymentIntegrationNote")}
-                  </p>
-                ) : null}
-              </div>
-            ) : null}
-            {intent.isError ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-left text-sm text-amber-900">
-                <p className="font-medium">{t("stripeUnavailable")}</p>
-                <p className="mt-1 text-xs leading-5 text-amber-800">
-                  {t("paymentIntegrationNote")}
-                </p>
-              </div>
-            ) : null}
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button onClick={() => router.push(`/orders/${created.orderId}`)}>
-                {t("viewOrder")}
-              </Button>
-              <Link
-                href="/products"
-                className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted"
-              >
-                {t("continueShopping")}
-              </Link>
-            </div>
+      <section className="page-wrap max-w-2xl py-16">
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center p-12 text-center">
+            <ShoppingBag className="size-10 text-muted-foreground" />
+            <h1 className="mt-4 text-2xl font-semibold">{t("emptyCart")}</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{t("emptyCartDescription")}</p>
+            <Link href="/products" className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">{t("continueShopping")}</Link>
           </CardContent>
         </Card>
       </section>
@@ -306,7 +259,12 @@ export function CheckoutPage() {
         onSubmit={(event) => void submit(event)}
       >
         <div className="space-y-6">
-          <CheckoutItemsCard items={items} locale={locale} />
+          <CheckoutItemsCard items={allItems} lineDiscounts={lineDiscounts} locale={locale} />
+          {hasUnavailable ? (
+            <p className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              {t("unavailableItems")}
+            </p>
+          ) : null}
           <Card>
             <CardHeader>
               <CardTitle>
@@ -369,6 +327,7 @@ export function CheckoutPage() {
                       onChange={(event) =>
                         setDeliveryAddress(event.target.value)
                       }
+                      maxLength={500}
                       required
                     />
                   </div>
@@ -397,20 +356,18 @@ export function CheckoutPage() {
                 <div className="grid gap-3 sm:grid-cols-3">
                   {shippingOptions.map((option) => (
                     <label
-                      key={option.code}
-                      className={`cursor-pointer rounded-xl border p-4 text-sm transition ${selectedShippingCode === option.code ? "border-primary bg-primary/5 shadow-sm" : "hover:border-primary/40"}`}
+                      key={option.id}
+                      className={`cursor-pointer rounded-xl border p-4 text-sm transition ${selectedShipping?.id === option.id ? "border-primary bg-primary/5 shadow-sm" : "hover:border-primary/40"}`}
                     >
                       <input
                         type="radio"
                         className="sr-only"
                         name="shipping"
-                        value={option.code}
-                        checked={selectedShippingCode === option.code}
-                        onChange={() => setShippingMethod(option.code ?? "")}
+                        value={option.id}
+                        checked={selectedShipping?.id === option.id}
+                        onChange={() => setShippingId(option.id)}
                       />
-                      <span className="font-medium">
-                        {option.name ?? option.code}
-                      </span>
+                      <span className="font-medium">{option.name}</span>
                       <span className="mt-3 block font-semibold">
                         {formatMoney(option.fee, locale)}
                       </span>
@@ -428,26 +385,28 @@ export function CheckoutPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {paymentOptions.length === 0 ? (
+              {methods.isPending ? (
+                <Skeleton className="h-14 rounded-xl" />
+              ) : methods.isError ? (
+                <ErrorMessage error={methods.error} />
+              ) : paymentOptions.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
                   {t("paymentMethodsUnavailable")}
                 </p>
               ) : (
                 paymentOptions.map((method) => (
                   <label
-                    key={method.code}
-                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${selectedPaymentCode === method.code ? "border-primary bg-primary/5" : ""}`}
+                    key={method.id}
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-4 ${selectedPayment?.id === method.id ? "border-primary bg-primary/5" : ""}`}
                   >
                     <input
                       type="radio"
                       name="payment"
-                      value={method.code}
-                      checked={selectedPaymentCode === method.code}
-                      onChange={() => setPaymentMethod((method.code ?? PaymentMethodCode.Cod) as PaymentMethodCode)}
+                      value={method.id}
+                      checked={selectedPayment?.id === method.id}
+                      onChange={() => setPaymentId(method.id)}
                     />
-                    <span className="font-medium">
-                      {method.name ?? method.code}
-                    </span>
+                    <span className="font-medium">{method.name}</span>
                   </label>
                 ))
               )}
@@ -474,38 +433,31 @@ export function CheckoutPage() {
             <CardContent>
               <div className="flex gap-2">
                 <Input
-                  value={discountCode}
-                  onChange={(event) => {
-                    setDiscountCode(event.target.value.toUpperCase());
-                    // A previous validation result must never be reused for a
-                    // newly edited voucher code or the quote can display the
-                    // wrong discount before the backend recalculates it.
-                    validate.reset();
-                  }}
+                  value={voucherInput}
+                  maxLength={50}
+                  onChange={(event) => setVoucherInput(event.target.value.toUpperCase())}
                   placeholder={t("voucherPlaceholder")}
                 />
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => void applyDiscount()}
-                  disabled={validate.isPending || !discountCode.trim()}
+                  onClick={applyVoucher}
+                  disabled={voucherPreview.isFetching || !voucherInput.trim()}
                 >
                   {t("apply")}
                 </Button>
               </div>
-              {validate.data ? (
-                <p
-                  className={`mt-3 text-sm ${validate.data.isValid ? "text-emerald-700" : "text-destructive"}`}
-                >
-                  {validate.data.message ??
-                    (validate.data.isValid
-                      ? t("voucherApplied")
-                      : t("voucherInvalid"))}
+              {voucherApplied ? (
+                <p className="mt-3 flex items-center justify-between gap-2 text-sm text-emerald-700">
+                  <span>{t("voucherApplied")}</span>
+                  <button type="button" className="text-xs font-medium underline" onClick={clearVoucher}>
+                    {t("removeVoucher")}
+                  </button>
                 </p>
               ) : null}
-              {validate.isError ? (
+              {appliedVoucher && voucherPreview.isError ? (
                 <div className="mt-3">
-                  <ErrorMessage error={validate.error} />
+                  <ErrorMessage error={voucherPreview.error} />
                 </div>
               ) : null}
             </CardContent>
@@ -520,8 +472,12 @@ export function CheckoutPage() {
                 value={formatMoney(subtotal, locale)}
               />
               <SummaryLine
-                label={t("discount")}
-                value={`− ${formatMoney(discountAmount, locale)}`}
+                label={t("itemDiscountLabel")}
+                value={`− ${formatMoney(itemDiscount, locale)}`}
+              />
+              <SummaryLine
+                label={t("voucherDiscountLabel")}
+                value={`− ${formatMoney(voucherDiscount, locale)}`}
               />
               <SummaryLine
                 label={t("shippingFee")}
@@ -533,7 +489,7 @@ export function CheckoutPage() {
               />
               <div className="border-t pt-3">
                 <SummaryLine
-                  label={t("estimatedTotal")}
+                  label={t("total")}
                   value={formatMoney(estimatedTotal, locale)}
                   strong
                 />
@@ -544,27 +500,13 @@ export function CheckoutPage() {
               <Button
                 type="submit"
                 className="mt-3 w-full"
-                disabled={
-                  create.isPending ||
-                  intent.isPending ||
-                  !canSubmit ||
-                  paymentOptions.length === 0 ||
-                  shipping.isPending ||
-                  shippingOptions.length === 0
-                }
+                disabled={create.isPending || !canSubmit}
               >
-                {create.isPending || intent.isPending
-                  ? common("loading")
-                  : t("placeOrder")}
+                {create.isPending ? common("loading") : t("placeOrder")}
               </Button>
               {create.isError ? (
                 <div className="mt-3">
                   <ErrorMessage error={create.error} />
-                </div>
-              ) : null}
-              {intent.isError ? (
-                <div className="mt-3">
-                  <ErrorMessage error={intent.error} />
                 </div>
               ) : null}
             </CardContent>
@@ -575,11 +517,56 @@ export function CheckoutPage() {
   );
 }
 
+function Field({
+  id,
+  label,
+  value,
+  onChange,
+  required,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required={required}
+      />
+    </div>
+  );
+}
+
+function SummaryLine({
+  label,
+  value,
+  strong,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div className={`flex justify-between gap-4 ${strong ? "font-semibold" : ""}`}>
+      <span className="text-muted-foreground">{label}</span>
+      <span>{value}</span>
+    </div>
+  );
+}
+
 function CheckoutItemsCard({
   items,
+  lineDiscounts,
   locale,
 }: {
-  items: import("@/features/cart/contracts/responses").CartItem[];
+  items: CartItem[];
+  lineDiscounts: Record<string, number>;
   locale: string;
 }) {
   const t = useTranslations("checkout");
@@ -602,169 +589,60 @@ function CheckoutItemsCard({
         </Link>
       </CardHeader>
       <CardContent className="divide-y">
-        {items.map((item, index) => (
-          <div
-            key={item.productVariantId ?? index}
-            className="flex gap-3 py-3 first:pt-0 last:pb-0"
-          >
-            <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted/60">
-              {item.imageUrl ? (
-                <Image
-                  src={item.imageUrl}
-                  alt={item.productName ?? ""}
-                  fill
-                  sizes="56px"
-                  unoptimized
-                  className="object-cover"
-                />
-              ) : (
-                <CatalogCategoryIcon
-                  categoryName={item.productName ?? item.model}
-                  className="size-7 text-primary/50"
-                  strokeWidth={1.45}
-                />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-sm font-medium">
-                {item.productName ?? item.sku ?? nav("products")}
-              </p>
-              <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                {item.model ?? item.sku ?? "—"}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
-                <span>{t("quantityShort", { count: item.quantity ?? 0 })}</span>
-                <span aria-hidden="true">·</span>
-                <span>{formatMoney(item.listPrice, locale)}</span>
+        {items.map((item) => {
+          const discount = lineDiscounts[item.productVariantId] ?? 0;
+          return (
+            <div key={item.productVariantId} className="flex gap-3 py-3 first:pt-0 last:pb-0">
+              <div className="relative flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted/60">
+                {item.imageUrl ? (
+                  <Image
+                    src={item.imageUrl}
+                    alt={item.productName}
+                    fill
+                    sizes="56px"
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  <CatalogCategoryIcon
+                    categoryName={item.productName || item.model}
+                    className="size-7 text-primary/50"
+                    strokeWidth={1.45}
+                  />
+                )}
               </div>
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 text-sm font-medium">
+                  {item.productName || item.sku || nav("products")}
+                </p>
+                {item.variantLabel ? (
+                  <p className="mt-0.5 truncate text-xs text-foreground/80">{item.variantLabel}</p>
+                ) : null}
+                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                  {item.model ?? item.sku ?? "—"}
+                </p>
+                {item.available ? (
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span>{t("quantityShort", { count: item.quantity })}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{formatMoney(item.price, locale)}</span>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs font-medium text-destructive">{t("itemUnavailable")}</p>
+                )}
+              </div>
+              {item.available ? (
+                <div className="shrink-0 self-center text-right">
+                  {discount > 0 ? (
+                    <p className="text-xs text-muted-foreground line-through">{formatMoney(item.subtotal, locale)}</p>
+                  ) : null}
+                  <p className="text-sm font-semibold">{formatMoney(item.subtotal - discount, locale)}</p>
+                </div>
+              ) : null}
             </div>
-            <p className="shrink-0 self-center text-sm font-semibold">
-              {formatMoney(item.subtotal, locale)}
-            </p>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
-  );
-}
-
-function StripeCardForm({
-  clientSecret,
-  onSubmitted,
-}: {
-  clientSecret: string;
-  onSubmitted: () => void;
-}) {
-  const t = useTranslations("checkout");
-  const common = useTranslations("common");
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!stripe || !elements) {
-      setError(t("stripeUnavailable"));
-      return;
-    }
-    const card = elements.getElement(CardElement);
-    if (!card) {
-      setError(t("stripeUnavailable"));
-      return;
-    }
-    setError(null);
-    setIsSubmitting(true);
-    const result = await stripe.confirmCardPayment(clientSecret, {
-      payment_method: { card },
-    });
-    setIsSubmitting(false);
-    if (result.error) {
-      setError(result.error.message ?? t("stripePaymentFailed"));
-      return;
-    }
-    if (
-      result.paymentIntent?.status === "succeeded" ||
-      result.paymentIntent?.status === "processing"
-    ) {
-      onSubmitted();
-      return;
-    }
-    setError(t("stripePaymentFailed"));
-  }
-
-  return (
-    <form className="mt-4 space-y-3" onSubmit={(event) => void submit(event)}>
-      <p className="text-xs text-muted-foreground">
-        {t("stripePaymentDescription")}
-      </p>
-      <div className="rounded-lg border bg-background p-3">
-        <CardElement
-          options={{
-            hidePostalCode: true,
-            style: {
-              base: {
-                color: "#172033",
-                fontSize: "16px",
-                fontFamily: "inherit",
-                "::placeholder": { color: "#64748b" },
-              },
-            },
-          }}
-        />
-      </div>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <Button type="submit" disabled={isSubmitting || !stripe || !elements}>
-        <CreditCard className="size-4" />
-        {isSubmitting ? common("loading") : t("payNow")}
-      </Button>
-    </form>
-  );
-}
-
-function Field({
-  id,
-  label,
-  value,
-  onChange,
-  type = "text",
-  required,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  required?: boolean;
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        required={required}
-      />
-    </div>
-  );
-}
-function SummaryLine({
-  label,
-  value,
-  strong,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-}) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 ${strong ? "text-base font-semibold" : ""}`}
-    >
-      <span className="text-muted-foreground">{label}</span>
-      <span>{value}</span>
-    </div>
   );
 }
