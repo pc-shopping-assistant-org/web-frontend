@@ -113,7 +113,6 @@ export type {
   CreateDiscountRequest,
   CreateEmployeeRequest,
   CreateOptionRequest,
-  CreateProductImageRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CreateSupplierRequest,

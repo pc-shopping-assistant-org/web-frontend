@@ -5,6 +5,7 @@ import {useTranslations} from "next-intl";
 import {useMemo, useState, useSyncExternalStore} from "react";
 
 import {Button} from "@/components/ui/button";
+import {useCursorTrail} from "@/lib/hooks/use-cursor-trail";
 import {ProductGridSkeleton} from "@/components/ui/loading-skeletons";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
@@ -108,6 +109,7 @@ export function CatalogPage({
     syncCatalogUrl(router, reset);
   }
 
+  const trail = useCursorTrail(JSON.stringify({...filters, cursor: undefined}));
   function movePage(cursor?: string) {
     const next = {...filters, cursor};
     setFilters(next);
@@ -215,7 +217,7 @@ export function CatalogPage({
           setCompareIds((current) => current.includes(product.id!) ? current.filter((id) => id !== product.id) : current.length < 5 ? [...current, product.id!] : current);
         }} />
         <CompareTray products={products} ids={compareIds} onClear={() => setCompareIds([])} />
-        {(query.data?.hasPrev || query.data?.hasNext) ? <div className="mt-8 flex justify-center gap-2"><Button variant="outline" disabled={!query.data?.hasPrev || !query.data?.prevCursor} onClick={() => movePage(query.data?.prevCursor)}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!query.data?.hasNext || !query.data?.nextCursor} onClick={() => movePage(query.data?.nextCursor)}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}
+        {(trail.hasPrev || query.data?.hasNext) ? <div className="mt-8 flex justify-center gap-2"><Button variant="outline" disabled={!trail.hasPrev} onClick={() => {trail.pop(); movePage(trail.prevCursor);}}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!query.data?.hasNext || !query.data?.nextCursor} onClick={() => {trail.push(filters.cursor); movePage(query.data?.nextCursor);}}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}
       </div> : null}
     </section>
   );

@@ -53,7 +53,6 @@ import type {
   SuppliersPage,
   TopSellingProduct,
 } from "@/features/admin/models";
-import {mapProductVariant} from "@/features/catalog/mappers";
 
 const text = (value?: string) => value?.trim() ?? "";
 const number = (value?: number) => value ?? 0;
@@ -92,10 +91,21 @@ export function mapAttributeSchemaItem(dto: AttributeSchemaItemDto): AttributeSc
 
 export function mapGroupSchemaItem(dto: GroupSchemaItemDto): CategorySpecs["groups"][number] {
   return {
-    groupId: text(dto.groupId),
-    groupName: text(dto.groupName),
+    groupId: dto.id,
+    groupName: dto.name,
     displayOrder: number(dto.displayOrder),
-    attributes: (dto.attributes ?? []).map(mapAttributeSchemaItem),
+    attributes: (dto.attributes ?? []).map((attribute) => ({
+      attributeId: attribute.attributeId,
+      key: attribute.key,
+      displayName: attribute.displayName,
+      dataType: attribute.dataType as AttributeSchemaItem["dataType"],
+      unit: attribute.unit ?? undefined,
+      allowedValues: attribute.allowedValues ?? [],
+      required: attribute.required,
+      displayOrder: number(attribute.displayOrder),
+      filterable: false,
+      comparable: false,
+    })),
   };
 }
 
@@ -125,8 +135,8 @@ export function mapCategoryAttribute(dto: CategoryAttributeDto): CategoryAttribu
 
 export function mapCategorySpecs(dto: CategorySpecsDto): CategorySpecs {
   return {
-    categoryId: text(dto.categoryId),
-    categoryName: text(dto.categoryName),
+    categoryId: dto.categoryId,
+    categoryName: "",
     groups: (dto.groups ?? []).map(mapGroupSchemaItem),
   };
 }
@@ -223,7 +233,16 @@ export function mapDiscountDetail(dto: DiscountDetailDto): DiscountDetail {
     ...mapDiscountSummary(dto),
     updatedAt: dto.updatedAt,
     appliedCategoryIds: dto.appliedCategoryIds ?? [],
-    appliedVariants: (dto.appliedVariants ?? []).map(mapProductVariant),
+    // Discounts still arrive in the old shape until the promotion phase is integrated
+    appliedVariants: (dto.appliedVariants ?? []).map((variant) => ({
+      id: text(variant.id),
+      productId: text(variant.productId),
+      sku: text(variant.sku),
+      price: number(variant.listPrice),
+      quantity: number(variant.quantity),
+      status: variant.status,
+      options: [],
+    })),
   };
 }
 

@@ -18,50 +18,53 @@ import {
   money,
 } from "@/lib/api/contracts/primitives";
 
-export const createProductImageRequestSchema = z.object({
+/** One gallery image: a file already stored in media-service. */
+export const productImageRequestSchema = z.object({
   fileId: uuid,
-  isMain: z.boolean().optional(),
-  name: optionalText,
+  main: z.boolean(),
+}).strict();
+
+/** A free `name: value` option such as Color: Blue. */
+export const variantOptionRequestSchema = z.object({
+  name: nonEmptyText.max(100),
+  value: nonEmptyText.max(255),
 }).strict();
 
 export const createProductVariantRequestSchema = z.object({
-  barcode: optionalText,
-  description: optionalText,
-  images: z.array(createProductImageRequestSchema).optional(),
-  listPrice: money,
-  model: optionalText,
-  optionIds: z.array(uuid).optional(),
+  price: money,
   quantity: z.number().int().nonnegative(),
+  sku: nonEmptyText.max(100),
+  model: optionalText,
+  description: optionalText,
+  warrantyMonths: z.number().int().positive(),
+  barcode: optionalText,
   releaseAt: optionalDate,
-  sku: nonEmptyText,
-  warranty: optionalText,
+  imageFileId: optionalUuid,
+  options: z.array(variantOptionRequestSchema).optional(),
 }).strict();
 
-export const updateProductVariantRequestSchema = createProductVariantRequestSchema.omit({
-  images: true,
-  sku: true,
-}).extend({
+/** The backend takes the status through its own call, so it is split off by the adapter. */
+export const updateProductVariantRequestSchema = createProductVariantRequestSchema.extend({
   status: optionalEnum(EDITABLE_RESOURCE_STATUS_VALUES),
 }).strict();
 
 export const createProductRequestSchema = z.object({
+  name: nonEmptyText.max(255),
+  seoName: optionalText,
   brandId: optionalUuid,
   categoryId: uuid,
   description: optionalText,
-  name: nonEmptyText,
-  seoName: nonEmptyText,
   specifications: z.record(z.string(), z.unknown()).optional(),
-  supplierIds: z.array(uuid).optional(),
-  variants: z.array(createProductVariantRequestSchema).optional(),
+  images: z.array(productImageRequestSchema).optional(),
 }).strict();
 
-export const updateProductRequestSchema = createProductRequestSchema.extend({
-  status: optionalEnum(EDITABLE_RESOURCE_STATUS_VALUES),
-}).strict();
+/** Omitting `images` keeps the gallery; a list (even an empty one) replaces it. */
+export const updateProductRequestSchema = createProductRequestSchema;
 
 export const createCategoryRequestSchema = z.object({
-  name: nonEmptyText,
-  seoName: nonEmptyText,
+  name: nonEmptyText.max(255),
+  seoName: optionalText,
+  description: optionalText,
   parentId: optionalUuid,
 }).strict();
 
@@ -70,9 +73,10 @@ export const updateCategoryRequestSchema = createCategoryRequestSchema.extend({
 }).strict();
 
 export const createBrandRequestSchema = z.object({
-  name: nonEmptyText,
+  name: nonEmptyText.max(255),
+  seoName: optionalText,
   description: optionalText,
-  fileId: optionalUuid,
+  imageFileId: optionalUuid,
 }).strict();
 
 export const updateBrandRequestSchema = createBrandRequestSchema.extend({
@@ -164,7 +168,8 @@ export const assignAttributeRequestSchema = z.object({
   displayOrder: z.number().int().nonnegative().optional(),
 }).strict();
 
-export type CreateProductImageRequest = z.infer<typeof createProductImageRequestSchema>;
+export type ProductImageRequest = z.infer<typeof productImageRequestSchema>;
+export type VariantOptionRequest = z.infer<typeof variantOptionRequestSchema>;
 export type CreateProductVariantRequest = z.infer<typeof createProductVariantRequestSchema>;
 export type UpdateProductVariantRequest = z.infer<typeof updateProductVariantRequestSchema>;
 export type CreateProductRequest = z.infer<typeof createProductRequestSchema>;

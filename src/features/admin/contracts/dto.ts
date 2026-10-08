@@ -5,8 +5,27 @@ export type AttributeDefinitionDto = BackendSchema["AttributeDefinitionResponse"
 export type AttributeSchemaItemDto = BackendSchema["AttributeSchemaItem"];
 export type CategoryAttributeGroupDto = BackendSchema["CategoryAttributeGroupResponse"];
 export type CategoryAttributeDto = BackendSchema["CategoryAttributeResponse"];
-export type CategorySpecsDto = BackendSchema["CategorySpecsSchemaResponse"];
-export type GroupSchemaItemDto = BackendSchema["GroupSchemaItem"];
+/** The specification form of a category as catalog-service serves it. */
+export type CategorySpecsDto = {
+  categoryId: string;
+  groups: GroupSchemaItemDto[];
+};
+export type GroupSchemaItemDto = {
+  id: string;
+  name: string;
+  displayOrder: number;
+  attributes: SpecAttributeDto[];
+};
+export type SpecAttributeDto = {
+  attributeId: string;
+  key: string;
+  displayName: string;
+  dataType: string;
+  unit?: string | null;
+  allowedValues?: string[] | null;
+  required: boolean;
+  displayOrder: number;
+};
 export type CustomerDetailDto = BackendSchema["CustomerDetailResponse"];
 export type CustomerOrderSummaryDto = BackendSchema["CustomerOrderSummaryResponse"];
 export type CustomersPageDto = BackendSchema["CursorPageResponseCustomerDetailResponse"];

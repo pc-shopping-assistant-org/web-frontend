@@ -3,7 +3,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  addVariantImage,
   assignCategoryAttribute,
   createBrand,
   createCategory,
@@ -22,7 +21,6 @@ import {
   deleteProduct,
   deleteSupplier,
   deleteVariant,
-  deleteVariantImage,
   deleteAttribute,
   deleteOption,
   getAdminCustomer,
@@ -37,6 +35,8 @@ import {
   getAdminSupplier,
   getAdminOrders,
   getAttributes,
+  getAdminBrands,
+  getAdminCategories,
   getCategorySpecsSchema,
   getCustomers,
   getDashboardOverview,
@@ -333,8 +333,8 @@ export function useAdminPaymentStatus() {
 }
 export function useAdminProductStatus() {
   return useStatusMutation(
-    ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
-      updateProductStatus(id, status, reason),
+    ({ id, status }: { id: string; status: string }) =>
+      updateProductStatus(id, status),
   );
 }
 export function useAdminCustomerStatus() {
@@ -367,8 +367,18 @@ function useAdminMutation<TVariables, TData>(
   const qc = useQueryClient();
   return useMutation<TData, Error, TVariables>({
     mutationFn,
-    onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
+    // The storefront caches the same categories and brands, so it is refreshed too
+    onSuccess: () => Promise.all([
+      qc.invalidateQueries({ queryKey: adminKeys.all }),
+      qc.invalidateQueries({ queryKey: ["catalog"] }),
+    ]),
   });
+}
+export function useAdminCategories() {
+  return useQuery({ queryKey: ["admin", "categories"], queryFn: getAdminCategories });
+}
+export function useAdminBrands() {
+  return useQuery({ queryKey: ["admin", "brands"], queryFn: getAdminBrands });
 }
 export function useCreateAdminCategory() {
   return useAdminMutation(createCategory);
@@ -489,30 +499,18 @@ export function useCreateAdminVariant() {
 export function useUpdateAdminVariant() {
   return useAdminMutation(
     ({
+      productId,
       id,
       request,
     }: {
+      productId: string;
       id: string;
-      request: Parameters<typeof updateVariant>[1];
-    }) => updateVariant(id, request),
+      request: Parameters<typeof updateVariant>[2];
+    }) => updateVariant(productId, id, request),
   );
 }
 export function useDeleteAdminVariant() {
   return useAdminMutation(deleteVariant);
-}
-export function useAddAdminVariantImage() {
-  return useAdminMutation(
-    ({
-      variantId,
-      request,
-    }: {
-      variantId: string;
-      request: Parameters<typeof addVariantImage>[1];
-    }) => addVariantImage(variantId, request),
-  );
-}
-export function useDeleteAdminVariantImage() {
-  return useAdminMutation(deleteVariantImage);
 }
 export function useCreateAdminDiscount() {
   return useAdminMutation(createDiscount);

@@ -703,7 +703,7 @@ export function VariantTargetPicker({
               .map((variant) => ({
                 value: variant.id!,
                 label: variant.sku ?? variant.id!,
-                description: String(variant.listPrice ?? 0),
+                description: String(variant.price ?? 0),
               }))}
             value={currentSelection}
             onChange={selectCurrentProduct}

@@ -5,11 +5,11 @@ import {
   ChevronDown,
   ChevronUp,
   ExternalLink,
-  ImagePlus,
   Pencil,
   Plus,
   Save,
   Trash2,
+  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState, type FormEvent } from "react";
@@ -36,7 +36,6 @@ import { Link, useRouter } from "@/i18n/navigation";
 import type {
   CategoryTree,
   ProductDetail,
-  ProductOption,
   ProductVariant,
 } from "@/features/catalog/contracts/responses";
 import type {PaymentSummary} from "@/features/orders/contracts/responses";
@@ -66,6 +65,13 @@ import { AdminPagination } from "./admin-pagination";
 import { ConfirmAction } from "./confirm-action";
 import { FileUploadField, type UploadedFile } from "./file-upload";
 import { VariantTargetPicker } from "./management-forms";
+import {
+  galleryFromProduct,
+  galleryRequest,
+  optionsRequest,
+  ProductGalleryEditor,
+  VariantOptionsEditor,
+} from "./product-fields";
 import { SpecificationsEditor } from "./specifications-editor";
 import { StatusSelect } from "./status-select";
 
@@ -82,17 +88,13 @@ import {
   useAdminPaymentStatus,
   useAdminProduct,
   useAdminProductStatus,
-  useAdminSuppliers,
   useAdminSupplier,
   useAdminDiscountStatus,
-  useAddAdminVariantImage,
   useCreateAdminVariant,
   useDeleteAdminDiscount,
   useDeleteAdminProduct,
   useDeleteAdminSupplier,
   useDeleteAdminVariant,
-  useDeleteAdminVariantImage,
-  useOptions,
   useInvoices,
   useOrderInvoice,
   useRoles,
@@ -279,7 +281,6 @@ export function AdminProductDetailPage({ productId }: { productId: string }) {
           </ConfirmAction>
         </div>
       </div>
-      {remove.isError ? <FormError error={remove.error} /> : null}
       <div className="space-y-6">
         <ProductEditor product={product.data} />
         <VariantManager product={product.data} />
@@ -292,7 +293,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
   const t = useTranslations("admin");
   const categories = useCategories();
   const brands = useBrands();
-  const suppliers = useAdminSuppliers({ limit: 100 });
   const update = useUpdateAdminProduct();
   const status = useAdminProductStatus();
   const defaults = useMemo(
@@ -305,10 +305,7 @@ function ProductEditor({ product }: { product: ProductDetail }) {
       specifications: product.specifications
         ? JSON.stringify(product.specifications, null, 2)
         : "{}",
-      supplierIds:
-        product.suppliers?.flatMap((supplier) =>
-          supplier.id ? [supplier.id] : [],
-        ) ?? [],
+      images: galleryFromProduct(product.images),
     }),
     [product],
   );
@@ -331,24 +328,29 @@ function ProductEditor({ product }: { product: ProductDetail }) {
       setFormError(t("invalidJson"));
       return;
     }
-    const saved = await update.mutateAsync({
-      id: product.id!,
-      request: {
-        name: form.name.trim(),
-        seoName: form.seoName.trim(),
-        categoryId: form.categoryId,
-        brandId: form.brandId || undefined,
-        supplierIds: form.supplierIds,
-        description: form.description.trim() || undefined,
-        specifications,
-      },
-    });
-    if (saved)
-      setDraft({
-        ...form,
-        name: saved.name ?? form.name,
-        seoName: saved.seoName ?? form.seoName,
+    let saved;
+    try {
+      saved = await update.mutateAsync({
+        id: product.id!,
+        request: {
+          name: form.name.trim(),
+          seoName: form.seoName.trim(),
+          categoryId: form.categoryId,
+          brandId: form.brandId || undefined,
+          description: form.description.trim() || undefined,
+          specifications,
+          images: galleryRequest(form.images),
+        },
       });
+    } catch {
+      return;
+    }
+    setDraft({
+      ...form,
+      name: saved.name,
+      seoName: saved.seoName,
+      images: galleryFromProduct(saved.images),
+    });
   }
   return (
     <Card>
@@ -373,7 +375,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
             label={t("seoName")}
             value={form.seoName}
             onChange={(value) => set("seoName", value)}
-            required
           />
           <div className="space-y-2">
             <Label htmlFor="admin-product-category">{t("category")}</Label>
@@ -408,23 +409,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
                 ))}
             </Select>
           </div>
-          <MultiSelectList
-            id="admin-product-suppliers"
-            label={t("suppliers")}
-            hint={t("supplierHint")}
-            options={(suppliers.data?.items ?? [])
-              .filter((supplier) => supplier.id && supplier.status === ResourceStatus.Active)
-              .map((supplier) => ({
-                value: supplier.id!,
-                label: supplier.name ?? supplier.id!,
-                description: supplier.email ?? supplier.phone,
-              }))}
-            value={form.supplierIds}
-            onChange={(value) => set("supplierIds", value)}
-            selectedLabel={t("selectedCount", {count: form.supplierIds.length})}
-            emptyLabel={t("noSuppliers")}
-            className="sm:col-span-2"
-          />
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="admin-product-description">
               {t("description")}
@@ -435,6 +419,11 @@ function ProductEditor({ product }: { product: ProductDetail }) {
               onChange={(event) => set("description", event.target.value)}
             />
           </div>
+          <ProductGalleryEditor
+            id="admin-product-gallery"
+            items={form.images}
+            onChange={(images) => set("images", images)}
+          />
           <SpecificationsEditor
             categoryId={form.categoryId}
             value={form.specifications}
@@ -469,74 +458,9 @@ function ProductEditor({ product }: { product: ProductDetail }) {
 
 function VariantManager({ product }: { product: ProductDetail }) {
   const t = useTranslations("admin");
-  const create = useCreateAdminVariant();
   const remove = useDeleteAdminVariant();
-  const options = useOptions();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [form, setForm] = useState({
-    sku: "",
-    model: "",
-    barcode: "",
-    releaseAt: "",
-    listPrice: "",
-    quantity: "0",
-    warranty: "12",
-    description: "",
-    optionIds: [] as string[],
-    images: [] as UploadedFile[],
-    mainImageId: "",
-  });
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setFormError("");
-    const selectedOptions = (options.data ?? []).filter(
-      (option) => option.id && form.optionIds.includes(option.id),
-    );
-    const selectedTypes = selectedOptions
-      .map((option) => option.type?.trim().toLowerCase())
-      .filter(Boolean);
-    if (new Set(selectedTypes).size !== selectedTypes.length) {
-      setFormError(t("duplicateOptionType"));
-      return;
-    }
-    await create.mutateAsync({
-      productId: product.id!,
-      request: {
-        sku: form.sku.trim(),
-        model: form.model.trim() || undefined,
-        barcode: form.barcode.trim() || undefined,
-        releaseAt: form.releaseAt || undefined,
-        listPrice: Number(form.listPrice),
-        quantity: Number(form.quantity),
-        warranty: form.warranty.trim() || undefined,
-        description: form.description.trim() || undefined,
-        optionIds: form.optionIds,
-        images: form.images
-          .filter((file) => file.id)
-          .map((file) => ({
-            fileId: file.id!,
-            name: file.originalName,
-            isMain: file.id === form.mainImageId,
-          })),
-      },
-    });
-    setForm({
-      sku: "",
-      model: "",
-      barcode: "",
-      releaseAt: "",
-      listPrice: "",
-      quantity: "0",
-      warranty: "12",
-      description: "",
-      optionIds: [],
-      images: [],
-      mainImageId: "",
-    });
-  }
 
   const variants = product.variants ?? [];
   return (
@@ -570,9 +494,9 @@ function VariantManager({ product }: { product: ProductDetail }) {
           </p>
         ) : (
           <div className="space-y-4">
-            {variants.map((variant, index) => (
+            {variants.map((variant) => (
               <div
-                key={variant.id ?? index}
+                key={variant.id}
                 className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -581,7 +505,7 @@ function VariantManager({ product }: { product: ProductDetail }) {
                       {variant.imageUrl ? (
                         <Image
                           src={variant.imageUrl}
-                          alt={variant.sku ?? ""}
+                          alt={variant.sku}
                           fill
                           sizes="64px"
                           unoptimized
@@ -598,59 +522,60 @@ function VariantManager({ product }: { product: ProductDetail }) {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold">{variant.sku ?? "—"}</p>
+                      <p className="font-semibold">{variant.sku}</p>
                       <p className="mt-1 text-sm font-medium">
-                        {formatMoney(variant.listPrice, "vi")}
+                        {formatMoney(variant.price, "vi")}
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {t("stockLabel")}: {variant.quantity ?? 0} ·{" "}
-                        {t("warranty")}: {variant.warranty ?? "—"}
+                        {t("stockLabel")}: {variant.quantity} ·{" "}
+                        {t("warranty")}:{" "}
+                        {variant.warrantyMonths
+                          ? t("warrantyMonthsValue", { count: variant.warrantyMonths })
+                          : "—"}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {variant.options
-                          ?.map((option) => `${option.type}: ${option.name}`)
+                          .map((option) => `${option.name}: ${option.value}`)
                           .join(" · ") || t("noOptions")}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={variant.status} />
-                    {variant.id ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setEditingId((current) =>
-                            current === variant.id ? null : variant.id!,
-                          )
-                        }
-                      >
-                        <Pencil className="size-3.5" />
-                        {editingId === variant.id ? t("close") : t("edit")}
-                      </Button>
-                    ) : null}
-                    {variant.id ? (
-                      <ConfirmAction
-                        title={t("confirmDelete")}
-                        confirmLabel={t("delete")}
-                        cancelLabel={t("cancel")}
-                        onConfirm={() => remove.mutateAsync(variant.id!)}
-                        size="sm"
-                        variant="destructive"
-                      >
-                        <Trash2 className="size-3.5" />
-                        {t("delete")}
-                      </ConfirmAction>
-                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setEditingId((current) =>
+                          current === variant.id ? null : variant.id,
+                        )
+                      }
+                    >
+                      <Pencil className="size-3.5" />
+                      {editingId === variant.id ? t("close") : t("edit")}
+                    </Button>
+                    <ConfirmAction
+                      title={t("confirmDelete")}
+                      confirmLabel={t("delete")}
+                      cancelLabel={t("cancel")}
+                      onConfirm={() =>
+                        remove.mutateAsync({ productId: product.id, id: variant.id })
+                      }
+                      size="sm"
+                      variant="destructive"
+                    >
+                      <Trash2 className="size-3.5" />
+                      {t("delete")}
+                    </ConfirmAction>
                   </div>
                 </div>
-                {editingId === variant.id && variant.id ? (
-                  <div className="mt-5 space-y-5 border-t pt-5">
-                    <VariantEditForm
+                {editingId === variant.id ? (
+                  <div className="mt-5 border-t pt-5">
+                    <VariantForm
+                      productId={product.id}
                       variant={variant}
-                      options={options.data ?? []}
+                      onSaved={() => setEditingId(null)}
                     />
-                    <VariantImageManager variant={variant} />
                   </div>
                 ) : null}
               </div>
@@ -658,463 +583,212 @@ function VariantManager({ product }: { product: ProductDetail }) {
           </div>
         )}
         {createOpen ? (
-          <form
-            className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2"
-            onSubmit={(event) => void submit(event)}
-          >
-            <div className="sm:col-span-2">
-              <p className="font-semibold">{t("createVariant")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("variantCreateHint")}
-              </p>
-            </div>
-            <Field
-              id="variant-sku"
-              label="SKU"
-              value={form.sku}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, sku: value }))
-              }
-              required
-            />
-            <Field
-              id="variant-model"
-              label={t("model")}
-              value={form.model}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, model: value }))
-              }
-            />
-            <Field
-              id="variant-barcode"
-              label={t("barcode")}
-              value={form.barcode}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, barcode: value }))
-              }
-            />
-            <Field
-              id="variant-release"
-              label={t("releaseAt")}
-              type="date"
-              value={form.releaseAt}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, releaseAt: value }))
-              }
-            />
-            <Field
-              id="variant-price"
-              label={t("listPrice")}
-              type="number"
-              min="0"
-              value={form.listPrice}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, listPrice: value }))
-              }
-              required
-            />
-            <Field
-              id="variant-quantity"
-              label={t("quantity")}
-              type="number"
-              min="0"
-              value={form.quantity}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, quantity: value }))
-              }
-              required
-            />
-            <Field
-              id="variant-warranty"
-              label={t("warranty")}
-              value={form.warranty}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, warranty: value }))
-              }
-            />
-            <MultiSelectList
-              id="variant-options"
-              label={t("options")}
-              hint={t("optionTypeHint")}
-              options={(options.data ?? [])
-                .filter((option) => option.id && option.status === ResourceStatus.Active)
-                .map((option) => ({
-                  value: option.id!,
-                  label: option.name ?? option.id!,
-                  description: `${option.type ?? "—"} · ${option.value ?? "—"}`,
-                }))}
-              value={form.optionIds}
-              onChange={(value) =>
-                setForm((current) => ({...current, optionIds: value}))
-              }
-              selectedLabel={t("selectedCount", {count: form.optionIds.length})}
-              emptyLabel={t("noOptions")}
-              className="sm:col-span-2"
-            />
-            <FileUploadField
-              id="variant-files"
-              label={t("variantImages")}
-              multiple
-              value={form.images}
-              selectedMainId={form.mainImageId}
-              onUploaded={(file) =>
-                setForm((current) => ({
-                  ...current,
-                  images: [...current.images, file],
-                  mainImageId: current.mainImageId || file.id || "",
-                }))
-              }
-              onSelectMain={(fileId) =>
-                setForm((current) => ({ ...current, mainImageId: fileId }))
-              }
-              onRemove={(fileId) =>
-                setForm((current) => {
-                  const images = current.images.filter(
-                    (file) => file.id !== fileId,
-                  );
-                  return {
-                    ...current,
-                    images,
-                    mainImageId:
-                      current.mainImageId === fileId
-                        ? (images[0]?.id ?? "")
-                        : current.mainImageId,
-                  };
-                })
-              }
-            />
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="variant-description">{t("description")}</Label>
-              <Textarea
-                id="variant-description"
-                value={form.description}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-              <Button
-                type="submit"
-                disabled={create.isPending || !form.sku || !form.listPrice}
-              >
-                <Plus className="size-4" />
-                {t("create")}
-              </Button>
-              {formError ? (
-                <p className="text-sm text-destructive">{formError}</p>
-              ) : null}
-              {create.isError ? <FormError error={create.error} /> : null}
-            </div>
-          </form>
+          <VariantForm productId={product.id} onSaved={() => undefined} />
         ) : null}
-        {remove.isError ? <FormError error={remove.error} /> : null}
       </CardContent>
     </Card>
   );
 }
 
-function VariantEditForm({
+/** Creates a variant, or edits `variant` when it is given. */
+function VariantForm({
+  productId,
   variant,
-  options,
+  onSaved,
 }: {
-  variant: ProductVariant;
-  options: ProductOption[];
+  productId: string;
+  variant?: ProductVariant;
+  onSaved: () => void;
 }) {
   const t = useTranslations("admin");
+  const create = useCreateAdminVariant();
   const update = useUpdateAdminVariant();
-  const defaults = useMemo(
+  const mutation = variant ? update : create;
+  const initial = useMemo(
     () => ({
-      model: variant.model ?? "",
-      barcode: variant.barcode ?? "",
-      releaseAt: variant.releaseAt ?? "",
-      listPrice: String(variant.listPrice ?? 0),
-      quantity: String(variant.quantity ?? 0),
-      warranty: variant.warranty ?? "",
-      description: variant.description ?? "",
-      optionIds:
-        variant.options?.flatMap((option) => (option.id ? [option.id] : [])) ??
-        [],
-      status: (variant.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
+      sku: variant?.sku ?? "",
+      model: variant?.model ?? "",
+      barcode: variant?.barcode ?? "",
+      releaseAt: variant?.releaseAt ?? "",
+      price: variant ? String(variant.price) : "",
+      quantity: variant ? String(variant.quantity) : "0",
+      warrantyMonths: String(variant?.warrantyMonths ?? 12),
+      description: variant?.description ?? "",
+      options: (variant?.options ?? []).map(({ name, value }) => ({ name, value })),
+      image: variant?.imageFileId
+        ? { fileId: variant.imageFileId, url: variant.imageUrl }
+        : (null as { fileId: string; url?: string } | null),
+      status: (variant?.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
     }),
     [variant],
   );
-  const [form, setForm] = useState<typeof defaults | null>(null);
+  const [form, setForm] = useState(initial);
   const [formError, setFormError] = useState("");
-  const value = form ?? defaults;
-  function set<K extends keyof typeof defaults>(
-    key: K,
-    next: (typeof defaults)[K],
-  ) {
-    setForm((current) => ({ ...(current ?? defaults), [key]: next }));
-  }
+  const idPrefix = variant ? `variant-${variant.id}` : "variant-new";
+  const set = <K extends keyof typeof initial>(key: K, value: (typeof initial)[K]) =>
+    setForm((current) => ({ ...current, [key]: value }));
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setFormError("");
-    const selectedOptions = options.filter(
-      (option) => option.id && value.optionIds.includes(option.id),
-    );
-    const selectedTypes = selectedOptions
-      .map((option) => option.type?.trim().toLowerCase())
-      .filter(Boolean);
-    if (new Set(selectedTypes).size !== selectedTypes.length) {
+    const options = optionsRequest(form.options);
+    if (options.some((option) => !option.name || !option.value)) {
+      setFormError(t("optionIncomplete"));
+      return;
+    }
+    if (new Set(options.map((option) => option.name.toLowerCase())).size !== options.length) {
       setFormError(t("duplicateOptionType"));
       return;
     }
-    await update.mutateAsync({
-      id: variant.id!,
-      request: {
-        model: value.model.trim() || undefined,
-        barcode: value.barcode.trim() || undefined,
-        releaseAt: value.releaseAt || undefined,
-        listPrice: Number(value.listPrice),
-        quantity: Number(value.quantity),
-        warranty: value.warranty.trim() || undefined,
-        description: value.description.trim() || undefined,
-        optionIds: value.optionIds,
-        status: value.status,
-      },
-    });
+    const request = {
+      sku: form.sku.trim(),
+      model: form.model.trim() || undefined,
+      barcode: form.barcode.trim() || undefined,
+      releaseAt: form.releaseAt || undefined,
+      price: Number(form.price),
+      quantity: Number(form.quantity),
+      warrantyMonths: Number(form.warrantyMonths),
+      description: form.description.trim() || undefined,
+      imageFileId: form.image?.fileId,
+      options,
+    };
+    try {
+      if (variant) {
+        await update.mutateAsync({ productId, id: variant.id, request: { ...request, status: form.status } });
+      } else {
+        await create.mutateAsync({ productId, request });
+        setForm(initial);
+      }
+    } catch {
+      return;
+    }
+    onSaved();
   }
+
   return (
     <form
-      className="grid gap-4 rounded-xl border bg-muted/20 p-4 sm:grid-cols-2"
+      className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2"
       onSubmit={(event) => void submit(event)}
     >
       <div className="sm:col-span-2">
-        <p className="font-medium">{t("editVariant")}</p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={`variant-sku-${variant.id}`}>SKU</Label>
-        <Input
-          id={`variant-sku-${variant.id}`}
-          value={variant.sku ?? "—"}
-          readOnly
-        />
+        <p className="font-semibold">{variant ? t("editVariant") : t("createVariant")}</p>
+        {variant ? null : (
+          <p className="mt-1 text-sm text-muted-foreground">{t("variantCreateHint")}</p>
+        )}
       </div>
       <Field
-        id={`variant-model-${variant.id}`}
-        label={t("model")}
-        value={value.model}
-        onChange={(next) => set("model", next)}
-      />
-      <Field
-        id={`variant-barcode-${variant.id}`}
-        label={t("barcode")}
-        value={value.barcode}
-        onChange={(next) => set("barcode", next)}
-      />
-      <Field
-        id={`variant-release-${variant.id}`}
-        label={t("releaseAt")}
-        type="date"
-        value={value.releaseAt}
-        onChange={(next) => set("releaseAt", next)}
-      />
-      <Field
-        id={`variant-price-${variant.id}`}
-        label={t("listPrice")}
-        type="number"
-        min="0"
-        value={value.listPrice}
-        onChange={(next) => set("listPrice", next)}
+        id={`${idPrefix}-sku`}
+        label="SKU"
+        value={form.sku}
+        onChange={(value) => set("sku", value)}
         required
       />
       <Field
-        id={`variant-quantity-${variant.id}`}
+        id={`${idPrefix}-model`}
+        label={t("model")}
+        value={form.model}
+        onChange={(value) => set("model", value)}
+      />
+      <Field
+        id={`${idPrefix}-barcode`}
+        label={t("barcode")}
+        value={form.barcode}
+        onChange={(value) => set("barcode", value)}
+      />
+      <Field
+        id={`${idPrefix}-release`}
+        label={t("releaseAt")}
+        type="date"
+        value={form.releaseAt}
+        onChange={(value) => set("releaseAt", value)}
+      />
+      <Field
+        id={`${idPrefix}-price`}
+        label={t("price")}
+        type="number"
+        min="0"
+        value={form.price}
+        onChange={(value) => set("price", value)}
+        required
+      />
+      <Field
+        id={`${idPrefix}-quantity`}
         label={t("quantity")}
         type="number"
         min="0"
-        value={value.quantity}
-        onChange={(next) => set("quantity", next)}
+        value={form.quantity}
+        onChange={(value) => set("quantity", value)}
         required
       />
       <Field
-        id={`variant-warranty-${variant.id}`}
-        label={t("warranty")}
-        value={value.warranty}
-        onChange={(next) => set("warranty", next)}
+        id={`${idPrefix}-warranty`}
+        label={t("warrantyMonths")}
+        type="number"
+        min="1"
+        value={form.warrantyMonths}
+        onChange={(value) => set("warrantyMonths", value)}
+        required
       />
-      <div className="space-y-2">
-        <Label htmlFor={`variant-status-${variant.id}`}>{t("status")}</Label>
-        <Select
-          id={`variant-status-${variant.id}`}
-          value={value.status}
-          onChange={(event) => set("status", event.target.value as EditableResourceStatus)}
-        >
-          <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
-          <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
-        </Select>
-      </div>
-      <MultiSelectList
-        id={`variant-options-${variant.id}`}
-        label={t("options")}
-        hint={t("optionTypeHint")}
-        options={options
-          .filter((option) => option.id && option.status === ResourceStatus.Active)
-          .map((option) => ({
-            value: option.id!,
-            label: option.name ?? option.id!,
-            description: `${option.type ?? "—"} · ${option.value ?? "—"}`,
-          }))}
-        value={value.optionIds}
-        onChange={(next) => set("optionIds", next)}
-        selectedLabel={t("selectedCount", {count: value.optionIds.length})}
-        emptyLabel={t("noOptions")}
-        className="sm:col-span-2"
+      {variant ? (
+        <div className="space-y-2">
+          <Label htmlFor={`${idPrefix}-status`}>{t("status")}</Label>
+          <Select
+            id={`${idPrefix}-status`}
+            value={form.status}
+            onChange={(event) => set("status", event.target.value as EditableResourceStatus)}
+          >
+            <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
+            <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
+          </Select>
+        </div>
+      ) : null}
+      <VariantOptionsEditor
+        id={`${idPrefix}-options`}
+        rows={form.options}
+        onChange={(rows) => set("options", rows)}
+      />
+      {form.image ? (
+        <div className="flex items-center gap-3 rounded-lg border bg-background p-2 sm:col-span-2">
+          <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
+            {form.image.url ? (
+              <Image src={form.image.url} alt="" fill sizes="48px" unoptimized className="object-cover" />
+            ) : null}
+          </div>
+          <span className="min-w-0 flex-1 truncate text-sm">{t("variantImage")}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("removeFile")}
+            onClick={() => set("image", null)}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      ) : null}
+      <FileUploadField
+        id={`${idPrefix}-image`}
+        label={t("variantImage")}
+        onUploaded={(file) => set("image", { fileId: file.id, url: file.publicUrl })}
       />
       <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor={`variant-description-${variant.id}`}>
-          {t("description")}
-        </Label>
+        <Label htmlFor={`${idPrefix}-description`}>{t("description")}</Label>
         <Textarea
-          id={`variant-description-${variant.id}`}
-          value={value.description}
+          id={`${idPrefix}-description`}
+          value={form.description}
           onChange={(event) => set("description", event.target.value)}
         />
       </div>
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+        <Button type="submit" disabled={mutation.isPending || !form.sku.trim() || !form.price}>
+          {variant ? <Save className="size-4" /> : <Plus className="size-4" />}
+          {variant ? t("save") : t("create")}
+        </Button>
+      </div>
       <div className="sm:col-span-2">
-        <Button type="submit" disabled={update.isPending}>
-          <Save className="size-4" />
-          {t("save")}
-        </Button>
+        <FormError error={mutation.error} formError={formError} />
       </div>
-      {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
-      <FormError error={update.error} />{" "}
     </form>
-  );
-}
-
-function VariantImageManager({
-  variant,
-}: {
-  variant: ProductVariant;
-}) {
-  const t = useTranslations("admin");
-  const add = useAddAdminVariantImage();
-  const remove = useDeleteAdminVariantImage();
-  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
-  const [form, setForm] = useState({ name: "", isMain: false });
-  const images = (variant.images ?? []).filter(
-    (image) => image.status !== ResourceStatus.Deleted,
-  );
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!uploadedFile?.id) return;
-    await add.mutateAsync({
-      variantId: variant.id!,
-      request: {
-        fileId: uploadedFile.id,
-        name: form.name.trim() || undefined,
-        isMain: form.isMain,
-      },
-    });
-    setUploadedFile(null);
-    setForm({ name: "", isMain: false });
-  }
-  return (
-    <div className="space-y-4 rounded-xl border p-4">
-      <div>
-        <p className="font-medium">{t("gallery")}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t("galleryDescription")}
-        </p>
-      </div>
-      {images.length ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {images.map((image, index) => (
-            <div
-              key={image.id ?? index}
-              className="flex items-center gap-3 rounded-lg border p-3"
-            >
-              <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                {image.imageUrl ? (
-                  <Image
-                    src={image.imageUrl}
-                    alt={image.name ?? ""}
-                    fill
-                    sizes="48px"
-                    unoptimized
-                    className="object-cover"
-                  />
-                ) : null}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {image.name ?? t("image")}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {image.main ? t("mainImage") : t("galleryImage")}
-                </p>
-              </div>
-              {image.id ? (
-                <ConfirmAction
-                  title={t("confirmDelete")}
-                  confirmLabel={t("delete")}
-                  cancelLabel={t("cancel")}
-                  onConfirm={() => remove.mutateAsync(image.id!)}
-                  size="icon-sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                  ariaLabel={t("delete")}
-                >
-                  <Trash2 className="size-4" />
-                </ConfirmAction>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
-          {t("noImages")}
-        </p>
-      )}
-      <form
-        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-end"
-        onSubmit={(event) => void submit(event)}
-      >
-        <FileUploadField
-          id={`new-image-file-${variant.id}`}
-          label={t("image")}
-          value={uploadedFile ? [uploadedFile] : []}
-          onUploaded={setUploadedFile}
-          onRemove={() => setUploadedFile(null)}
-        />
-        <Field
-          id={`new-image-name-${variant.id}`}
-          label={t("imageName")}
-          value={form.name}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, name: value }))
-          }
-        />
-        <label className="flex h-10 items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.isMain}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                isMain: event.target.checked,
-              }))
-            }
-          />
-          {t("mainImage")}
-        </label>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={add.isPending || !uploadedFile?.id}
-        >
-          <ImagePlus className="size-4" />
-          {t("addImage")}
-        </Button>
-        <FormError error={add.error ?? remove.error} />
-      </form>
-    </div>
   );
 }
 

@@ -8,8 +8,6 @@ export type AdminProductFilter = {
   maxPrice?: number;
   keyword?: string;
   status?: string;
-  sortBy?: string;
-  sortDirection?: string;
 };
 
 export type CustomerFilter = {

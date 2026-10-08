@@ -1,5 +1,6 @@
 "use client";
 
+import { useCursorTrail } from "@/lib/hooks/use-cursor-trail";
 import Image from "next/image";
 import { CreditCard, Eye, Search, Star, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -378,9 +379,8 @@ function Products() {
     brandId: applied.brandId || undefined,
     minPrice: toNumber(applied.minPrice),
     maxPrice: toNumber(applied.maxPrice),
-    sortBy: "createdAt",
-    sortDirection: "DESC",
   });
+  const trail = useCursorTrail(JSON.stringify({ ...applied, cursor: undefined }));
   const mutation = useAdminProductStatus();
   const remove = useDeleteAdminProduct();
   const apply = () =>
@@ -397,7 +397,9 @@ function Products() {
     setDraft(empty);
     setApplied({ ...empty, cursor: undefined });
   };
-  const page = query.data;
+  const page = query.data
+    ? { ...query.data, hasPrev: trail.hasPrev, prevCursor: trail.prevCursor }
+    : undefined;
   return (
     <Shell
       title={t("resource.products")}
@@ -597,24 +599,24 @@ function Products() {
           )}
           <ListFooter
             page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
+            onPrev={() => {
+              const cursor = trail.prevCursor;
+              trail.pop();
+              setApplied((current) => ({ ...current, cursor }));
+            }}
+            onNext={() => {
+              trail.push(applied.cursor);
               setApplied((current) => ({
                 ...current,
                 cursor: page?.nextCursor,
-              }))
-            }
+              }));
+            }}
           />
         </>
       )}
-      {remove.isError || mutation.isError ? (
+      {mutation.isError ? (
         <div className="mt-4">
-          <Failure error={remove.error ?? mutation.error} />
+          <Failure error={mutation.error} />
         </div>
       ) : null}
     </Shell>
