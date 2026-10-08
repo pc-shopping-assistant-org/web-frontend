@@ -2,7 +2,7 @@
 
 import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
-import {createProductReview, getBrands, getCategories, getProductBySlug, getProductRatingSummary, getProductReviews, getProducts, type ProductFilters} from "./api";
+import {createProductReview, getBrands, getCategories, getCategorySpecLabels, getProductBySlug, getProductRatingSummary, getProductReviews, getProducts, type ProductFilters} from "./api";
 
 export const catalogKeys = {
   all: ["catalog"] as const,
@@ -28,6 +28,15 @@ export function useProducts(
 
 export function useCategories() {
   return useQuery({queryKey: catalogKeys.categories, queryFn: getCategories, staleTime: 300_000});
+}
+
+export function useCategorySpecLabels(categoryId?: string) {
+  return useQuery({
+    queryKey: ["catalog", "spec-labels", categoryId],
+    queryFn: () => getCategorySpecLabels(categoryId!),
+    enabled: Boolean(categoryId),
+    staleTime: 300_000,
+  });
 }
 
 export function useBrands() {

@@ -16,11 +16,10 @@ import {Skeleton} from "@/components/ui/skeleton";
 import {Link} from "@/i18n/navigation";
 import {ApiClientError} from "@/lib/api/envelope";
 import {formatMoney, formatRating} from "@/lib/format";
-import {ApiMessageKey} from "@/lib/domain/message-keys";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 import {useAddToCart} from "@/features/cart/queries";
-import {useProductBySlug, useProductRatingSummary, useProductReviews, useProducts} from "../queries";
+import {useCategorySpecLabels, useProductBySlug, useProductRatingSummary, useProductReviews, useProducts} from "../queries";
 import {CatalogCategoryIcon} from "./catalog-category-icon";
 import {ProductCard} from "./product-card";
 import {ProductIllustration, productArtKind} from "./product-card";
@@ -57,14 +56,17 @@ export function ProductDetailPage({slug}: {slug: string}) {
   // A variant with its own image shows it until the shopper picks a gallery image
   const activeImage = images.find((image) => image.id === selectedImageId) ?? (selected?.imageUrl ? undefined : images.find((image) => image.main) ?? images[0]);
   const heroImage = activeImage?.imageUrl ?? selected?.imageUrl ?? product?.imageUrl;
-  const specifications = Object.entries(product?.specifications ?? {}).filter(([key, value]) => key.trim() && value !== null && value !== undefined);
+  const specLabels = useCategorySpecLabels(product?.category?.id).data;
+  const specifications = Object.entries(product?.specifications ?? {})
+    .filter(([key, value]) => key.trim() && value !== null && value !== undefined)
+    .sort(([a], [b]) => (specLabels?.[a]?.order ?? Number.MAX_SAFE_INTEGER) - (specLabels?.[b]?.order ?? Number.MAX_SAFE_INTEGER));
   const categoryHref = product?.category?.id ? `/products?categoryId=${encodeURIComponent(product.category.id)}` : undefined;
   const assistantHref = product?.id ? `/assistant?mode=EVALUATE&productId=${encodeURIComponent(product.id)}` : undefined;
   const compareHref = product?.id ? `/assistant?mode=COMPARE&productIds=${encodeURIComponent(product.id)}` : undefined;
 
   if (query.isPending) return <ProductDetailPageSkeleton />;
   if (query.isError || !product) {
-    return <section className="page-wrap py-16"><Link href="/products" className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />{common("back")}</Link><div className="rounded-2xl border border-dashed p-12 text-center"><h1 className="text-2xl font-semibold">{query.error instanceof ApiClientError && query.error.messageKey === ApiMessageKey.PRODUCT_NOT_FOUND ? t("productNotFound") : t("loadError")}</h1><p className="mt-2 text-sm text-muted-foreground">{query.isError ? common("unknownError") : t("productNotFound")}</p></div></section>;
+    return <section className="page-wrap py-16"><Link href="/products" className="mb-8 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />{common("back")}</Link><div className="rounded-2xl border border-dashed p-12 text-center"><h1 className="text-2xl font-semibold">{query.error instanceof ApiClientError && query.error.status === 404 ? t("productNotFound") : t("loadError")}</h1><p className="mt-2 text-sm text-muted-foreground">{query.error instanceof ApiClientError && query.error.status === 404 ? null : common("unknownError")}</p></div></section>;
   }
 
   async function add() {
@@ -149,7 +151,7 @@ export function ProductDetailPage({slug}: {slug: string}) {
     </div>
     <div ref={belowFoldRef} className="[content-visibility:auto] [contain-intrinsic-size:1400px]">
       {relatedQuery.data?.items?.filter((item) => item.id && item.id !== product.id).slice(0, 4).length ? <section className="mt-12" aria-labelledby="related-products-title"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">{t("relatedProducts")}</p><h2 id="related-products-title" className="mt-2 text-2xl font-semibold">{product.category?.name}</h2></div>{categoryHref ? <Link href={categoryHref} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">{t("viewCategory")}<ChevronRight className="size-4" /></Link> : null}</div><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{relatedQuery.data?.items?.filter((item) => item.id && item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} />)}</div></section> : null}
-      <section className="mt-12" aria-labelledby="specifications-title"><div className="mb-5"><p className="eyebrow">{t("specifications")}</p><h2 id="specifications-title" className="mt-2 text-2xl font-semibold">{t("technicalDetails")}</h2></div>{specifications.length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("specificationsEmpty")}</div> : <Card><CardContent className="grid gap-px overflow-hidden p-0 sm:grid-cols-2">{specifications.map(([key, value]) => <div key={key} className="flex min-h-14 items-start justify-between gap-5 border-b bg-muted/15 px-5 py-3.5 text-sm last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"><span className="font-medium text-muted-foreground">{formatSpecificationLabel(key)}</span><span className="max-w-[65%] text-right font-medium">{formatSpecificationValue(value)}</span></div>)}</CardContent></Card>}</section>
+      <section className="mt-12" aria-labelledby="specifications-title"><div className="mb-5"><p className="eyebrow">{t("specifications")}</p><h2 id="specifications-title" className="mt-2 text-2xl font-semibold">{t("technicalDetails")}</h2></div>{specifications.length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("specificationsEmpty")}</div> : <Card><CardContent className="grid gap-px overflow-hidden p-0 sm:grid-cols-2">{specifications.map(([key, value]) => <div key={key} className="flex min-h-14 items-start justify-between gap-5 border-b bg-muted/15 px-5 py-3.5 text-sm last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"><span className="font-medium text-muted-foreground">{specLabels?.[key]?.label ?? formatSpecificationLabel(key)}</span><span className="max-w-[65%] text-right font-medium">{formatSpecificationValue(value)}{specLabels?.[key]?.unit ? ` ${specLabels[key].unit}` : ""}</span></div>)}</CardContent></Card>}</section>
       <section className="mt-14"><div className="mb-5 flex items-end justify-between"><div><p className="eyebrow">{t("reviews")}</p><h2 className="mt-2 text-2xl font-semibold">{t("customerReviews")}</h2></div><span className="text-sm text-muted-foreground">{product.reviewCount ?? reviews.data?.size ?? 0}</span></div>{ratingSummary.data ? <RatingSummary summary={ratingSummary.data} /> : null}{!belowFoldReady || reviews.isPending ? <Skeleton className="h-24 rounded-2xl" /> : reviews.isError ? <ErrorMessage error={reviews.error} /> : (reviews.data?.items ?? []).length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("noReviews")}</div> : <><div className="grid gap-4 md:grid-cols-2">{reviews.data?.items?.map((review) => <Card key={review.id}><CardContent className="space-y-2 p-5"><div className="flex items-center justify-between"><span className="font-medium">{review.customerName ?? t("verifiedBuyer")}</span><span className="flex items-center gap-1 text-sm"><Star className="size-4 fill-amber-400 text-amber-400" />{review.rating}/5</span></div><p className="text-sm leading-6 text-muted-foreground">{review.comment || "—"}</p></CardContent></Card>)}</div>{(reviews.data?.hasPrev || reviews.data?.hasNext) ? <div className="mt-6 flex justify-center gap-2"><Button variant="outline" disabled={!reviews.data?.hasPrev || !reviews.data?.prevCursor} onClick={() => setReviewCursor(reviews.data?.prevCursor)}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!reviews.data?.hasNext || !reviews.data?.nextCursor} onClick={() => setReviewCursor(reviews.data?.nextCursor)}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}</>}</section>
     </div>
   </section>;

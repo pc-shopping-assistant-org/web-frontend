@@ -31,8 +31,6 @@ type CatalogPageProps = {
   initialBrandId?: string;
   initialMinPrice?: number;
   initialMaxPrice?: number;
-  initialSortBy?: string;
-  initialSortDirection?: string;
 };
 
 export function CatalogPage({
@@ -41,8 +39,6 @@ export function CatalogPage({
   initialBrandId,
   initialMinPrice,
   initialMaxPrice,
-  initialSortBy,
-  initialSortDirection,
 }: CatalogPageProps = {}) {
   const t = useTranslations("catalog");
   const common = useTranslations("common");
@@ -55,8 +51,6 @@ export function CatalogPage({
     brandId: initialBrandId || undefined,
     minPrice: initialMinPrice,
     maxPrice: initialMaxPrice,
-    sortBy: initialSortBy || "createdAt",
-    sortDirection: initialSortDirection || "DESC",
   };
   const [term, setTerm] = useState(initialKeyword);
   const [filters, setFilters] = useState(initialFilters);
@@ -98,8 +92,6 @@ export function CatalogPage({
       brandId: undefined,
       minPrice: undefined,
       maxPrice: undefined,
-      sortBy: "createdAt",
-      sortDirection: "DESC",
     };
     setDraft(reset);
     setFilters(reset);
@@ -186,12 +178,11 @@ export function CatalogPage({
 
       <div className="mb-8 rounded-2xl border bg-card p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2 text-sm font-semibold"><SlidersHorizontal className="size-4" />{t("filters")}</div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2"><Label htmlFor="category">{t("category")}</Label><Select id="category" value={draft.categoryId ?? ""} onChange={(event) => setDraft((current) => ({...current, categoryId: event.target.value || undefined}))}><option value="">{t("allCategories")}</option>{flattenCategories(categories.data ?? []).map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</Select></div>
           <div className="space-y-2"><Label htmlFor="brand">{t("brand")}</Label><Select id="brand" value={draft.brandId ?? ""} onChange={(event) => setDraft((current) => ({...current, brandId: event.target.value || undefined}))}><option value="">{t("allBrands")}</option>{(brands.data ?? []).filter((brand) => brand.status === ResourceStatus.Active).map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</Select></div>
           <div className="space-y-2"><Label htmlFor="min-price">{t("minPrice")}</Label><Input id="min-price" type="number" min="0" value={draft.minPrice ?? ""} onChange={(event) => setDraft((current) => ({...current, minPrice: event.target.value ? Number(event.target.value) : undefined}))} /></div>
           <div className="space-y-2"><Label htmlFor="max-price">{t("maxPrice")}</Label><Input id="max-price" type="number" min="0" value={draft.maxPrice ?? ""} onChange={(event) => setDraft((current) => ({...current, maxPrice: event.target.value ? Number(event.target.value) : undefined}))} /></div>
-          <div className="space-y-2"><Label htmlFor="sort">{t("sort")}</Label><Select id="sort" value={`${draft.sortBy}:${draft.sortDirection}`} onChange={(event) => {const [sortBy, sortDirection] = event.target.value.split(":"); setDraft((current) => ({...current, sortBy, sortDirection}));}}><option value="createdAt:DESC">{t("newest")}</option><option value="price:ASC">{t("priceLowToHigh")}</option><option value="price:DESC">{t("priceHighToLow")}</option></Select></div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2"><Button type="button" onClick={applyFilters}>{t("applyFilters")}</Button><Button type="button" variant="ghost" onClick={clearFilters}>{t("clearFilters")}</Button>{filterError ? <p className="text-sm text-destructive" role="alert">{t("invalidPriceRange")}</p> : null}</div>
       </div>
@@ -279,13 +270,13 @@ type CatalogUrlFilters = {
   brandId?: string;
   minPrice?: number;
   maxPrice?: number;
-  sortBy?: string;
-  sortDirection?: string;
 };
 
 function syncCatalogUrl(router: ReturnType<typeof useRouter>, filters: CatalogUrlFilters) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) {
+  // Paging state (limit, cursor) is not part of the shareable URL
+  for (const key of ["keyword", "categoryId", "brandId", "minPrice", "maxPrice"] as const) {
+    const value = filters[key];
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
   const query = params.toString();
