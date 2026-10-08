@@ -57,14 +57,12 @@ import {
   OrderStatus,
   PaymentStatus,
   ORDER_STATUS_TRANSITIONS,
-  type EditableDiscountStatus,
 } from "@/lib/domain/commerce-enums";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
 import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import { AdminPagination } from "./admin-pagination";
 import { ConfirmAction } from "./confirm-action";
 import { FileUploadField, type UploadedFile } from "./file-upload";
-import { VariantTargetPicker } from "./management-forms";
 import {
   galleryFromProduct,
   galleryRequest,
@@ -217,8 +215,12 @@ function flatten(
     ...flatten(category.children ?? [], depth + 1),
   ]);
 }
+/** The backend sends UTC instants; a datetime-local input shows (and `toIso` reads) the browser's local time. */
 function toDateTimeInput(value?: string) {
-  return value ? value.slice(0, 16) : "";
+  if (!value) return "";
+  const date = new Date(value);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 function toIso(value: string) {
   return value ? new Date(value).toISOString() : new Date().toISOString();
@@ -1197,11 +1199,7 @@ function DiscountForm({
       startAt: toDateTimeInput(discount?.startAt),
       endAt: toDateTimeInput(discount?.endAt),
       description: discount?.description ?? "",
-      categoryIds: discount?.appliedCategoryIds ?? [],
-      variantIds:
-        discount?.appliedVariants?.flatMap((variant) =>
-          variant.id ? [variant.id] : [],
-        ) ?? [],
+      categoryIds: discount?.categoryIds ?? [],
     }),
     [discount],
   );
@@ -1218,9 +1216,8 @@ function DiscountForm({
     event.preventDefault();
     setFormError("");
     if (
-      (value.applicationScope === DiscountScope.Category &&
-        value.categoryIds.length === 0) ||
-      (value.applicationScope === DiscountScope.Variant && value.variantIds.length === 0)
+      value.applicationScope === DiscountScope.Category &&
+      value.categoryIds.length === 0
     ) {
       setFormError(t("discountTargetRequired"));
       return;
@@ -1238,15 +1235,16 @@ function DiscountForm({
       applicationScope: value.applicationScope,
       minOrderAmount: Number(value.minOrderAmount),
       description: value.description.trim() || undefined,
-      appliedCategoryIds:
+      categoryIds:
         value.applicationScope === DiscountScope.Category ? value.categoryIds : [],
-      appliedVariantIds:
-        value.applicationScope === DiscountScope.Variant ? value.variantIds : [],
-      ...(discount && !create
-        ? {status: discount.status as EditableDiscountStatus | undefined}
-        : {}),
     };
-    if (discount?.id) await update.mutateAsync({ id: discount.id, request });
+    if (!discount?.id) return;
+    try {
+      const saved = await update.mutateAsync({ id: discount.id, request });
+      setForm({ ...value, startAt: toDateTimeInput(saved.startAt), endAt: toDateTimeInput(saved.endAt) });
+    } catch {
+      // the failed mutation shows its own error
+    }
   }
   return (
     <Card>
@@ -1332,7 +1330,6 @@ function DiscountForm({
               <option value={DiscountScope.Order}>{t("scopeValues.ORDER")}</option>
               <option value={DiscountScope.AllItems}>{t("scopeValues.ALL_ITEMS")}</option>
               <option value={DiscountScope.Category}>{t("scopeValues.CATEGORY")}</option>
-              <option value={DiscountScope.Variant}>{t("scopeValues.VARIANT")}</option>
             </Select>
           </div>
           {value.applicationScope === DiscountScope.Category ? (
@@ -1349,12 +1346,6 @@ function DiscountForm({
               selectedLabel={t("selectedCount", {count: value.categoryIds.length})}
               emptyLabel={t("noCategories")}
               className="sm:col-span-2"
-            />
-          ) : null}
-          {value.applicationScope === DiscountScope.Variant ? (
-            <VariantTargetPicker
-              value={value.variantIds}
-              onChange={(next) => set("variantIds", next)}
             />
           ) : null}
           <div className="space-y-2 sm:col-span-2">
@@ -1374,7 +1365,7 @@ function DiscountForm({
               <>
                 <StatusSelect
                   currentStatus={discount.status ?? DiscountStatus.Active}
-                  options={[DiscountStatus.Active, DiscountStatus.Inactive, DiscountStatus.Disabled, DiscountStatus.Expired]}
+                  options={[DiscountStatus.Active, DiscountStatus.Inactive]}
                   label={t("status")}
                   onStatus={(nextStatus) =>
                     status.mutateAsync({
@@ -1404,7 +1395,7 @@ function DiscountForm({
             ) : null}
           </div>
           <FormError
-            error={update.error ?? status.error ?? remove.error}
+            error={update.error ?? status.error}
             formError={formError}
           />
         </form>

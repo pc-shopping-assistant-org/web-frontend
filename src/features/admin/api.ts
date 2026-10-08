@@ -7,7 +7,7 @@ import type {
   CustomerDetailDto,
   CustomerOrderSummaryDto,
   DashboardOverviewDto,
-  DiscountDetailDto,
+  DiscountDto,
   EmployeeDetailDto,
   OptionDto,
   OrderStatusStatDto,
@@ -145,6 +145,7 @@ import type {
 } from "@/features/admin/contracts/requests";
 
 const CATALOG = "/catalog-service";
+const PROMOTION = "/promotion-service";
 
 function queryString(values: Record<string, unknown>) {
   const params = new URLSearchParams();
@@ -206,7 +207,7 @@ export function getDiscounts(
   filter: DiscountFilter = {},
 ) {
   return backendFetch<DiscountsPageDto>(
-    `/admin/discounts${queryString(filter)}`,
+    `${PROMOTION}/discounts${queryString(filter)}`,
   ).then(mapDiscountsPage);
 }
 export function getAdminOrders(
@@ -245,8 +246,8 @@ export function getAdminEmployee(id: string) {
   ).then(mapEmployeeDetail);
 }
 export function getAdminDiscount(id: string) {
-  return backendFetch<DiscountDetailDto>(
-    `/admin/discounts/${encodeURIComponent(id)}`,
+  return backendFetch<DiscountDto>(
+    `${PROMOTION}/discounts/${encodeURIComponent(id)}`,
   ).then(mapDiscountDetail);
 }
 export function getAdminOrder(id: string) {
@@ -377,16 +378,12 @@ export function updateEmployeeStatus(
     { method: "PATCH", body: JSON.stringify(payload) },
   );
 }
-export function updateDiscountStatus(
-  id: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateDiscountStatusRequestSchema, {status, reason});
-  return backendFetch<string>(
-    `/admin/discounts/${encodeURIComponent(id)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
+export function updateDiscountStatus(id: string, status: string) {
+  const payload = parseRequest(updateDiscountStatusRequestSchema, {status});
+  return backendFetch<DiscountDto>(
+    `${PROMOTION}/discounts/${encodeURIComponent(id)}/status`,
+    { method: "PATCH", body: JSON.stringify({status: payload.status}) },
+  ).then(mapDiscountDetail);
 }
 export function updateReviewStatus(
   id: string,
@@ -444,23 +441,27 @@ export function createDiscount(
   request: CreateDiscountRequest,
 ) {
   const payload = parseRequest(createDiscountRequestSchema, request);
-  return backendFetch<DiscountDetailDto>(
-    "/admin/discounts",
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapDiscountDetail);
+  return backendFetch<DiscountDto>(`${PROMOTION}/discounts`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }).then(mapDiscountDetail);
 }
-export function updateDiscount(
+/** The definition and the status are two backend calls; the status one only when it differs. */
+export async function updateDiscount(
   id: string,
   request: UpdateDiscountRequest,
 ) {
-  const payload = parseRequest(updateDiscountRequestSchema, request);
-  return backendFetch<DiscountDetailDto>(
-    `/admin/discounts/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapDiscountDetail);
+  const {status, ...definition} = parseRequest(updateDiscountRequestSchema, request);
+  const path = `${PROMOTION}/discounts/${encodeURIComponent(id)}`;
+  // The backend keeps the current code when it is omitted and removes it when it is blank, so a cleared code is sent as ""
+  let discount = await backendFetch<DiscountDto>(path, { method: "PUT", body: JSON.stringify({ ...definition, code: definition.code ?? "" }) });
+  if (status && status !== discount.status) {
+    discount = await backendFetch<DiscountDto>(`${path}/status`, { method: "PATCH", body: JSON.stringify({status}) });
+  }
+  return mapDiscountDetail(discount);
 }
 export function deleteDiscount(id: string) {
-  return backendFetch<string>(`/admin/discounts/${encodeURIComponent(id)}`, {
+  return backendFetch<null>(`${PROMOTION}/discounts/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }

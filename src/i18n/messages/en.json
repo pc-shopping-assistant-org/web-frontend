@@ -647,7 +647,9 @@
       "CANCELLED": "Cancelled",
       "PENDING": "Pending",
       "PAID": "Paid",
-      "FAILED": "Failed"
+      "FAILED": "Failed",
+      "SCHEDULED": "Scheduled",
+      "RUNNING": "Running"
     },
     "searchProducts": "Search products",
     "searchOrders": "Search order/customer",
@@ -835,8 +837,8 @@
     "discountDetail": "Discount detail",
     "createDiscount": "Create discount",
     "editDiscount": "Edit discount",
-    "discountTargetDescription": "Targets must match the selected application scope; the backend validates the transaction.",
-    "discountTargetRequired": "Select at least one target for CATEGORY or enter at least one variant ID for VARIANT.",
+    "discountTargetDescription": "A code is only available for the \"Whole order\" scope. The \"By category\" scope needs at least one category in use.",
+    "discountTargetRequired": "The \"By category\" scope needs at least one category.",
     "titleField": "Title",
     "code": "Code (optional)",
     "voucherOnlyOrder": "Voucher codes are only valid for the ORDER scope.",
@@ -915,7 +917,10 @@
     "warrantyMonthsValue": "{count} months",
     "addOption": "Add option",
     "removeOption": "Remove option",
-    "optionIncomplete": "Each option needs both a name and a value."
+    "optionIncomplete": "Each option needs both a name and a value.",
+    "pageOf": "Page {page} of {total}",
+    "discountState": "State",
+    "allStates": "All states"
   },
   "errors": {
     "CATEGORY_IN_USE": "The category still has sub-categories or products and cannot be deleted.",

@@ -32,12 +32,19 @@ export enum ShippingMethodCode {
   SameDay = "SAME_DAY",
 }
 
+/** Stored status; expiry is not a status, it is derived from the validity period (see DiscountState). */
 export enum DiscountStatus {
   Active = "ACTIVE",
   Inactive = "INACTIVE",
-  Expired = "EXPIRED",
-  Disabled = "DISABLED",
   Deleted = "DELETED",
+}
+
+/** What the discount list shows: the status combined with the validity period. */
+export enum DiscountState {
+  Scheduled = "SCHEDULED",
+  Running = "RUNNING",
+  Expired = "EXPIRED",
+  Locked = "LOCKED",
 }
 
 export enum DiscountType {
@@ -49,14 +56,9 @@ export enum DiscountScope {
   Order = "ORDER",
   AllItems = "ALL_ITEMS",
   Category = "CATEGORY",
-  Variant = "VARIANT",
 }
 
-export type EditableDiscountStatus =
-  | DiscountStatus.Active
-  | DiscountStatus.Inactive
-  | DiscountStatus.Expired
-  | DiscountStatus.Disabled;
+export type EditableDiscountStatus = DiscountStatus.Active | DiscountStatus.Inactive;
 
 export const ORDER_STATUS_VALUES = enumValues(OrderStatus);
 export const PAYMENT_STATUS_VALUES = enumValues(PaymentStatus);
@@ -66,9 +68,8 @@ export const DISCOUNT_STATUS_VALUES = enumValues(DiscountStatus);
 export const EDITABLE_DISCOUNT_STATUS_VALUES = [
   DiscountStatus.Active,
   DiscountStatus.Inactive,
-  DiscountStatus.Expired,
-  DiscountStatus.Disabled,
 ] as const;
+export const DISCOUNT_STATE_VALUES = enumValues(DiscountState);
 export const DISCOUNT_TYPE_VALUES = enumValues(DiscountType);
 export const DISCOUNT_SCOPE_VALUES = enumValues(DiscountScope);
 

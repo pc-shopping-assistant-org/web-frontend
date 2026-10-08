@@ -647,7 +647,9 @@
       "CANCELLED": "Đã hủy",
       "PENDING": "Chờ xử lý",
       "PAID": "Đã thanh toán",
-      "FAILED": "Thất bại"
+      "FAILED": "Thất bại",
+      "SCHEDULED": "Sắp diễn ra",
+      "RUNNING": "Đang chạy"
     },
     "searchProducts": "Tìm sản phẩm",
     "searchOrders": "Tìm đơn/khách hàng",
@@ -835,8 +837,8 @@
     "discountDetail": "Chi tiết khuyến mãi",
     "createDiscount": "Tạo khuyến mãi",
     "editDiscount": "Sửa khuyến mãi",
-    "discountTargetDescription": "Target phải khớp scope đã chọn; backend sẽ kiểm tra trong transaction.",
-    "discountTargetRequired": "CATEGORY phải có ít nhất một category; VARIANT phải có ít nhất một variant ID.",
+    "discountTargetDescription": "Mã giảm giá chỉ dùng được cho phạm vi \"Toàn đơn hàng\". Phạm vi \"Theo danh mục\" cần chọn ít nhất một danh mục đang sử dụng.",
+    "discountTargetRequired": "Phạm vi \"Theo danh mục\" cần chọn ít nhất một danh mục.",
     "titleField": "Tiêu đề",
     "code": "Mã (tùy chọn)",
     "voucherOnlyOrder": "Mã voucher chỉ dùng cho phạm vi ORDER.",
@@ -915,7 +917,10 @@
     "warrantyMonthsValue": "{count} tháng",
     "addOption": "Thêm tùy chọn",
     "removeOption": "Bỏ tùy chọn",
-    "optionIncomplete": "Mỗi tùy chọn cần có cả tên và giá trị."
+    "optionIncomplete": "Mỗi tùy chọn cần có cả tên và giá trị.",
+    "pageOf": "Trang {page}/{total}",
+    "discountState": "Tình trạng",
+    "allStates": "Tất cả tình trạng"
   },
   "errors": {
     "CATEGORY_IN_USE": "Danh mục còn danh mục con hoặc sản phẩm nên không thể xóa.",

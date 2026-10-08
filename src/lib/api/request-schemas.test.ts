@@ -43,9 +43,9 @@ describe("request schemas", () => {
     };
     expect(createDiscountRequestSchema.safeParse(base).success).toBe(false);
     const categoryId = "550e8400-e29b-41d4-a716-446655440000";
-    expect(createDiscountRequestSchema.safeParse({...base, appliedCategoryIds: [categoryId]}).success).toBe(true);
-    expect(createDiscountRequestSchema.safeParse({...base, value: 101, appliedCategoryIds: [categoryId]}).success).toBe(false);
-    expect(createDiscountRequestSchema.safeParse({...base, applicationScope: DiscountScope.Order, appliedCategoryIds: [categoryId]}).success).toBe(false);
+    expect(createDiscountRequestSchema.safeParse({...base, categoryIds: [categoryId]}).success).toBe(true);
+    expect(createDiscountRequestSchema.safeParse({...base, value: 101, categoryIds: [categoryId]}).success).toBe(false);
+    expect(createDiscountRequestSchema.safeParse({...base, applicationScope: DiscountScope.Order, categoryIds: [categoryId]}).success).toBe(false);
   });
 
   it("keeps payment protocol values explicit", () => {

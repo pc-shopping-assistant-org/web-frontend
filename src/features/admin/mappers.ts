@@ -8,8 +8,7 @@ import type {
   CustomerDetailDto,
   CustomerOrderSummaryDto,
   DashboardOverviewDto,
-  DiscountDetailDto,
-  DiscountSummaryDto,
+  DiscountDto,
   DiscountsPageDto,
   EmployeeDetailDto,
   EmployeesPageDto,
@@ -55,7 +54,7 @@ import type {
 } from "@/features/admin/models";
 
 const text = (value?: string) => value?.trim() ?? "";
-const number = (value?: number) => value ?? 0;
+const number = (value?: number | null) => value ?? 0;
 
 export function mapAttributeDefinition(dto: AttributeDefinitionDto): AttributeDefinition {
   return {
@@ -211,12 +210,12 @@ export function mapOrderStatusStat(dto: OrderStatusStatDto): OrderStatusStat {
   };
 }
 
-export function mapDiscountSummary(dto: DiscountSummaryDto): DiscountSummary {
+export function mapDiscountSummary(dto: DiscountDto): DiscountSummary {
   return {
-    id: text(dto.id),
-    code: dto.code,
+    id: dto.id,
+    code: dto.code ?? undefined,
     title: dto.title,
-    description: dto.description,
+    description: dto.description ?? undefined,
     discountType: dto.discountType,
     applicationScope: dto.applicationScope,
     value: number(dto.value),
@@ -224,36 +223,24 @@ export function mapDiscountSummary(dto: DiscountSummaryDto): DiscountSummary {
     startAt: dto.startAt,
     endAt: dto.endAt,
     status: dto.status,
+    state: dto.state,
+    categoryIds: dto.categoryIds ?? [],
     createdAt: dto.createdAt,
   };
 }
 
-export function mapDiscountDetail(dto: DiscountDetailDto): DiscountDetail {
-  return {
-    ...mapDiscountSummary(dto),
-    updatedAt: dto.updatedAt,
-    appliedCategoryIds: dto.appliedCategoryIds ?? [],
-    // Discounts still arrive in the old shape until the promotion phase is integrated
-    appliedVariants: (dto.appliedVariants ?? []).map((variant) => ({
-      id: text(variant.id),
-      productId: text(variant.productId),
-      sku: text(variant.sku),
-      price: number(variant.listPrice),
-      quantity: number(variant.quantity),
-      status: variant.status,
-      options: [],
-    })),
-  };
+export function mapDiscountDetail(dto: DiscountDto): DiscountDetail {
+  return {...mapDiscountSummary(dto), updatedAt: dto.updatedAt};
 }
 
 export function mapDiscountsPage(dto: DiscountsPageDto): DiscountsPage {
   return {
-    hasNext: dto.hasNext ?? false,
-    hasPrev: dto.hasPrev ?? false,
-    items: (dto.items ?? []).map(mapDiscountSummary),
-    nextCursor: dto.nextCursor,
-    prevCursor: dto.prevCursor,
-    size: number(dto.size),
+    items: (dto.content ?? []).map(mapDiscountSummary),
+    page: dto.page,
+    size: dto.size,
+    totalElements: dto.totalElements,
+    totalPages: dto.totalPages,
+    last: dto.last,
   };
 }
 

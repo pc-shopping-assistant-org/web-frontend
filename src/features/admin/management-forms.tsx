@@ -1,8 +1,8 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Plus, Search, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,20 +17,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import type {CategoryTree} from "@/features/catalog/contracts/responses";
 import {Gender} from "@/lib/domain/account-enums";
 import {DiscountScope, DiscountType} from "@/lib/domain/commerce-enums";
-import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 import { useCategories } from "@/features/catalog/queries";
 import { FileUploadField, type UploadedFile } from "./file-upload";
 import {
   useCreateAdminDiscount,
   useCreateAdminEmployee,
-  useAdminProduct,
-  useAdminProducts,
   useCreateAdminSupplier,
   useRoles,
 } from "./queries";
@@ -422,14 +418,14 @@ export function DiscountCreateForm() {
     endAt: "",
     description: "",
     categoryIds: [] as string[],
-    variantIds: [] as string[],
   });
   function set(key: keyof typeof form, value: string | string[]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
-    await create.mutateAsync({
+    try {
+      await create.mutateAsync({
       title: form.title.trim(),
       code: form.code.trim() || undefined,
       discountType: form.discountType,
@@ -439,11 +435,12 @@ export function DiscountCreateForm() {
       startAt: iso(form.startAt),
       endAt: iso(form.endAt),
       description: form.description.trim() || undefined,
-      appliedCategoryIds:
+      categoryIds:
       form.applicationScope === DiscountScope.Category ? form.categoryIds : [],
-      appliedVariantIds:
-      form.applicationScope === DiscountScope.Variant ? form.variantIds : [],
     });
+    } catch {
+      return;
+    }
     setForm({
       title: "",
       code: "",
@@ -455,12 +452,10 @@ export function DiscountCreateForm() {
       endAt: "",
       description: "",
       categoryIds: [],
-      variantIds: [],
     });
   }
   const targetError =
-    (form.applicationScope === DiscountScope.Category && form.categoryIds.length === 0) ||
-    (form.applicationScope === DiscountScope.Variant && form.variantIds.length === 0);
+    form.applicationScope === DiscountScope.Category && form.categoryIds.length === 0;
   return (
     <Card className="mb-6">
       <CreateCardHeader
@@ -550,7 +545,6 @@ export function DiscountCreateForm() {
                 <option value={DiscountScope.Order}>{t("scopeValues.ORDER")}</option>
                 <option value={DiscountScope.AllItems}>{t("scopeValues.ALL_ITEMS")}</option>
                 <option value={DiscountScope.Category}>{t("scopeValues.CATEGORY")}</option>
-                <option value={DiscountScope.Variant}>{t("scopeValues.VARIANT")}</option>
               </Select>
             </div>
             {form.applicationScope === DiscountScope.Category ? (
@@ -567,12 +561,6 @@ export function DiscountCreateForm() {
                 selectedLabel={t("selectedCount", {count: form.categoryIds.length})}
                 emptyLabel={t("noCategories")}
                 className="sm:col-span-2"
-              />
-            ) : null}
-            {form.applicationScope === DiscountScope.Variant ? (
-              <VariantTargetPicker
-                value={form.variantIds}
-                onChange={(value) => set("variantIds", value)}
               />
             ) : null}
             <div className="space-y-2 sm:col-span-2">
@@ -600,149 +588,5 @@ export function DiscountCreateForm() {
         </CardContent>
       ) : null}
     </Card>
-  );
-}
-
-/**
- * Selects variants through the catalog instead of asking operators to copy
- * UUIDs. Selected IDs are retained while switching products so a promotion
- * can target variants from more than one product.
- */
-export function VariantTargetPicker({
-  value,
-  onChange,
-}: {
-  value: string[];
-  onChange: (value: string[]) => void;
-}) {
-  const t = useTranslations("admin");
-  const [productId, setProductId] = useState("");
-  const [keyword, setKeyword] = useState("");
-  const products = useAdminProducts({
-    limit: 100,
-    status: ResourceStatus.Active,
-    keyword: keyword.trim() || undefined,
-  });
-  const product = useAdminProduct(productId);
-  const variants = useMemo(
-    () =>
-      (product.data?.variants ?? []).filter(
-        (variant) => variant.id && variant.status === ResourceStatus.Active,
-      ),
-    [product.data?.variants],
-  );
-  const currentProductVariantIds = useMemo(
-    () => new Set(variants.flatMap((variant) => (variant.id ? [variant.id] : []))),
-    [variants],
-  );
-  const currentSelection = value.filter((id) =>
-    currentProductVariantIds.has(id),
-  );
-
-  function selectCurrentProduct(nextIds: string[]) {
-    const retained = value.filter((id) => !currentProductVariantIds.has(id));
-    onChange(Array.from(new Set([...retained, ...nextIds])));
-  }
-
-  return (
-    <div className="space-y-3 sm:col-span-2">
-      <div>
-        <Label htmlFor="discount-target-variants">{t("targetVariants")}</Label>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t("targetVariantsHint")}
-        </p>
-      </div>
-      <div className="grid gap-3 md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-        <label className="space-y-1.5 text-sm">
-          <span className="font-medium text-muted-foreground">
-            {t("findProduct")}
-          </span>
-          <span className="relative block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              placeholder={t("searchProducts")}
-            />
-          </span>
-        </label>
-        <label className="space-y-1.5 text-sm">
-          <span className="font-medium text-muted-foreground">
-            {t("targetProduct")}
-          </span>
-          <Select
-            value={productId}
-            onChange={(event) => setProductId(event.target.value)}
-          >
-            <option value="">{t("chooseProduct")}</option>
-            {(products.data?.items ?? [])
-              .filter((item) => item.id)
-              .map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-          </Select>
-        </label>
-      </div>
-      {productId ? (
-        product.isPending ? (
-          <Skeleton className="h-24 rounded-xl" />
-        ) : product.isError ? (
-          <p className="rounded-xl border border-dashed p-4 text-sm text-destructive">
-            {t("variantsUnavailable")}
-          </p>
-        ) : variants.length ? (
-          <MultiSelectList
-            id="discount-target-variant-options"
-            label={t("chooseVariants")}
-            hint={t("targetVariantsHint")}
-            options={variants
-              .filter((variant) => variant.id)
-              .map((variant) => ({
-                value: variant.id!,
-                label: variant.sku ?? variant.id!,
-                description: String(variant.price ?? 0),
-              }))}
-            value={currentSelection}
-            onChange={selectCurrentProduct}
-            selectedLabel={t("selectedCount", {count: currentSelection.length})}
-            emptyLabel={t("noActiveVariants")}
-          />
-        ) : (
-          <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-            {t("noActiveVariants")}
-          </p>
-        )
-      ) : null}
-      {value.length ? (
-        <div className="flex flex-wrap gap-2" aria-label={t("selectedTargets")}>
-          {value.map((id) => {
-            const variant = product.data?.variants?.find(
-              (candidate) => candidate.id === id,
-            );
-            return (
-              <span
-                key={id}
-                className="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-muted/40 px-2.5 py-1 text-xs"
-              >
-                <span className="truncate">{variant?.sku ?? id}</span>
-                <button
-                  type="button"
-                  className="rounded-full p-0.5 text-muted-foreground hover:bg-background hover:text-foreground"
-                  onClick={() => onChange(value.filter((item) => item !== id))}
-                  aria-label={`${t("removeTarget")}: ${variant?.sku ?? id}`}
-                >
-                  <X className="size-3" />
-                </button>
-              </span>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="text-xs text-muted-foreground">{t("noSelectedTargets")}</p>
-      )}
-    </div>
   );
 }

@@ -7,13 +7,11 @@ import { Button } from "@/components/ui/button";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Select } from "@/components/ui/select";
 import {AccountStatus} from "@/lib/domain/account-enums";
-import {DiscountStatus} from "@/lib/domain/commerce-enums";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 const CONFIRMABLE_STATUSES = new Set<string>([
   AccountStatus.Inactive,
   AccountStatus.Locked,
-  DiscountStatus.Disabled,
   ResourceStatus.Deleted,
 ]);
 

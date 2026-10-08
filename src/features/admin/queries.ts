@@ -351,8 +351,8 @@ export function useAdminEmployeeStatus() {
 }
 export function useAdminDiscountStatus() {
   return useStatusMutation(
-    ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
-      updateDiscountStatus(id, status, reason),
+    ({ id, status }: { id: string; status: string }) =>
+      updateDiscountStatus(id, status),
   );
 }
 export function useAdminReviewStatus() {
