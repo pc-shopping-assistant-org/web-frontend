@@ -63,8 +63,8 @@ export function ProductDetailPage({slug}: {slug: string}) {
     .filter(([key, value]) => key.trim() && value !== null && value !== undefined)
     .sort(([a], [b]) => (specLabels?.[a]?.order ?? Number.MAX_SAFE_INTEGER) - (specLabels?.[b]?.order ?? Number.MAX_SAFE_INTEGER));
   const categoryHref = product?.category?.id ? `/products?categoryId=${encodeURIComponent(product.category.id)}` : undefined;
-  const assistantHref = product?.id ? `/assistant?mode=EVALUATE&productId=${encodeURIComponent(product.id)}` : undefined;
-  const compareHref = product?.id ? `/assistant?mode=COMPARE&productIds=${encodeURIComponent(product.id)}` : undefined;
+  const assistantHref = product?.id ? `/assistant?productId=${encodeURIComponent(product.id)}` : undefined;
+  const compareHref = product?.id ? `/assistant?productIds=${encodeURIComponent(product.id)}` : undefined;
 
   if (query.isPending) return <ProductDetailPageSkeleton />;
   if (query.isError || !product) {

@@ -240,11 +240,9 @@ export function OrderDetailPageSkeleton() {
 export function AssistantPageSkeleton() {
   return (
     <LoadingFrame className="page-wrap space-y-7 py-8 sm:py-12">
-      <Skeleton className="h-72 rounded-[2rem]" />
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <Skeleton className="h-[30rem] rounded-2xl" />
-        <Skeleton className="h-[30rem] rounded-2xl" />
-      </div>
+      <Skeleton className="h-20 rounded-2xl" />
+      <Skeleton className="h-[30rem] rounded-2xl" />
+      <Skeleton className="h-36 rounded-2xl" />
     </LoadingFrame>
   );
 }

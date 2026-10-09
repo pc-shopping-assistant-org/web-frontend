@@ -9,6 +9,6 @@ const AssistantPage = dynamic(
   {loading: () => <AssistantPageSkeleton />},
 );
 
-export function AssistantRouteClient() {
-  return <AssistantPage />;
+export function AssistantRouteClient({initialProductIds, initialPrompt, invalidBuild}: {initialProductIds?: string[]; initialPrompt?: string; invalidBuild?: boolean}) {
+  return <AssistantPage key={initialPrompt} initialProductIds={initialProductIds} initialPrompt={initialPrompt} invalidBuild={invalidBuild} />;
 }

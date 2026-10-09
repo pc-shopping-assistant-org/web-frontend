@@ -2,6 +2,7 @@
 
 import {
   IconChevronDown,
+  IconDeviceDesktop,
   IconLayoutGrid,
   IconLayoutDashboard,
   IconClipboardList,
@@ -36,7 +37,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const profile = useProfile();
   const role = profile.data?.role?.toUpperCase();
   const isStaff = isStaffRole(role);
-  const cart = useCart(profile.isSuccess && !isStaff);
+  const cart = useCart(!isStaff);
   const categories = useCategories();
   const logout = useLogout();
   const [open, setOpen] = useState(false);
@@ -44,6 +45,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const links = [
     { href: "/" as const, label: t("home") },
     { href: "/products" as const, label: t("products"), icon: IconLayoutGrid },
+    { href: "/build-pc" as const, label: "Build PC", icon: IconDeviceDesktop },
     { href: "/assistant" as const, label: t("assistant"), icon: IconRobot },
     ...(!isStaff
       ? [{ href: "/cart" as const, label: t("cart"), icon: IconShoppingCart }]
@@ -338,13 +340,10 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
 
   return (
     <details className="group relative hidden shrink-0 md:block">
-      <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-background pl-3 pr-2.5 text-sm font-semibold transition hover:border-primary/30 hover:bg-primary/5 [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-background px-3 text-sm font-semibold transition hover:border-primary/30 hover:bg-primary/5 [&::-webkit-details-marker]:hidden">
         <IconLayoutGrid className="size-4 text-primary" aria-hidden="true" />
         {t("catalogMenu")}
-        <IconChevronDown
-          className="size-4 text-muted-foreground transition-transform duration-200 group-open:rotate-180"
-          aria-hidden="true"
-        />
+        <span className="text-muted-foreground transition group-open:rotate-180">⌄</span>
       </summary>
       <div className="absolute left-0 top-[calc(100%+0.65rem)] z-50 w-[25rem] rounded-2xl border bg-background p-3 shadow-2xl shadow-slate-950/10">
         <div className="flex items-center justify-between gap-3 border-b px-2 pb-3">
@@ -375,7 +374,7 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
         ) : (
           <p className="px-2 py-5 text-sm text-muted-foreground">{t("catalogMenuEmpty")}</p>
         )}
-        <Link href="/assistant?mode=CONSULT" className="mt-3 flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/85">
+        <Link href="/assistant" className="mt-3 flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/85">
           <IconRobot className="size-4" aria-hidden="true" />
           {t("catalogMenuAssistant")}
         </Link>

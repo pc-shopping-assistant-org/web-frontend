@@ -156,7 +156,7 @@ function ShopByGoal() {
     {key: "gaming", href: "/products?keyword=gaming", icon: IconDeviceGamepad2, tone: "from-violet-500/15 to-fuchsia-500/5 text-violet-700"},
     {key: "work", href: "/products?keyword=laptop", icon: IconDeviceLaptop, tone: "from-sky-500/15 to-cyan-500/5 text-sky-700"},
     {key: "creator", href: "/products?keyword=creator", icon: IconDesk, tone: "from-amber-500/15 to-orange-500/5 text-amber-700"},
-    {key: "build", href: "/assistant?mode=CONSULT", icon: IconCpu, tone: "from-emerald-500/15 to-teal-500/5 text-emerald-700"},
+    {key: "build", href: "/assistant", icon: IconCpu, tone: "from-emerald-500/15 to-teal-500/5 text-emerald-700"},
   ] as const;
 
   return (
@@ -167,7 +167,7 @@ function ShopByGoal() {
           <h2 id="shop-by-goal-title" className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{t("goalTitle")}</h2>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{t("goalDescription")}</p>
         </div>
-        <Link href="/assistant?mode=CONSULT" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline">
+        <Link href="/assistant" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline">
           {t("talkToAssistant")}
           <IconArrowRight className="size-4" aria-hidden="true" />
         </Link>
@@ -198,7 +198,7 @@ function FinderFlow({isStaff}: {isStaff: boolean}) {
   const t = useTranslations("home");
   const steps = [
     {icon: IconSearch, title: t("finderStepSearch"), href: "/products" as const},
-    {icon: IconArrowsLeftRight, title: t("finderStepCompare"), href: "/assistant?mode=COMPARE" as const},
+    {icon: IconArrowsLeftRight, title: t("finderStepCompare"), href: "/assistant" as const},
     isStaff
       ? {icon: IconClipboardList, title: t("finderStepAdminOrders"), href: "/admin/orders" as const}
       : {icon: IconShoppingCart, title: t("finderStepOrder"), href: "/cart" as const},
@@ -213,7 +213,7 @@ function FinderFlow({isStaff}: {isStaff: boolean}) {
           <h2 id="finder-flow-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("finderTitle")}</h2>
           <p className="text-sm leading-6 text-slate-300">{t("finderDescription")}</p>
         </div>
-        <Link href="/assistant?mode=CONSULT" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">
+        <Link href="/assistant" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">
           {t("finderCta")}
           <IconArrowRight className="size-4" aria-hidden="true" />
         </Link>
@@ -245,21 +245,21 @@ function StorefrontQuickActions({isStaff}: {isStaff: boolean}) {
       tone: "bg-sky-50 text-sky-700",
     },
     {
-      href: "/assistant?mode=SEARCH" as const,
+      href: "/assistant" as const,
       icon: IconSearch,
       title: t("quickAction.searchTitle"),
       description: t("quickAction.searchDescription"),
       tone: "bg-cyan-50 text-cyan-700",
     },
     {
-      href: "/assistant?mode=COMPARE" as const,
+      href: "/assistant" as const,
       icon: IconArrowsLeftRight,
       title: t("quickAction.compareTitle"),
       description: t("quickAction.compareDescription"),
       tone: "bg-violet-50 text-violet-700",
     },
     {
-      href: "/assistant?mode=CONSULT" as const,
+      href: "/assistant" as const,
       icon: IconRobot,
       title: t("quickAction.assistantTitle"),
       description: t("quickAction.assistantDescription"),
