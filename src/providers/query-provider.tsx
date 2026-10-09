@@ -1,5 +1,6 @@
 "use client";
 
+import {ApiClientError} from "@/lib/api/envelope";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {useState, type ReactNode} from "react";
 
@@ -10,7 +11,8 @@ export function QueryProvider({children}: {children: ReactNode}) {
         defaultOptions: {
           queries: {
             staleTime: 30_000,
-            retry: 1,
+            // A 4xx answer will not change on a retry (not found, validation, forbidden)
+            retry: (failureCount, error) => failureCount < 1 && !(error instanceof ApiClientError && error.status < 500),
             refetchOnWindowFocus: false,
           },
         },

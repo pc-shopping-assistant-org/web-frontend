@@ -49,6 +49,10 @@ const AdminSupplierDetailPage = dynamic(
   () => import("@/features/admin/detail-pages").then((module) => module.AdminSupplierDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
+const AdminInvoiceDetailPage = dynamic(
+  () => import("@/features/admin/detail-pages").then((module) => module.AdminInvoiceDetailPage),
+  {loading: () => <AdminPageSkeleton />},
+);
 const AdminInvoicesPage = dynamic(
   () => import("@/features/admin/detail-pages").then((module) => module.AdminInvoicesPage),
   {loading: () => <AdminPageSkeleton />},
@@ -96,6 +100,10 @@ export function AdminOrderDetailRouteClient({orderId}: {orderId: string}) {
 
 export function AdminSupplierDetailRouteClient({supplierId}: {supplierId: string}) {
   return <AdminSupplierDetailPage supplierId={supplierId} />;
+}
+
+export function AdminInvoiceDetailRouteClient({orderId}: {orderId: string}) {
+  return <AdminInvoiceDetailPage orderId={orderId} />;
 }
 
 export function AdminInvoicesRouteClient() {

@@ -59,7 +59,6 @@ export type {
   ProductImage,
   ProductOption,
   ProductPage,
-  ProductRatingSummary,
   ProductSummary,
   ProductVariant,
   Review,
@@ -68,7 +67,7 @@ export type {
 export type {
   CancelOrderRequest,
   CreateOrderRequest,
-  CreatePaymentIntentRequest,
+  DiscountPreviewRequest,
   DiscountValidation,
   Invoice,
   InvoicesPage,
@@ -79,7 +78,6 @@ export type {
   PaymentMethod,
   PaymentSummary,
   ShippingMethod,
-  ValidateDiscountRequest,
 } from "@/features/orders/contracts";
 export type {
   AdminReviewPage,
@@ -113,7 +111,6 @@ export type {
   CreateDiscountRequest,
   CreateEmployeeRequest,
   CreateOptionRequest,
-  CreateProductImageRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CreateSupplierRequest,
@@ -127,7 +124,6 @@ export type {
   UpdateEmployeeRequest,
   UpdateOptionRequest,
   UpdateOrderStatusRequest,
-  UpdatePaymentStatusRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
   UpdateResourceStatusRequest,

@@ -1,32 +1,25 @@
-import type {
-  AuthResponseDto,
-  UserProfileDto,
-  UserSummaryDto,
-} from "@/features/auth/contracts/dto";
-import type {AuthResponse, UserProfile, UserSummary} from "@/features/auth/models";
-
-const text = (value?: string) => value?.trim() ?? "";
+import type {AuthResponseDto, MediaFileDto, UserSummaryDto} from "@/features/auth/contracts/dto";
+import type {AuthResponse, UploadedImage, UserProfile, UserSummary} from "@/features/auth/models";
 
 export function mapUserSummary(dto: UserSummaryDto): UserSummary {
   return {
-    accountId: text(dto.accountId),
-    id: text(dto.id),
+    accountId: dto.accountId,
     email: dto.email,
-    fullName: dto.fullName,
-    phone: dto.phone,
+    firstName: dto.firstName,
+    lastName: dto.lastName,
+    fullName: `${dto.lastName} ${dto.firstName}`.trim(),
+    phone: dto.phone ?? undefined,
     role: dto.role,
   };
 }
 
-export function mapUserProfile(dto: UserProfileDto): UserProfile {
+export function mapUserProfile(dto: UserSummaryDto): UserProfile {
   return {
     ...mapUserSummary(dto),
-    address: dto.address,
-    avatarFileId: dto.avatarFileId,
-    birthday: dto.birthday,
-    createdAt: dto.createdAt,
-    gender: dto.gender,
-    status: dto.status,
+    birthday: dto.birthday ?? undefined,
+    gender: dto.gender ?? undefined,
+    avatarFileId: dto.avatarFileId ?? undefined,
+    avatarUrl: dto.avatarUrl ?? undefined,
   };
 }
 
@@ -38,4 +31,8 @@ export function mapAuthResponse(dto: AuthResponseDto): AuthResponse {
     tokenType: dto.tokenType,
     user: dto.user ? mapUserSummary(dto.user) : undefined,
   };
+}
+
+export function mapUploadedImage(dto: MediaFileDto): UploadedImage {
+  return {id: dto.id, url: dto.url};
 }

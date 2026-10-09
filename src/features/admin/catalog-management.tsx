@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -23,9 +22,11 @@ import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-
 import { useBrands, useCategories } from "@/features/catalog/queries";
 import { ConfirmAction } from "./confirm-action";
 import { FileUploadField, type UploadedFile } from "./file-upload";
+import { galleryRequest, ProductGalleryEditor, type GalleryItem } from "./product-fields";
 import { SpecificationsEditor } from "./specifications-editor";
 import {
-  useAdminSuppliers,
+  useAdminBrands,
+  useAdminCategories,
   useCreateAdminBrand,
   useCreateAdminCategory,
   useCreateAdminProduct,
@@ -75,21 +76,26 @@ function CreateCardHeader({
 
 export function CategoryManagement() {
   const t = useTranslations("admin");
-  const categories = useCategories();
+  const categories = useAdminCategories();
   const create = useCreateAdminCategory();
   const remove = useDeleteAdminCategory();
   const update = useUpdateAdminCategory();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", seoName: "", parentId: "" });
+  const [form, setForm] = useState({ name: "", seoName: "", description: "", parentId: "" });
   const [editing, setEditing] = useState<CategoryTree | null>(null);
   async function submit(event: FormEvent) {
     event.preventDefault();
-    await create.mutateAsync({
-      name: form.name.trim(),
-      seoName: form.seoName.trim(),
-      parentId: form.parentId || undefined,
-    });
-    setForm({ name: "", seoName: "", parentId: "" });
+    try {
+      await create.mutateAsync({
+        name: form.name.trim(),
+        seoName: form.seoName.trim(),
+        description: form.description.trim(),
+        parentId: form.parentId || undefined,
+      });
+    } catch {
+      return;
+    }
+    setForm({ name: "", seoName: "", description: "", parentId: "" });
   }
   const flat = flatten(categories.data ?? []);
   return (
@@ -131,7 +137,6 @@ export function CategoryManagement() {
                 onChange={(value) =>
                   setForm((current) => ({ ...current, seoName: value }))
                 }
-                required
               />
               <div className="space-y-2">
                 <Label htmlFor="category-parent">{t("parentCategory")}</Label>
@@ -152,6 +157,16 @@ export function CategoryManagement() {
                     </option>
                   ))}
                 </Select>
+              </div>
+              <div className="space-y-2 md:col-span-3">
+                <Label htmlFor="category-description">{t("description")}</Label>
+                <Textarea
+                  id="category-description"
+                  value={form.description}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, description: event.target.value }))
+                  }
+                />
               </div>
               <Button
                 type="submit"
@@ -225,6 +240,7 @@ export function CategoryManagement() {
                             name: category.label.replace(/^—+\s*/, ""),
                             seoName: "",
                             parentId: undefined,
+                            description: undefined,
                           },
                         )
                       }
@@ -249,11 +265,6 @@ export function CategoryManagement() {
               ))}
             </div>
           )}
-          {remove.isError ? (
-            <div className="mt-4">
-              <ErrorMessage error={remove.error} />
-            </div>
-          ) : null}
         </CardContent>
       </Card>
     </section>
@@ -290,17 +301,23 @@ function CategoryEditForm({
   const [form, setForm] = useState({
     name: category.name ?? "",
     seoName: category.seoName ?? "",
+    description: category.description ?? "",
     parentId: category.parentId ?? "",
     status: (category.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
   });
   async function submit(event: FormEvent) {
     event.preventDefault();
-    await onSave({
-      name: form.name.trim(),
-      seoName: form.seoName.trim(),
-      parentId: form.parentId || undefined,
-      status: form.status,
-    });
+    try {
+      await onSave({
+        name: form.name.trim(),
+        seoName: form.seoName.trim(),
+        description: form.description.trim(),
+        parentId: form.parentId || undefined,
+        status: form.status,
+      });
+    } catch {
+      return;
+    }
     onClose();
   }
   return (
@@ -337,7 +354,6 @@ function CategoryEditForm({
             onChange={(value) =>
               setForm((current) => ({ ...current, seoName: value }))
             }
-            required
           />
           <Select
             value={form.parentId}
@@ -366,6 +382,16 @@ function CategoryEditForm({
             <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
             <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
           </Select>
+          <div className="space-y-2 md:col-span-4">
+            <Label htmlFor="edit-category-description">{t("description")}</Label>
+            <Textarea
+              id="edit-category-description"
+              value={form.description}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, description: event.target.value }))
+              }
+            />
+          </div>
           <div className="flex gap-2 md:col-span-4">
             <Button type="submit" disabled={loading}>
               {t("save")}
@@ -387,7 +413,7 @@ function CategoryEditForm({
 
 export function BrandManagement() {
   const t = useTranslations("admin");
-  const brands = useBrands();
+  const brands = useAdminBrands();
   const create = useCreateAdminBrand();
   const remove = useDeleteAdminBrand();
   const update = useUpdateAdminBrand();
@@ -400,11 +426,15 @@ export function BrandManagement() {
   const [editing, setEditing] = useState<Brand | null>(null);
   async function submit(event: FormEvent) {
     event.preventDefault();
-    await create.mutateAsync({
-      name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      fileId: form.file?.id,
-    });
+    try {
+      await create.mutateAsync({
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        imageFileId: form.file?.id,
+      });
+    } catch {
+      return;
+    }
     setForm({ name: "", description: "", file: null });
   }
   return (
@@ -555,11 +585,6 @@ export function BrandManagement() {
               ))}
             </div>
           )}
-          {remove.isError ? (
-            <div className="mt-4">
-              <ErrorMessage error={remove.error} />
-            </div>
-          ) : null}
         </CardContent>
       </Card>
     </section>
@@ -590,12 +615,16 @@ function BrandEditForm({
   });
   async function submit(event: FormEvent) {
     event.preventDefault();
-    await onSave({
-      name: form.name.trim(),
-      description: form.description.trim() || undefined,
-      fileId: form.file?.id,
-      status: form.status,
-    });
+    try {
+      await onSave({
+        name: form.name.trim(),
+        description: form.description.trim() || undefined,
+        imageFileId: form.file?.id,
+        status: form.status,
+      });
+    } catch {
+      return;
+    }
     onClose();
   }
   return (
@@ -690,7 +719,6 @@ export function ProductCreateForm() {
   const router = useRouter();
   const categories = useCategories();
   const brands = useBrands();
-  const suppliers = useAdminSuppliers({ limit: 100, status: ResourceStatus.Active });
   const create = useCreateAdminProduct();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
@@ -700,7 +728,7 @@ export function ProductCreateForm() {
     brandId: "",
     description: "",
     specifications: "{}",
-    supplierIds: [] as string[],
+    images: [] as GalleryItem[],
   });
   const [formError, setFormError] = useState("");
   async function submit(event: FormEvent) {
@@ -721,15 +749,20 @@ export function ProductCreateForm() {
       setFormError(t("specificationsObjectRequired"));
       return;
     }
-    const created = await create.mutateAsync({
-      name: form.name.trim(),
-      seoName: form.seoName.trim(),
-      categoryId: form.categoryId,
-      brandId: form.brandId || undefined,
-      description: form.description.trim() || undefined,
-      specifications,
-      supplierIds: form.supplierIds,
-    });
+    let created;
+    try {
+      created = await create.mutateAsync({
+        name: form.name.trim(),
+        seoName: form.seoName.trim(),
+        categoryId: form.categoryId,
+        brandId: form.brandId || undefined,
+        description: form.description.trim() || undefined,
+        specifications,
+        images: galleryRequest(form.images),
+      });
+    } catch {
+      return;
+    }
     setForm({
       name: "",
       seoName: "",
@@ -737,7 +770,7 @@ export function ProductCreateForm() {
       brandId: "",
       description: "",
       specifications: "{}",
-      supplierIds: [],
+      images: [],
     });
     if (created?.id) router.push(`/admin/products/${created.id}`);
   }
@@ -771,7 +804,6 @@ export function ProductCreateForm() {
               onChange={(value) =>
                 setForm((current) => ({ ...current, seoName: value }))
               }
-              required
             />
             <div className="space-y-2">
               <Label htmlFor="product-category">{t("category")}</Label>
@@ -816,24 +848,10 @@ export function ProductCreateForm() {
                   ))}
               </Select>
             </div>
-            <MultiSelectList
-              id="product-suppliers"
-              label={t("suppliers")}
-              hint={t("supplierHint")}
-              options={(suppliers.data?.items ?? [])
-                .filter((supplier) => supplier.id)
-                .map((supplier) => ({
-                  value: supplier.id!,
-                  label: supplier.name ?? supplier.id!,
-                  description: supplier.email ?? supplier.phone,
-                }))}
-              value={form.supplierIds}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, supplierIds: value }))
-              }
-              selectedLabel={t("selectedCount", {count: form.supplierIds.length})}
-              emptyLabel={t("noSuppliers")}
-              className="sm:col-span-2"
+            <ProductGalleryEditor
+              id="product-gallery"
+              items={form.images}
+              onChange={(images) => setForm((current) => ({ ...current, images }))}
             />
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="product-description">{t("description")}</Label>
@@ -862,8 +880,7 @@ export function ProductCreateForm() {
                 disabled={
                   create.isPending ||
                   !form.categoryId ||
-                  !form.name.trim() ||
-                  !form.seoName.trim()
+                  !form.name.trim()
                 }
               >
                 <Plus className="size-4" />

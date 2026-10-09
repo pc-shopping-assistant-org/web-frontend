@@ -2,9 +2,10 @@
 
 import {ChevronLeft, ChevronRight, Search, SlidersHorizontal, X} from "lucide-react";
 import {useTranslations} from "next-intl";
-import {useMemo, useState} from "react";
+import {useMemo, useState, useSyncExternalStore} from "react";
 
 import {Button} from "@/components/ui/button";
+import {useCursorTrail} from "@/lib/hooks/use-cursor-trail";
 import {ProductGridSkeleton} from "@/components/ui/loading-skeletons";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
@@ -21,14 +22,15 @@ import {useBrands, useCategories, useProducts} from "../queries";
 import {CatalogCategoryIcon} from "./catalog-category-icon";
 import {ProductGrid} from "./product-grid";
 
+// Never changes after mount, so the store never needs to notify.
+const subscribeNoop = () => () => {};
+
 type CatalogPageProps = {
   initialKeyword?: string;
   initialCategoryId?: string;
   initialBrandId?: string;
   initialMinPrice?: number;
   initialMaxPrice?: number;
-  initialSortBy?: string;
-  initialSortDirection?: string;
 };
 
 export function CatalogPage({
@@ -37,8 +39,6 @@ export function CatalogPage({
   initialBrandId,
   initialMinPrice,
   initialMaxPrice,
-  initialSortBy,
-  initialSortDirection,
 }: CatalogPageProps = {}) {
   const t = useTranslations("catalog");
   const common = useTranslations("common");
@@ -51,8 +51,6 @@ export function CatalogPage({
     brandId: initialBrandId || undefined,
     minPrice: initialMinPrice,
     maxPrice: initialMaxPrice,
-    sortBy: initialSortBy || "createdAt",
-    sortDirection: initialSortDirection || "DESC",
   };
   const [term, setTerm] = useState(initialKeyword);
   const [filters, setFilters] = useState(initialFilters);
@@ -63,6 +61,12 @@ export function CatalogPage({
   const categories = useCategories();
   const brands = useBrands();
   const products = query.data?.items ?? [];
+  // `SiteHeader` shares the `catalog/categories` query key, and this page is
+  // lazy loaded, so its chunk can hydrate after the header has already resolved
+  // that query: the server prerenders the category-bar skeleton while the client
+  // renders the loaded bar, which fails hydration. Holding the skeleton until
+  // after mount keeps the first client pass identical to the server pass.
+  const hydrated = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   function applyFilters() {
     const min = draft.minPrice;
@@ -88,8 +92,6 @@ export function CatalogPage({
       brandId: undefined,
       minPrice: undefined,
       maxPrice: undefined,
-      sortBy: "createdAt",
-      sortDirection: "DESC",
     };
     setDraft(reset);
     setFilters(reset);
@@ -99,6 +101,7 @@ export function CatalogPage({
     syncCatalogUrl(router, reset);
   }
 
+  const trail = useCursorTrail(JSON.stringify({...filters, cursor: undefined}));
   function movePage(cursor?: string) {
     const next = {...filters, cursor};
     setFilters(next);
@@ -148,12 +151,15 @@ export function CatalogPage({
             syncCatalogUrl(router, next);
           }}
         >
-          <Input value={term} onChange={(event) => setTerm(event.target.value)} placeholder={t("searchPlaceholder")} aria-label={t("searchPlaceholder")} />
-          <Button type="submit"><Search className="size-4" />{t("search")}</Button>
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input value={term} onChange={(event) => setTerm(event.target.value)} placeholder={t("searchPlaceholder")} aria-label={t("searchPlaceholder")} className="pl-10" />
+          </div>
+          <Button type="submit" size="field"><Search className="size-4" />{t("search")}</Button>
         </form>
       </div>
 
-      {categories.isPending ? (
+      {!hydrated || categories.isPending ? (
         <Skeleton className="mb-8 h-12 rounded-2xl" />
       ) : categories.data?.length ? (
         <div className="mb-8 rounded-2xl border border-border/70 bg-muted/20 p-2.5" aria-label={t("browseByCategory")}>
@@ -172,12 +178,11 @@ export function CatalogPage({
 
       <div className="mb-8 rounded-2xl border bg-card p-5 shadow-sm">
         <div className="mb-4 flex items-center gap-2 text-sm font-semibold"><SlidersHorizontal className="size-4" />{t("filters")}</div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-2"><Label htmlFor="category">{t("category")}</Label><Select id="category" value={draft.categoryId ?? ""} onChange={(event) => setDraft((current) => ({...current, categoryId: event.target.value || undefined}))}><option value="">{t("allCategories")}</option>{flattenCategories(categories.data ?? []).map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</Select></div>
           <div className="space-y-2"><Label htmlFor="brand">{t("brand")}</Label><Select id="brand" value={draft.brandId ?? ""} onChange={(event) => setDraft((current) => ({...current, brandId: event.target.value || undefined}))}><option value="">{t("allBrands")}</option>{(brands.data ?? []).filter((brand) => brand.status === ResourceStatus.Active).map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}</Select></div>
           <div className="space-y-2"><Label htmlFor="min-price">{t("minPrice")}</Label><Input id="min-price" type="number" min="0" value={draft.minPrice ?? ""} onChange={(event) => setDraft((current) => ({...current, minPrice: event.target.value ? Number(event.target.value) : undefined}))} /></div>
           <div className="space-y-2"><Label htmlFor="max-price">{t("maxPrice")}</Label><Input id="max-price" type="number" min="0" value={draft.maxPrice ?? ""} onChange={(event) => setDraft((current) => ({...current, maxPrice: event.target.value ? Number(event.target.value) : undefined}))} /></div>
-          <div className="space-y-2"><Label htmlFor="sort">{t("sort")}</Label><Select id="sort" value={`${draft.sortBy}:${draft.sortDirection}`} onChange={(event) => {const [sortBy, sortDirection] = event.target.value.split(":"); setDraft((current) => ({...current, sortBy, sortDirection}));}}><option value="createdAt:DESC">{t("newest")}</option><option value="price:ASC">{t("priceLowToHigh")}</option><option value="price:DESC">{t("priceHighToLow")}</option></Select></div>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2"><Button type="button" onClick={applyFilters}>{t("applyFilters")}</Button><Button type="button" variant="ghost" onClick={clearFilters}>{t("clearFilters")}</Button>{filterError ? <p className="text-sm text-destructive" role="alert">{t("invalidPriceRange")}</p> : null}</div>
       </div>
@@ -203,7 +208,7 @@ export function CatalogPage({
           setCompareIds((current) => current.includes(product.id!) ? current.filter((id) => id !== product.id) : current.length < 5 ? [...current, product.id!] : current);
         }} />
         <CompareTray products={products} ids={compareIds} onClear={() => setCompareIds([])} />
-        {(query.data?.hasPrev || query.data?.hasNext) ? <div className="mt-8 flex justify-center gap-2"><Button variant="outline" disabled={!query.data?.hasPrev || !query.data?.prevCursor} onClick={() => movePage(query.data?.prevCursor)}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!query.data?.hasNext || !query.data?.nextCursor} onClick={() => movePage(query.data?.nextCursor)}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}
+        {(trail.hasPrev || query.data?.hasNext) ? <div className="mt-8 flex justify-center gap-2"><Button variant="outline" disabled={!trail.hasPrev} onClick={() => {trail.pop(); movePage(trail.prevCursor);}}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!query.data?.hasNext || !query.data?.nextCursor} onClick={() => {trail.push(filters.cursor); movePage(query.data?.nextCursor);}}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}
       </div> : null}
     </section>
   );
@@ -265,13 +270,13 @@ type CatalogUrlFilters = {
   brandId?: string;
   minPrice?: number;
   maxPrice?: number;
-  sortBy?: string;
-  sortDirection?: string;
 };
 
 function syncCatalogUrl(router: ReturnType<typeof useRouter>, filters: CatalogUrlFilters) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters)) {
+  // Paging state (limit, cursor) is not part of the shareable URL
+  for (const key of ["keyword", "categoryId", "brandId", "minPrice", "maxPrice"] as const) {
+    const value = filters[key];
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
   const query = params.toString();

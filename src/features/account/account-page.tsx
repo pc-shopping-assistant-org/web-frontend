@@ -36,7 +36,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { ApiClientError } from "@/lib/api/envelope";
 import type {CustomerAddress} from "@/features/account/contracts/responses";
 import type {CustomerAddressRequest} from "@/features/account/contracts/requests";
-import type {FileResponse} from "@/features/admin/contracts/responses";
+import type {UploadedImage} from "@/features/auth/models";
 import { isStaffRole } from "@/lib/auth/roles";
 import {Gender} from "@/lib/domain/account-enums";
 
@@ -44,9 +44,9 @@ import {
   useChangePassword,
   useLogout,
   useProfile,
-  useRequestChangePasswordOtp,
   useUpdateProfile,
-  useUploadProfileAvatar,
+  useUploadAvatar,
+  useVerifyPasswordChange,
 } from "@/features/auth/queries";
 import {
   useAddresses,
@@ -57,12 +57,13 @@ import {
 } from "./queries";
 
 type ProfileDraft = {
-  fullName: string;
-  email: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   gender: Gender | "";
   birthday: string;
   avatarFileId?: string;
+  avatarUrl?: string;
 };
 
 type AddressDraft = CustomerAddressRequest & { id?: string };
@@ -83,12 +84,13 @@ export function AccountPage() {
 
   const profileDefaults = useMemo<ProfileDraft>(
     () => ({
-      fullName: profile.data?.fullName ?? "",
-      email: profile.data?.email ?? "",
+      firstName: profile.data?.firstName ?? "",
+      lastName: profile.data?.lastName ?? "",
       phone: profile.data?.phone ?? "",
       gender: (profile.data?.gender as Gender | undefined) ?? "",
       birthday: profile.data?.birthday ?? "",
       avatarFileId: profile.data?.avatarFileId,
+      avatarUrl: profile.data?.avatarUrl,
     }),
     [profile.data],
   );
@@ -97,13 +99,13 @@ export function AccountPage() {
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await updateProfile.mutateAsync({
-      ...draft,
-      fullName: draft.fullName.trim(),
-      email: draft.email.trim() || undefined,
+      firstName: draft.firstName.trim(),
+      lastName: draft.lastName.trim(),
       phone: draft.phone.trim() || undefined,
       gender: draft.gender || undefined,
       birthday: draft.birthday || undefined,
-    });
+      avatarFileId: draft.avatarFileId,
+    }).catch(() => undefined);
   }
 
   async function signOut() {
@@ -196,24 +198,28 @@ export function AccountPage() {
               onSubmit={(event) => void saveProfile(event)}
             >
               <AvatarPicker
-                fileId={draft.avatarFileId}
-                onUploaded={(file) => updateDraft("avatarFileId", file.id)}
+                url={draft.avatarUrl}
+                onUploaded={(image) => setProfileDraft((current) => ({ ...(current ?? profileDefaults), avatarFileId: image.id, avatarUrl: image.url }))}
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
-                  id="profile-full-name"
-                  label={t("fullName")}
-                  value={draft.fullName}
-                  onChange={(value) => updateDraft("fullName", value)}
+                  id="profile-last-name"
+                  label={t("lastName")}
+                  value={draft.lastName}
+                  onChange={(value) => updateDraft("lastName", value)}
                   required
                 />
                 <Field
-                  id="profile-email"
-                  label={t("email")}
-                  type="email"
-                  value={draft.email}
-                  onChange={(value) => updateDraft("email", value)}
+                  id="profile-first-name"
+                  label={t("firstName")}
+                  value={draft.firstName}
+                  onChange={(value) => updateDraft("firstName", value)}
+                  required
                 />
+                <div className="space-y-2">
+                  <Label htmlFor="profile-email">{t("email")}</Label>
+                  <Input id="profile-email" type="email" value={profile.data?.email ?? ""} readOnly disabled />
+                </div>
                 <Field
                   id="profile-phone"
                   label={t("phone")}
@@ -250,7 +256,7 @@ export function AccountPage() {
               <Button
                 type="submit"
                 disabled={
-                  updateProfile.isPending || draft.fullName.trim().length < 2
+                  updateProfile.isPending || !draft.firstName.trim() || !draft.lastName.trim()
                 }
               >
                 <Save className="size-4" />
@@ -351,18 +357,15 @@ function Field({
 }
 
 function AvatarPicker({
-  fileId,
+  url,
   onUploaded,
 }: {
-  fileId?: string;
-  onUploaded: (file: FileResponse) => void;
+  url?: string;
+  onUploaded: (image: UploadedImage) => void;
 }) {
   const t = useTranslations("account");
-  const upload = useUploadProfileAvatar();
+  const upload = useUploadAvatar();
   const [error, setError] = useState<unknown>(null);
-  const src = fileId
-    ? `/api/backend/files/${encodeURIComponent(fileId)}/content`
-    : null;
 
   async function handleChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -379,33 +382,20 @@ function AvatarPicker({
   return (
     <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-muted/20 p-4">
       <div className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 text-xl font-semibold text-primary">
-        {src ? (
-          <Image
-            src={src}
-            alt=""
-            fill
-            sizes="64px"
-            unoptimized
-            className="object-cover"
-          />
+        {url ? (
+          <Image src={url} alt="" fill sizes="64px" unoptimized className="object-cover" />
         ) : (
           <span aria-hidden="true">{t("profile").charAt(0)}</span>
         )}
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold">{t("avatar")}</p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-          {t("avatarHint")}
-        </p>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("avatarHint")}</p>
         <label
           htmlFor="profile-avatar"
           className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
         >
-          {upload.isPending ? (
-            <LoaderCircle className="size-3.5 animate-spin" />
-          ) : (
-            <Upload className="size-3.5" />
-          )}
+          {upload.isPending ? <LoaderCircle className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
           {upload.isPending ? t("uploadingAvatar") : t("chooseAvatar")}
         </label>
         <input
@@ -535,7 +525,7 @@ function AddressCard({
                     size="sm"
                     variant="outline"
                     className="mt-3"
-                    onClick={() => void setDefault.mutateAsync(address.id!)}
+                    onClick={() => void setDefault.mutateAsync(address.id!).catch(() => undefined)}
                     disabled={setDefault.isPending}
                   >
                     <ShieldCheck className="size-4" />
@@ -577,10 +567,14 @@ function AddressDialog({
       addressLine: form.addressLine.trim(),
       default: form.default,
     };
-    if (editing && form.id) {
-      await update.mutateAsync({ addressId: form.id, request });
-    } else {
-      await create.mutateAsync(request);
+    try {
+      if (editing && form.id) {
+        await update.mutateAsync({ addressId: form.id, request });
+      } else {
+        await create.mutateAsync(request);
+      }
+    } catch {
+      return;
     }
     onClose();
   }
@@ -667,15 +661,30 @@ function AddressDialog({
 function ChangePasswordCard() {
   const t = useTranslations("account");
   const common = useTranslations("common");
-  const requestOtp = useRequestChangePasswordOtp();
   const change = useChangePassword();
-  const [values, setValues] = useState({ oldPassword: "", newPassword: "", otp: "" });
+  const confirm = useVerifyPasswordChange();
+  const [values, setValues] = useState({ currentPassword: "", newPassword: "" });
+  const [otp, setOtp] = useState("");
   const passwordReady = /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(values.newPassword);
+  const awaitingOtp = change.isSuccess && !confirm.isSuccess;
 
-  async function submit(event: FormEvent<HTMLFormElement>) {
+  async function requestOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await change.mutateAsync(values);
-    setValues({ oldPassword: "", newPassword: "", otp: "" });
+    confirm.reset();
+    setOtp("");
+    await change.mutateAsync(values).catch(() => undefined);
+  }
+
+  async function submitOtp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    try {
+      await confirm.mutateAsync({ otp });
+    } catch {
+      return;
+    }
+    setValues({ currentPassword: "", newPassword: "" });
+    setOtp("");
+    change.reset();
   }
 
   return (
@@ -685,67 +694,52 @@ function ChangePasswordCard() {
         <CardDescription>{t("changePasswordDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
-          <Field
-            id="old-password"
-            label={t("oldPassword")}
-            type="password"
-            value={values.oldPassword}
-            onChange={(value) => setValues((current) => ({ ...current, oldPassword: value }))}
-            required
-          />
-          <Field
-            id="new-password-account"
-            label={t("newPassword")}
-            type="password"
-            value={values.newPassword}
-            onChange={(value) => setValues((current) => ({ ...current, newPassword: value }))}
-            required
-          />
-          <Field
-            id="change-otp"
-            label={t("otp")}
-            value={values.otp}
-            onChange={(value) => setValues((current) => ({ ...current, otp: value.replace(/\D/g, "").slice(0, 6) }))}
-            required
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                requestOtp.reset();
-                void requestOtp.mutateAsync();
-              }}
-              disabled={requestOtp.isPending}
-            >
-              {requestOtp.isPending ? common("loading") : t("sendOtp")}
-            </Button>
-            <Button
-              type="submit"
-              disabled={
-                change.isPending ||
-                values.otp.length !== 6 ||
-                !values.oldPassword ||
-                !passwordReady
-              }
-            >
-              {change.isPending ? common("loading") : t("changePassword")}
-            </Button>
-          </div>
-          {requestOtp.isSuccess ? (
+        {awaitingOtp ? (
+          <form className="space-y-4" onSubmit={(event) => void submitOtp(event)}>
             <p className="text-sm text-emerald-700">{t("otpSent")}</p>
-          ) : null}
-          <p className="text-xs leading-5 text-muted-foreground">
-            {t("passwordHint")}
-          </p>
-          {change.isError || requestOtp.isError ? (
-            <ErrorMessage error={change.error ?? requestOtp.error} />
-          ) : null}
-          {change.isSuccess ? (
-            <p className="text-sm text-emerald-700">{t("passwordChanged")}</p>
-          ) : null}
-        </form>
+            <Field
+              id="change-otp"
+              label={t("otp")}
+              value={otp}
+              onChange={(value) => setOtp(value.replace(/\D/g, "").slice(0, 6))}
+              required
+            />
+            {confirm.isError ? <ErrorMessage error={confirm.error} /> : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="submit" disabled={confirm.isPending || otp.length !== 6}>
+                {confirm.isPending ? common("loading") : t("confirmChange")}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => change.reset()} disabled={confirm.isPending}>
+                {t("cancel")}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <form className="space-y-4" onSubmit={(event) => void requestOtp(event)}>
+            <Field
+              id="old-password"
+              label={t("oldPassword")}
+              type="password"
+              value={values.currentPassword}
+              onChange={(value) => setValues((current) => ({ ...current, currentPassword: value }))}
+              required
+            />
+            <Field
+              id="new-password-account"
+              label={t("newPassword")}
+              type="password"
+              value={values.newPassword}
+              onChange={(value) => setValues((current) => ({ ...current, newPassword: value }))}
+              required
+            />
+            <p className="text-xs leading-5 text-muted-foreground">{t("passwordHint")}</p>
+            {change.isError ? <ErrorMessage error={change.error} /> : null}
+            {confirm.isSuccess ? <p className="text-sm text-emerald-700">{t("passwordChanged")}</p> : null}
+            <Button type="submit" disabled={change.isPending || !values.currentPassword || !passwordReady}>
+              {change.isPending ? common("loading") : t("sendOtp")}
+            </Button>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

@@ -10,12 +10,14 @@ import {Card, CardContent} from "@/components/ui/card";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Link} from "@/i18n/navigation";
 import {useRouter} from "@/i18n/navigation";
+import {ApiClientError} from "@/lib/api/envelope";
 import type {ProductSummary} from "@/features/catalog/contracts/responses";
 import {formatMoney, formatRating} from "@/lib/format";
 import {cn} from "@/lib/utils";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-import {useAddToCart} from "@/features/cart/queries";
+import {useAddToCart, useCart} from "@/features/cart/queries";
+import {MAX_CART_LINE_QUANTITY} from "@/lib/api/contracts/primitives";
 import {getProductBySlug} from "../api";
 
 type ProductTheme = {
@@ -63,6 +65,7 @@ export function ProductCard({
   const locale = useLocale();
   const router = useRouter();
   const addToCart = useAddToCart();
+  const cart = useCart(false);
   const [added, setAdded] = useState(false);
   const [quickAddError, setQuickAddError] = useState<unknown>(null);
   const [quickAddMessage, setQuickAddMessage] = useState<string | null>(null);
@@ -98,10 +101,16 @@ export function ProductCard({
         setQuickAddMessage(t("outOfStock"));
         return;
       }
-      await addToCart.mutateAsync({productVariantId: variant.id, quantity: 1});
+      const inCart = cart.data?.items.find((item) => item.productVariantId === variant.id)?.quantity ?? 0;
+      // A full cart line takes no more; the quick add just confirms without sending anything.
+      if (inCart < MAX_CART_LINE_QUANTITY) await addToCart.mutateAsync({productVariantId: variant.id, quantity: 1});
       setAdded(true);
       window.setTimeout(() => setAdded(false), 2600);
     } catch (cause) {
+      if (cause instanceof ApiClientError && cause.status === 401) {
+        router.push(`/login?redirect=${encodeURIComponent(productHref ?? "/products")}`);
+        return;
+      }
       // The error is rendered locally so one unavailable SKU does not replace
       // the whole catalog result.
       setQuickAddError(cause);

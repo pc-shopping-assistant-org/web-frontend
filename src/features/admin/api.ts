@@ -7,12 +7,10 @@ import type {
   CustomerDetailDto,
   CustomerOrderSummaryDto,
   DashboardOverviewDto,
-  DiscountDetailDto,
+  DiscountDto,
   EmployeeDetailDto,
-  FileResponseDto,
   OptionDto,
   OrderStatusStatDto,
-  PaymentDetailDto,
   RoleDto,
   SupplierDto,
 } from "@/features/admin/contracts/dto";
@@ -21,9 +19,6 @@ import type {
   CustomerFilter,
   DiscountFilter,
   EmployeeFilter,
-  InvoiceFilter,
-  OrderFilter,
-  PaymentFilter,
   ReviewFilter,
   SupplierFilter,
 } from "@/features/admin/contracts/filters";
@@ -37,10 +32,8 @@ import {
   mapDashboardOverview,
   mapDiscountDetail,
   mapEmployeeDetail,
-  mapFileResponse,
   mapOption,
   mapOrderStatusStat,
-  mapPaymentDetail,
   mapRole,
   mapRevenueChartData,
   mapSupplier,
@@ -48,23 +41,20 @@ import {
   mapCustomersPage,
   mapDiscountsPage,
   mapEmployeesPage,
-  mapPaymentsPage,
   mapSuppliersPage,
 } from "@/features/admin/mappers";
 import type {
   CustomersPageDto,
   DiscountsPageDto,
   EmployeesPageDto,
-  PaymentsPageDto,
   RevenueChartDataDto,
   TopSellingProductDto,
   SuppliersPageDto,
 } from "@/features/admin/contracts/dto";
 import type {CategoryDto, BrandDto} from "@/features/catalog/contracts/dto";
-import {mapBrand, mapCategory} from "@/features/catalog/mappers";
+import {buildCategoryTree, mapBrandResponse, mapCategoryResponse} from "@/features/catalog/mappers";
 import type {
   ProductDetailDto,
-  ProductImageDto,
   ProductPageDto,
   ProductVariantDto,
   ReviewDto,
@@ -72,25 +62,14 @@ import type {
 } from "@/features/catalog/contracts/dto";
 import {
   mapProductDetail,
-  mapProductImage,
   mapProductPage,
   mapProductVariant,
   mapReview,
   mapReviewsPage,
 } from "@/features/catalog/mappers";
 import type {
-  InvoiceDto,
-  InvoicesPageDto,
-  OrderDto,
-  OrdersPageDto,
-  PaymentMethodDto,
 } from "@/features/orders/contracts/dto";
 import {
-  mapInvoice,
-  mapInvoicesPage,
-  mapOrder,
-  mapOrdersPage,
-  mapPaymentMethod,
 } from "@/features/orders/mappers";
 import {
   analyticsDateRangeRequestSchema,
@@ -102,7 +81,6 @@ import {
   createDiscountRequestSchema,
   createEmployeeRequestSchema,
   createOptionRequestSchema,
-  createProductImageRequestSchema,
   createProductRequestSchema,
   createProductVariantRequestSchema,
   createSupplierRequestSchema,
@@ -114,9 +92,7 @@ import {
   updateDiscountRequestSchema,
   updateDiscountStatusRequestSchema,
   updateEmployeeRequestSchema,
-  updateOrderStatusRequestSchema,
   updateOptionRequestSchema,
-  updatePaymentStatusRequestSchema,
   updateProductRequestSchema,
   updateProductVariantRequestSchema,
   updateResourceStatusRequestSchema,
@@ -134,7 +110,6 @@ import type {
   CreateDiscountRequest,
   CreateEmployeeRequest,
   CreateOptionRequest,
-  CreateProductImageRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CreateSupplierRequest,
@@ -149,6 +124,9 @@ import type {
   UpdateProductVariantRequest,
   UpdateSupplierRequest,
 } from "@/features/admin/contracts/requests";
+
+const CATALOG = "/catalog-service";
+const PROMOTION = "/promotion-service";
 
 function queryString(values: Record<string, unknown>) {
   const params = new URLSearchParams();
@@ -183,7 +161,7 @@ export function getTopSelling(limit = 5, fromDate?: string, toDate?: string) {
 export function getAdminProducts(
   filter: AdminProductFilter = {},
 ) {
-  return backendFetch<ProductPageDto>(`/admin/products${queryString(filter)}`).then(mapProductPage);
+  return backendFetch<ProductPageDto>(`/catalog-service/products/admin${queryString(filter)}`).then(mapProductPage);
 }
 export function getCustomers(
   filter: CustomerFilter = {},
@@ -210,28 +188,13 @@ export function getDiscounts(
   filter: DiscountFilter = {},
 ) {
   return backendFetch<DiscountsPageDto>(
-    `/admin/discounts${queryString(filter)}`,
+    `${PROMOTION}/discounts${queryString(filter)}`,
   ).then(mapDiscountsPage);
-}
-export function getAdminOrders(
-  filter: OrderFilter = {},
-) {
-  return backendFetch<OrdersPageDto>(`/admin/orders${queryString(filter)}`).then(mapOrdersPage);
-}
-export function getAdminPayments(
-  filter: PaymentFilter = {},
-) {
-  return backendFetch<PaymentsPageDto>(
-    `/admin/payments${queryString(filter)}`,
-  ).then(mapPaymentsPage);
 }
 export function getAdminReviews(
   filter: ReviewFilter = {},
 ) {
   return backendFetch<ReviewsPageDto>(`/admin/reviews${queryString(filter)}`).then(mapReviewsPage);
-}
-export function getAdminPaymentMethods() {
-  return backendFetch<PaymentMethodDto[]>("/admin/payment-methods").then((methods) => methods.map(mapPaymentMethod));
 }
 export function getAdminCustomer(id: string) {
   return backendFetch<CustomerDetailDto>(
@@ -249,24 +212,9 @@ export function getAdminEmployee(id: string) {
   ).then(mapEmployeeDetail);
 }
 export function getAdminDiscount(id: string) {
-  return backendFetch<DiscountDetailDto>(
-    `/admin/discounts/${encodeURIComponent(id)}`,
+  return backendFetch<DiscountDto>(
+    `${PROMOTION}/discounts/${encodeURIComponent(id)}`,
   ).then(mapDiscountDetail);
-}
-export function getAdminOrder(id: string) {
-  return backendFetch<OrderDto>(
-    `/admin/orders/${encodeURIComponent(id)}`,
-  ).then(mapOrder);
-}
-export function getOrderInvoice(id: string) {
-  return backendFetch<InvoiceDto>(
-    `/admin/orders/${encodeURIComponent(id)}/invoice`,
-  ).then(mapInvoice);
-}
-export function getInvoices(
-  filter: InvoiceFilter = {},
-) {
-  return backendFetch<InvoicesPageDto>(`/admin/invoices${queryString(filter)}`).then(mapInvoicesPage);
 }
 export function getAdminSupplier(id: string) {
   return backendFetch<SupplierDto>(
@@ -288,63 +236,46 @@ export function getAttributes() {
 }
 export function getCategorySpecsSchema(categoryId: string) {
   return backendFetch<CategorySpecsDto>(
-    `/categories/${encodeURIComponent(categoryId)}/specs-schema`,
+    `/catalog-service/categories/${encodeURIComponent(categoryId)}/attributes`,
   ).then(mapCategorySpecs);
 }
 export function getAdminProductById(id: string) {
   return backendFetch<ProductDetailDto>(
-    `/admin/products/${encodeURIComponent(id)}`,
+    `/catalog-service/products/admin/${encodeURIComponent(id)}`,
   ).then(mapProductDetail);
 }
+/** The file shape media-service returns; the admin model keeps its older field names. */
+type MediaFileDto = {
+  id: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  url: string;
+  createdAt?: string;
+};
+
 export function uploadAdminFile(file: globalThis.File) {
   const body = new FormData();
   body.append("file", file);
-  return backendFetch<FileResponseDto>("/admin/files", {
+  return backendFetch<MediaFileDto>("/media-service/files", {
     method: "POST",
     body,
-  }).then(mapFileResponse);
+  }).then((dto) => ({
+    id: dto.id,
+    originalName: dto.originalName,
+    mimeType: dto.mimeType,
+    sizeBytes: dto.sizeBytes,
+    publicUrl: dto.url,
+    createdAt: dto.createdAt,
+  }));
 }
 
-export function updateOrderStatus(
-  orderId: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateOrderStatusRequestSchema, {status, reason});
-  return backendFetch<OrderDto>(
-    `/admin/orders/${encodeURIComponent(orderId)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  ).then(mapOrder);
-}
-export function updatePaymentStatus(
-  paymentId: string,
-  status: string,
-  providerTransactionCode?: string,
-  note?: string,
-) {
-  const payload = parseRequest(updatePaymentStatusRequestSchema, {
-    status,
-    providerTransactionCode,
-    note,
-  });
-  return backendFetch<PaymentDetailDto>(
-    `/admin/payments/${encodeURIComponent(paymentId)}/status`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    },
-  ).then(mapPaymentDetail);
-}
-export function updateProductStatus(
-  productId: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateResourceStatusRequestSchema, {status, reason});
-  return backendFetch<string>(
-    `/admin/products/${encodeURIComponent(productId)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
+export function updateProductStatus(productId: string, status: string) {
+  const payload = parseRequest(updateResourceStatusRequestSchema, {status});
+  return backendFetch<ProductDetailDto>(
+    `${CATALOG}/products/${encodeURIComponent(productId)}/status`,
+    { method: "PATCH", body: JSON.stringify({status: payload.status}) },
+  ).then(mapProductDetail);
 }
 export function updateCustomerStatus(
   accountId: string,
@@ -368,16 +299,12 @@ export function updateEmployeeStatus(
     { method: "PATCH", body: JSON.stringify(payload) },
   );
 }
-export function updateDiscountStatus(
-  id: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateDiscountStatusRequestSchema, {status, reason});
-  return backendFetch<string>(
-    `/admin/discounts/${encodeURIComponent(id)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
+export function updateDiscountStatus(id: string, status: string) {
+  const payload = parseRequest(updateDiscountStatusRequestSchema, {status});
+  return backendFetch<DiscountDto>(
+    `${PROMOTION}/discounts/${encodeURIComponent(id)}/status`,
+    { method: "PATCH", body: JSON.stringify({status: payload.status}) },
+  ).then(mapDiscountDetail);
 }
 export function updateReviewStatus(
   id: string,
@@ -397,7 +324,7 @@ export function updateProduct(
 ) {
   const payload = parseRequest(updateProductRequestSchema, request);
   return backendFetch<ProductDetailDto>(
-    `/admin/products/${encodeURIComponent(id)}`,
+    `${CATALOG}/products/${encodeURIComponent(id)}`,
     { method: "PUT", body: JSON.stringify(payload) },
   ).then(mapProductDetail);
 }
@@ -407,61 +334,55 @@ export function createVariant(
 ) {
   const payload = parseRequest(createProductVariantRequestSchema, request);
   return backendFetch<ProductVariantDto>(
-    `/admin/products/${encodeURIComponent(productId)}/variants`,
+    `${CATALOG}/products/${encodeURIComponent(productId)}/variants`,
     { method: "POST", body: JSON.stringify(payload) },
   ).then(mapProductVariant);
 }
-export function updateVariant(
+/** The details and the status are two backend calls; the status one only when it differs. */
+export async function updateVariant(
+  productId: string,
   id: string,
   request: UpdateProductVariantRequest,
 ) {
-  const payload = parseRequest(updateProductVariantRequestSchema, request);
-  return backendFetch<ProductVariantDto>(
-    `/admin/variants/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapProductVariant);
+  const {status, ...details} = parseRequest(updateProductVariantRequestSchema, request);
+  const path = `${CATALOG}/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(id)}`;
+  let variant = await backendFetch<ProductVariantDto>(path, { method: "PUT", body: JSON.stringify(details) });
+  if (status && status !== variant.status) {
+    variant = await backendFetch<ProductVariantDto>(`${path}/status`, { method: "PATCH", body: JSON.stringify({status}) });
+  }
+  return mapProductVariant(variant);
 }
-export function deleteVariant(id: string) {
-  return backendFetch<string>(`/admin/variants/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-}
-export function addVariantImage(
-  variantId: string,
-  request: CreateProductImageRequest,
-) {
-  const payload = parseRequest(createProductImageRequestSchema, request);
-  return backendFetch<ProductImageDto>(
-    `/admin/variants/${encodeURIComponent(variantId)}/images`,
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapProductImage);
-}
-export function deleteVariantImage(imageId: string) {
-  return backendFetch<string>(`/admin/images/${encodeURIComponent(imageId)}`, {
-    method: "DELETE",
-  });
+export function deleteVariant({productId, id}: {productId: string; id: string}) {
+  return backendFetch<null>(
+    `${CATALOG}/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(id)}`,
+    { method: "DELETE" },
+  );
 }
 export function createDiscount(
   request: CreateDiscountRequest,
 ) {
   const payload = parseRequest(createDiscountRequestSchema, request);
-  return backendFetch<DiscountDetailDto>(
-    "/admin/discounts",
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapDiscountDetail);
+  return backendFetch<DiscountDto>(`${PROMOTION}/discounts`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }).then(mapDiscountDetail);
 }
-export function updateDiscount(
+/** The definition and the status are two backend calls; the status one only when it differs. */
+export async function updateDiscount(
   id: string,
   request: UpdateDiscountRequest,
 ) {
-  const payload = parseRequest(updateDiscountRequestSchema, request);
-  return backendFetch<DiscountDetailDto>(
-    `/admin/discounts/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapDiscountDetail);
+  const {status, ...definition} = parseRequest(updateDiscountRequestSchema, request);
+  const path = `${PROMOTION}/discounts/${encodeURIComponent(id)}`;
+  // The backend keeps the current code when it is omitted and removes it when it is blank, so a cleared code is sent as ""
+  let discount = await backendFetch<DiscountDto>(path, { method: "PUT", body: JSON.stringify({ ...definition, code: definition.code ?? "" }) });
+  if (status && status !== discount.status) {
+    discount = await backendFetch<DiscountDto>(`${path}/status`, { method: "PATCH", body: JSON.stringify({status}) });
+  }
+  return mapDiscountDetail(discount);
 }
 export function deleteDiscount(id: string) {
-  return backendFetch<string>(`/admin/discounts/${encodeURIComponent(id)}`, {
+  return backendFetch<null>(`${PROMOTION}/discounts/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
@@ -591,14 +512,18 @@ export function deleteCategoryAttributeAssignment(id: string) {
   );
 }
 
+/** Every category including inactive ones, as a tree. */
+export async function getAdminCategories() {
+  return buildCategoryTree(await backendFetch<CategoryDto[]>(`${CATALOG}/categories/admin`));
+}
 export function createCategory(
   request: CreateCategoryRequest,
 ) {
   const payload = parseRequest(createCategoryRequestSchema, request);
-  return backendFetch<CategoryDto>("/admin/categories", {
+  return backendFetch<CategoryDto>(`${CATALOG}/categories`, {
     method: "POST",
     body: JSON.stringify(payload),
-  }).then(mapCategory);
+  }).then(mapCategoryResponse);
 }
 export function updateCategory(
   id: string,
@@ -606,46 +531,54 @@ export function updateCategory(
 ) {
   const payload = parseRequest(updateCategoryRequestSchema, request);
   return backendFetch<CategoryDto>(
-    `/admin/categories/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapCategory);
+    `${CATALOG}/categories/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  ).then(mapCategoryResponse);
 }
 export function deleteCategory(id: string) {
-  return backendFetch<string>(`/admin/categories/${encodeURIComponent(id)}`, {
+  return backendFetch<null>(`${CATALOG}/categories/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
+
+/** Every brand including inactive ones. */
+export async function getAdminBrands() {
+  return (await backendFetch<BrandDto[]>(`${CATALOG}/brands/admin`)).map(mapBrandResponse);
+}
 export function createBrand(request: CreateBrandRequest) {
   const payload = parseRequest(createBrandRequestSchema, request);
-  return backendFetch<BrandDto>("/admin/brands", {
+  return backendFetch<BrandDto>(`${CATALOG}/brands`, {
     method: "POST",
     body: JSON.stringify(payload),
-  }).then(mapBrand);
+  }).then(mapBrandResponse);
 }
-export function updateBrand(
+/** The details and the status are two backend calls; the status one only when it is asked for. */
+export async function updateBrand(
   id: string,
   request: UpdateBrandRequest,
 ) {
-  const payload = parseRequest(updateBrandRequestSchema, request);
-  return backendFetch<BrandDto>(
-    `/admin/brands/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapBrand);
+  const {status, ...details} = parseRequest(updateBrandRequestSchema, request);
+  const path = `${CATALOG}/brands/${encodeURIComponent(id)}`;
+  let brand = await backendFetch<BrandDto>(path, { method: "PUT", body: JSON.stringify(details) });
+  if (status && status !== brand.status) {
+    brand = await backendFetch<BrandDto>(`${path}/status`, { method: "PATCH", body: JSON.stringify({status}) });
+  }
+  return mapBrandResponse(brand);
 }
 export function deleteBrand(id: string) {
-  return backendFetch<string>(`/admin/brands/${encodeURIComponent(id)}`, {
+  return backendFetch<null>(`${CATALOG}/brands/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
 export function createProduct(request: CreateProductRequest) {
   const payload = parseRequest(createProductRequestSchema, request);
   return backendFetch<ProductDetailDto>(
-    "/admin/products",
+    `${CATALOG}/products`,
     { method: "POST", body: JSON.stringify(payload) },
   ).then(mapProductDetail);
 }
 export function deleteProduct(id: string) {
-  return backendFetch<string>(`/admin/products/${encodeURIComponent(id)}`, {
+  return backendFetch<null>(`${CATALOG}/products/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }

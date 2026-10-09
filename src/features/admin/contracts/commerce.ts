@@ -7,7 +7,6 @@ import {
   DiscountScope,
   DiscountType,
   ORDER_STATUS_VALUES,
-  PAYMENT_STATUS_VALUES,
 } from "@/lib/domain/commerce-enums";
 import {USER_STATUS_VALUES} from "@/lib/domain/account-enums";
 import {REVIEW_STATUS_VALUES} from "@/lib/domain/catalog-enums";
@@ -23,12 +22,6 @@ import {
 export const updateOrderStatusRequestSchema = z.object({
   status: z.enum(ORDER_STATUS_VALUES),
   reason: optionalText,
-}).strict();
-
-export const updatePaymentStatusRequestSchema = z.object({
-  status: z.enum(PAYMENT_STATUS_VALUES),
-  providerTransactionCode: optionalText,
-  note: optionalText,
 }).strict();
 
 export const updateResourceStatusRequestSchema = z.object({
@@ -53,7 +46,7 @@ export const updateReviewStatusRequestSchema = z.object({
 
 export const createDiscountRequestSchema = z.object({
   code: optionalText,
-  title: nonEmptyText,
+  title: nonEmptyText.max(255),
   discountType: z.enum(DISCOUNT_TYPE_VALUES),
   value: z.number().int().positive(),
   applicationScope: z.enum(DISCOUNT_SCOPE_VALUES),
@@ -61,8 +54,7 @@ export const createDiscountRequestSchema = z.object({
   startAt: z.string().datetime(),
   endAt: z.string().datetime(),
   description: optionalText,
-  appliedCategoryIds: z.array(uuid).optional(),
-  appliedVariantIds: z.array(uuid).optional(),
+  categoryIds: z.array(uuid).optional(),
 }).superRefine((value, context) => {
   if (value.startAt >= value.endAt) {
     context.addIssue({code: "custom", path: ["endAt"], message: "endAt must be after startAt"});
@@ -70,26 +62,18 @@ export const createDiscountRequestSchema = z.object({
   if (value.discountType === DiscountType.Percent && value.value > 100) {
     context.addIssue({code: "custom", path: ["value"], message: "Percent discount cannot exceed 100"});
   }
-  if (value.applicationScope === DiscountScope.Category && !value.appliedCategoryIds?.length) {
-    context.addIssue({code: "custom", path: ["appliedCategoryIds"], message: "At least one category target is required"});
+  if (value.code && value.applicationScope !== DiscountScope.Order) {
+    context.addIssue({code: "custom", path: ["code"], message: "Only an order discount can have a code"});
   }
-  if (value.applicationScope === DiscountScope.Variant && !value.appliedVariantIds?.length) {
-    context.addIssue({code: "custom", path: ["appliedVariantIds"], message: "At least one variant target is required"});
+  if (value.applicationScope === DiscountScope.Category && !value.categoryIds?.length) {
+    context.addIssue({code: "custom", path: ["categoryIds"], message: "At least one category target is required"});
   }
-  if (
-    [DiscountScope.Order, DiscountScope.AllItems].includes(value.applicationScope) &&
-    (value.appliedCategoryIds?.length || value.appliedVariantIds?.length)
-  ) {
-    context.addIssue({code: "custom", path: ["applicationScope"], message: "This scope cannot have targets"});
-  }
-  if (value.applicationScope === DiscountScope.Category && value.appliedVariantIds?.length) {
-    context.addIssue({code: "custom", path: ["appliedVariantIds"], message: "Category scope cannot have variant targets"});
-  }
-  if (value.applicationScope === DiscountScope.Variant && value.appliedCategoryIds?.length) {
-    context.addIssue({code: "custom", path: ["appliedCategoryIds"], message: "Variant scope cannot have category targets"});
+  if (value.applicationScope !== DiscountScope.Category && value.categoryIds?.length) {
+    context.addIssue({code: "custom", path: ["categoryIds"], message: "This scope cannot have targets"});
   }
 }).strict();
 
+/** The backend takes the status through its own call, so the adapter splits it off. */
 export const updateDiscountRequestSchema = createDiscountRequestSchema.extend({
   status: optionalEnum(EDITABLE_DISCOUNT_STATUS_VALUES),
 }).strict();
@@ -100,7 +84,6 @@ export const updateReviewRequestSchema = z.object({
 }).strict();
 
 export type UpdateOrderStatusRequest = z.infer<typeof updateOrderStatusRequestSchema>;
-export type UpdatePaymentStatusRequest = z.infer<typeof updatePaymentStatusRequestSchema>;
 export type UpdateResourceStatusRequest = z.infer<typeof updateResourceStatusRequestSchema>;
 export type UpdateAccountStatusRequest = z.infer<typeof updateAccountStatusRequestSchema>;
 export type UpdateDiscountStatusRequest = z.infer<typeof updateDiscountStatusRequestSchema>;

@@ -8,8 +8,6 @@ export type AdminProductFilter = {
   maxPrice?: number;
   keyword?: string;
   status?: string;
-  sortBy?: string;
-  sortDirection?: string;
 };
 
 export type CustomerFilter = {
@@ -24,13 +22,11 @@ export type CustomerFilter = {
 export type EmployeeFilter = CustomerFilter & {roleName?: string};
 export type SupplierFilter = CustomerFilter;
 
+/** promotion-service lists by zero-based page and filters only by state. */
 export type DiscountFilter = {
-  cursor?: string;
-  limit?: number;
-  keyword?: string;
-  status?: string;
-  discountType?: string;
-  applicationScope?: string;
+  page?: number;
+  size?: number;
+  state?: string;
 };
 
 export type OrderFilter = {

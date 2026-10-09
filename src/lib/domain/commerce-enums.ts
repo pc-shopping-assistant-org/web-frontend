@@ -18,12 +18,13 @@ export enum PaymentStatus {
   Pending = "PENDING",
   Paid = "PAID",
   Failed = "FAILED",
+  Cancelled = "CANCELLED",
+  Refunded = "REFUNDED",
 }
 
 export enum PaymentMethodCode {
   Cod = "COD",
-  StripeCard = "STRIPE_CARD",
-  BankTransfer = "BANK_TRANSFER",
+  Vnpay = "VNPAY",
 }
 
 export enum ShippingMethodCode {
@@ -32,12 +33,19 @@ export enum ShippingMethodCode {
   SameDay = "SAME_DAY",
 }
 
+/** Stored status; expiry is not a status, it is derived from the validity period (see DiscountState). */
 export enum DiscountStatus {
   Active = "ACTIVE",
   Inactive = "INACTIVE",
-  Expired = "EXPIRED",
-  Disabled = "DISABLED",
   Deleted = "DELETED",
+}
+
+/** What the discount list shows: the status combined with the validity period. */
+export enum DiscountState {
+  Scheduled = "SCHEDULED",
+  Running = "RUNNING",
+  Expired = "EXPIRED",
+  Locked = "LOCKED",
 }
 
 export enum DiscountType {
@@ -49,14 +57,9 @@ export enum DiscountScope {
   Order = "ORDER",
   AllItems = "ALL_ITEMS",
   Category = "CATEGORY",
-  Variant = "VARIANT",
 }
 
-export type EditableDiscountStatus =
-  | DiscountStatus.Active
-  | DiscountStatus.Inactive
-  | DiscountStatus.Expired
-  | DiscountStatus.Disabled;
+export type EditableDiscountStatus = DiscountStatus.Active | DiscountStatus.Inactive;
 
 export const ORDER_STATUS_VALUES = enumValues(OrderStatus);
 export const PAYMENT_STATUS_VALUES = enumValues(PaymentStatus);
@@ -66,19 +69,14 @@ export const DISCOUNT_STATUS_VALUES = enumValues(DiscountStatus);
 export const EDITABLE_DISCOUNT_STATUS_VALUES = [
   DiscountStatus.Active,
   DiscountStatus.Inactive,
-  DiscountStatus.Expired,
-  DiscountStatus.Disabled,
 ] as const;
+export const DISCOUNT_STATE_VALUES = enumValues(DiscountState);
 export const DISCOUNT_TYPE_VALUES = enumValues(DiscountType);
 export const DISCOUNT_SCOPE_VALUES = enumValues(DiscountScope);
 
-/** Legal order transitions used by admin controls and order detail. */
+/** What the shop can do with an order, current status first; PENDING_PAYMENT to PENDING_CONFIRMATION belongs to the payment result. */
 export const ORDER_STATUS_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> = {
-  [OrderStatus.PendingPayment]: [
-    OrderStatus.PendingPayment,
-    OrderStatus.PendingConfirmation,
-    OrderStatus.Cancelled,
-  ],
+  [OrderStatus.PendingPayment]: [OrderStatus.PendingPayment, OrderStatus.Cancelled],
   [OrderStatus.PendingConfirmation]: [
     OrderStatus.PendingConfirmation,
     OrderStatus.Confirmed,

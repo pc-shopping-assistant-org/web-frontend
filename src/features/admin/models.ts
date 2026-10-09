@@ -1,6 +1,5 @@
 import type {CustomerAddress} from "@/features/account/models";
 import type {
-  ProductVariant,
   Review,
   Supplier as CatalogSupplier,
 } from "@/features/catalog/models";
@@ -133,22 +132,23 @@ export type DiscountSummary = {
   startAt?: string;
   endAt?: string;
   status?: string;
+  /** SCHEDULED, RUNNING, EXPIRED or LOCKED. */
+  state?: string;
+  categoryIds: string[];
   createdAt?: string;
 };
 
 export type DiscountDetail = DiscountSummary & {
   updatedAt?: string;
-  appliedCategoryIds: string[];
-  appliedVariants: ProductVariant[];
 };
 
 export type DiscountsPage = {
-  hasNext: boolean;
-  hasPrev: boolean;
   items: DiscountSummary[];
-  nextCursor?: string;
-  prevCursor?: string;
+  page: number;
   size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
 };
 
 export type EmployeeDetail = {

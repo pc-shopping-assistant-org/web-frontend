@@ -1,0 +1,126 @@
+import {afterEach, describe, expect, it, vi} from "vitest";
+
+import {cancelOrder, createOrder, getOrder, getOrders, advanceOrder, cancelOrderAsAdmin, createVnpayUrl, getAdminInvoice, getAdminInvoices, getAdminOrder, getAdminOrders, getShippingMethods, getVnpayResult, previewDiscounts} from "./api";
+
+afterEach(() => vi.restoreAllMocks());
+
+const ID = "00000000-0000-4000-8000-000000000001";
+const ID2 = "00000000-0000-4000-8000-000000000002";
+
+function stubFetch(payload: unknown) {
+  const fetchMock = vi.fn().mockImplementation(async () =>
+    new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {status: 200, headers: {"content-type": "application/json"}}),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+const order = {
+  id: ID, invoiceNumber: "INV-ABCDEFGHJK", status: "PENDING_CONFIRMATION", cancellationReason: null,
+  recipientName: "A", recipientPhone: "0912345678", deliveryAddress: "1 Street", note: null,
+  shippingMethodId: ID2, paymentMethodId: ID2,
+  items: [{id: "i1", productVariantId: ID, productName: "Card", sku: "S1", variantLabel: "Color: Blue", quantity: 2, unitPrice: 1000, discountAmount: 100, lineTotal: 1900}],
+  subtotalAmount: 1900, discountAmount: 0, shippingFee: 30000, totalAmount: 31900,
+  payments: [{id: "p1", orderId: ID, paymentMethodId: ID2, amount: 31900, status: "PENDING", paidAt: null, createdAt: null}],
+  createdAt: "2026-10-08T00:00:00Z", deliveredAt: null,
+};
+
+describe("order api", () => {
+  it("places an order with the ids and the idempotency key", async () => {
+    const fetchMock = stubFetch(order);
+
+    const placed = await createOrder({idempotencyKey: "k1", shippingMethodId: ID2, paymentMethodId: ID2, customerAddressId: ID, discountCode: "", note: " leave "});
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/order-service/orders");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({idempotencyKey: "k1", shippingMethodId: ID2, paymentMethodId: ID2, customerAddressId: ID, note: "leave"});
+    expect(placed).toMatchObject({invoiceNumber: "INV-ABCDEFGHJK", totalAmount: 31900});
+    expect(placed.items[0]).toMatchObject({variantLabel: "Color: Blue", lineTotal: 1900});
+  });
+
+  it("does not call the backend for a delivery that is neither a saved address nor a full recipient", async () => {
+    const fetchMock = stubFetch(order);
+
+    await expect(createOrder({idempotencyKey: "k1", shippingMethodId: ID2, paymentMethodId: ID2, recipientName: "A"})).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("lists by cursor with the status and keyword filters", async () => {
+    const fetchMock = stubFetch({items: [{id: ID, invoiceNumber: "INV-1", status: "CONFIRMED", totalAmount: 5, itemCount: 2, firstProductName: "Card", createdAt: "2026-10-08T00:00:00Z"}], nextCursor: "next", hasNext: true, size: 1});
+
+    const page = await getOrders({limit: 10, status: "CONFIRMED", keyword: "INV-1", cursor: ""});
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/order-service/orders?limit=10&status=CONFIRMED&keyword=INV-1");
+    expect(page).toMatchObject({hasNext: true, nextCursor: "next"});
+    expect(page.items[0]).toMatchObject({invoiceNumber: "INV-1", itemCount: 2, firstProductName: "Card"});
+  });
+
+  it("reads one order, cancels it with a POST and reads the shipping and discount endpoints", async () => {
+    const fetchMock = stubFetch(order);
+    expect((await getOrder(ID)).payments[0]).toMatchObject({status: "PENDING", amount: 31900});
+    await cancelOrder(ID, "changed my mind");
+    expect(fetchMock.mock.calls[1]).toEqual([`/api/backend/order-service/orders/${ID}/cancel`, expect.objectContaining({method: "POST", body: JSON.stringify({reason: "changed my mind"})})]);
+
+    stubFetch([{id: ID, code: "STANDARD", name: "Standard", fee: 30000}]);
+    expect((await getShippingMethods())[0]).toEqual({id: ID, code: "STANDARD", name: "Standard", fee: 30000});
+
+    const preview = stubFetch({discountId: null, discountAmount: 0, orderDiscountId: null, orderDiscountAmount: 500, itemDiscounts: [{productVariantId: ID, discountId: ID2, discountAmount: 100}]});
+    const priced = await previewDiscounts({code: "FE10", orderAmount: 2000, items: [{productVariantId: ID, quantity: 2, unitPrice: 1000, categoryId: ID2}]});
+    expect(preview.mock.calls[0][0]).toBe("/api/backend/promotion-service/discounts/apply");
+    expect(priced).toEqual({itemDiscountAmount: 100, orderDiscountAmount: 500, lineDiscounts: {[ID]: 100}});
+  });
+
+  it("asks for the VNPAY page of a payment and reads the result of the return", async () => {
+    const url = stubFetch({paymentUrl: "https://sandbox.vnpayment.vn/pay?x=1"});
+    expect(await createVnpayUrl(ID)).toBe("https://sandbox.vnpayment.vn/pay?x=1");
+    expect(url.mock.calls[0]).toEqual([`/api/backend/payment-service/payments/${ID}/vnpay-url`, expect.objectContaining({method: "POST"})]);
+
+    const result = stubFetch({paymentId: ID, orderId: ID2, result: "PAID", amount: 31900});
+    expect(await getVnpayResult("vnp_TxnRef=a&vnp_SecureHash=b")).toEqual({paymentId: ID, orderId: ID2, result: "PAID", amount: 31900});
+    expect(result.mock.calls[0][0]).toBe("/api/backend/payment-service/payments/vnpay/return?vnp_TxnRef=a&vnp_SecureHash=b");
+  });
+
+  it("lists every order for the shop by page and reads one with its status history", async () => {
+    const list = stubFetch({content: [{id: ID, invoiceNumber: "INV-ABCDEFGHJK", customerId: ID2, recipientName: "A", recipientPhone: "0912345678", status: "PENDING_CONFIRMATION", totalAmount: 31900, itemCount: 2, firstProductName: "Card", createdAt: "2026-10-08T00:00:00Z"}], page: 1, size: 20, totalElements: 41, totalPages: 3, last: false});
+    const page = await getAdminOrders({page: 1, size: 20, keyword: "A", status: "", createdFrom: "2026-10-01T00:00:00Z"});
+    expect(list.mock.calls[0][0]).toBe("/api/backend/order-service/orders/admin?page=1&size=20&keyword=A&createdFrom=2026-10-01T00%3A00%3A00Z");
+    expect(page).toMatchObject({page: 1, totalPages: 3, last: false});
+    expect(page.items[0]).toMatchObject({invoiceNumber: "INV-ABCDEFGHJK", customerId: ID2, itemCount: 2});
+
+    stubFetch({...order, customerId: ID2, statusHistory: [
+      {fromStatus: null, toStatus: "PENDING_PAYMENT", changedBy: null, reason: null, createdAt: "2026-10-08T00:00:00Z"},
+      {fromStatus: "PENDING_PAYMENT", toStatus: "CANCELLED", changedBy: ID, reason: "out of stock", createdAt: "2026-10-08T01:00:00Z"},
+    ]});
+    const detail = await getAdminOrder(ID);
+    expect(detail.customerId).toBe(ID2);
+    expect(detail.statusHistory).toEqual([
+      {fromStatus: undefined, toStatus: "PENDING_PAYMENT", changedBy: undefined, reason: undefined, createdAt: "2026-10-08T00:00:00Z"},
+      {fromStatus: "PENDING_PAYMENT", toStatus: "CANCELLED", changedBy: ID, reason: "out of stock", createdAt: "2026-10-08T01:00:00Z"},
+    ]);
+  });
+
+  it("moves an order on with a PATCH and cancels it with a required reason", async () => {
+    const fetchMock = stubFetch({id: ID, invoiceNumber: "INV-ABCDEFGHJK", status: "CONFIRMED"});
+    await advanceOrder(ID, "CONFIRMED");
+    expect(fetchMock.mock.calls[0]).toEqual([`/api/backend/order-service/orders/admin/${ID}/status`, expect.objectContaining({method: "PATCH", body: JSON.stringify({status: "CONFIRMED"})})]);
+
+    await cancelOrderAsAdmin(ID, "  carrier lost it  ");
+    expect(fetchMock.mock.calls[1]).toEqual([`/api/backend/order-service/orders/admin/${ID}/cancel`, expect.objectContaining({method: "POST", body: JSON.stringify({reason: "carrier lost it"})})]);
+
+    await expect(cancelOrderAsAdmin(ID, "   ")).rejects.toThrow();
+    await expect(advanceOrder(ID, "BOGUS")).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("lists the invoices of the shop by page and reads one by the id of its order", async () => {
+    const list = stubFetch({content: [{id: ID, invoiceNumber: "INV-ABCDEFGHJK", recipientName: "A", totalAmount: 31900, invoiceDate: "2026-10-08T00:00:00Z"}], page: 0, size: 20, totalElements: 1, totalPages: 1, last: true});
+    const page = await getAdminInvoices({page: 0, size: 20, keyword: "INV", invoiceFrom: "2026-10-01T00:00:00Z", invoiceTo: ""});
+    expect(list.mock.calls[0][0]).toBe("/api/backend/order-service/orders/admin/invoices?page=0&size=20&keyword=INV&invoiceFrom=2026-10-01T00%3A00%3A00Z");
+    expect(page.items).toEqual([{id: ID, invoiceNumber: "INV-ABCDEFGHJK", recipientName: "A", totalAmount: 31900, invoiceDate: "2026-10-08T00:00:00Z"}]);
+
+    const detail = stubFetch({id: ID, invoiceNumber: "INV-ABCDEFGHJK", invoiceDate: null, recipientName: "A", recipientPhone: "0912345678", deliveryAddress: "1 Street", items: order.items, subtotalAmount: 1900, discountAmount: 0, shippingFee: 30000, totalAmount: 31900});
+    const invoice = await getAdminInvoice(ID);
+    expect(detail.mock.calls[0][0]).toBe(`/api/backend/order-service/orders/admin/invoices/${ID}`);
+    expect(invoice).toMatchObject({invoiceNumber: "INV-ABCDEFGHJK", invoiceDate: undefined, totalAmount: 31900});
+    expect(invoice.items[0]).toMatchObject({productName: "Card", variantLabel: "Color: Blue", lineTotal: 1900});
+  });
+});

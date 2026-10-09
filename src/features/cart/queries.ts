@@ -27,5 +27,5 @@ export function useRemoveCartItem() {
 
 export function useClearCart() {
   const queryClient = useQueryClient();
-  return useMutation({mutationFn: clearCart, onSuccess: () => queryClient.setQueryData(cartKeys.all, {items: [], totalItems: 0, subtotalAmount: 0})});
+  return useMutation({mutationFn: clearCart, onSuccess: (cart) => queryClient.setQueryData(cartKeys.all, cart)});
 }

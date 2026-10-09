@@ -1,5 +1,6 @@
 "use client";
 
+import { useCursorTrail } from "@/lib/hooks/use-cursor-trail";
 import Image from "next/image";
 import { CreditCard, Eye, Search, Star, Trash2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -10,18 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Link } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/format";
 import {AccountStatus} from "@/lib/domain/account-enums";
-import {DiscountStatus, DiscountScope, DiscountType, OrderStatus, PaymentStatus, ORDER_STATUS_TRANSITIONS} from "@/lib/domain/commerce-enums";
+import {DiscountStatus, DiscountState, DiscountType, OrderStatus, PaymentMethodCode, PaymentStatus} from "@/lib/domain/commerce-enums";
 import {ResourceStatus, ReviewStatus} from "@/lib/domain/catalog-enums";
 import type {CategoryTree, Review} from "@/features/catalog/contracts/responses";
-import type {PaymentDetail} from "@/features/admin/contracts/responses";
 
 import { useBrands, useCategories } from "@/features/catalog/queries";
 import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
@@ -40,11 +38,6 @@ import {
   useAdminDiscounts,
   useAdminEmployeeStatus,
   useAdminEmployees,
-  useAdminOrderStatus,
-  useAdminOrders,
-  useAdminPaymentMethods,
-  useAdminPaymentStatus,
-  useAdminPayments,
   useAdminProductStatus,
   useAdminProducts,
   useAdminReviewStatus,
@@ -54,6 +47,14 @@ import {
   useRoles,
 } from "./queries";
 import { AdminPagination } from "./admin-pagination";
+import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
+import type { AdminPayment, AdminPaymentMethod } from "@/features/payments/models";
+import {
+  useAdminPaymentMethods,
+  useAdminPayments,
+  useUpdateAdminPaymentStatus,
+} from "@/features/payments/queries";
+import { useAdminOrders } from "@/features/orders/queries";
 
 export type AdminResource =
   | "products"
@@ -162,12 +163,12 @@ function FilterBar({
               />
             </div>
             <div className="flex gap-2">
-              <Button type="submit">
+              <Button type="submit" size="field">
                 <Search className="size-4" />
                 {t("search")}
               </Button>
               {onReset ? (
-                <Button type="button" variant="outline" onClick={onReset}>
+                <Button type="button" size="field" variant="outline" onClick={onReset}>
                   {t("clearFilters")}
                 </Button>
               ) : null}
@@ -321,12 +322,7 @@ function StatusOptions({
     kind === "account"
       ? [AccountStatus.Active, AccountStatus.Inactive, AccountStatus.Locked]
       : kind === "discount"
-        ? [
-            DiscountStatus.Active,
-            DiscountStatus.Inactive,
-            DiscountStatus.Disabled,
-            DiscountStatus.Expired,
-          ]
+        ? [DiscountStatus.Active, DiscountStatus.Inactive]
         : [ResourceStatus.Active, ResourceStatus.Inactive];
   return (
     <>
@@ -341,16 +337,6 @@ function StatusOptions({
 }
 
 const ORDER_STATUSES = Object.values(OrderStatus);
-
-function orderStatusOptions(current?: string) {
-  return ORDER_STATUS_TRANSITIONS[current as OrderStatus] ?? [...ORDER_STATUSES];
-}
-
-function paymentStatusOptions(current?: string) {
-  return current === PaymentStatus.Pending
-    ? Object.values(PaymentStatus)
-    : [current ?? PaymentStatus.Pending];
-}
 
 function Products() {
   const t = useTranslations("admin");
@@ -378,9 +364,8 @@ function Products() {
     brandId: applied.brandId || undefined,
     minPrice: toNumber(applied.minPrice),
     maxPrice: toNumber(applied.maxPrice),
-    sortBy: "createdAt",
-    sortDirection: "DESC",
   });
+  const trail = useCursorTrail(JSON.stringify({ ...applied, cursor: undefined }));
   const mutation = useAdminProductStatus();
   const remove = useDeleteAdminProduct();
   const apply = () =>
@@ -397,7 +382,9 @@ function Products() {
     setDraft(empty);
     setApplied({ ...empty, cursor: undefined });
   };
-  const page = query.data;
+  const page = query.data
+    ? { ...query.data, hasPrev: trail.hasPrev, prevCursor: trail.prevCursor }
+    : undefined;
   return (
     <Shell
       title={t("resource.products")}
@@ -597,24 +584,24 @@ function Products() {
           )}
           <ListFooter
             page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
+            onPrev={() => {
+              const cursor = trail.prevCursor;
+              trail.pop();
+              setApplied((current) => ({ ...current, cursor }));
+            }}
+            onNext={() => {
+              trail.push(applied.cursor);
               setApplied((current) => ({
                 ...current,
                 cursor: page?.nextCursor,
-              }))
-            }
+              }));
+            }}
           />
         </>
       )}
-      {remove.isError || mutation.isError ? (
+      {mutation.isError ? (
         <div className="mt-4">
-          <Failure error={remove.error ?? mutation.error} />
+          <Failure error={mutation.error} />
         </div>
       ) : null}
     </Shell>
@@ -637,25 +624,28 @@ function Orders() {
     fromDate: "",
     toDate: "",
   }));
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
+  const [applied, setApplied] = useState(draft);
+  const [pageNumber, setPageNumber] = useState(0);
+  const [actionError, setActionError] = useState<unknown>(null);
   const query = useAdminOrders({
-    limit: 20,
-    cursor: applied.cursor,
+    page: pageNumber,
+    size: 20,
     keyword: applied.keyword || undefined,
     status: applied.status || undefined,
-    fromDate: dateParam(applied.fromDate, false),
-    toDate: dateParam(applied.toDate, true),
+    createdFrom: dateParam(applied.fromDate, false),
+    createdTo: dateParam(applied.toDate, true),
   });
-  const mutation = useAdminOrderStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
+  const apply = () => {
+    setApplied({ ...draft, keyword: draft.keyword.trim() });
+    setPageNumber(0);
+    setActionError(null);
+  };
   const reset = () => {
     const empty = { keyword: "", status: "", fromDate: "", toDate: "" };
     setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
+    setApplied(empty);
+    setPageNumber(0);
+    setActionError(null);
   };
   const page = query.data;
   return (
@@ -699,6 +689,7 @@ function Orders() {
           }
         />
       </FilterBar>
+      {actionError ? <div className="mb-4"><Failure error={actionError} /></div> : null}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -709,196 +700,77 @@ function Orders() {
             <EmptyState />
           ) : (
             <div className="space-y-3">
-              {(page?.items ?? []).map((order, index) => (
+              {(page?.items ?? []).map((order) => (
                 <Card
-                  key={order.id ?? index}
+                  key={order.id}
                   className="transition hover:border-primary/30 hover:shadow-md"
                 >
                   <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        {order.id ? (
-                          <Link
-                            href={`/admin/orders/${order.id}`}
-                            className="font-semibold hover:text-primary hover:underline"
-                          >
-                            {shortId(order.id)}
-                          </Link>
-                        ) : (
-                          <span className="font-semibold">—</span>
-                        )}
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="font-semibold hover:text-primary hover:underline"
+                        >
+                          {order.invoiceNumber}
+                        </Link>
                         <StatusBadge status={order.status} />
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {order.customerName ??
-                          order.customerEmail ??
-                          t("guestCustomer")}{" "}
-                        ·{" "}
-                        {order.orderTime
-                          ? new Date(order.orderTime).toLocaleString(
+                        {order.recipientName ?? t("guestCustomer")}
+                        {order.recipientPhone ? ` · ${order.recipientPhone}` : ""}
+                        {" · "}
+                        {order.createdAt
+                          ? new Date(order.createdAt).toLocaleString(
                               locale === "vi" ? "vi-VN" : "en-US",
                             )
                           : "—"}
+                      </p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">
+                        {order.firstProductName ?? "—"}
+                        {order.itemCount > 1 ? ` ${t("moreItems", { count: order.itemCount - 1 })}` : ""}
                       </p>
                       <p className="mt-1 font-semibold">
                         {formatMoney(order.totalAmount, locale)}
                       </p>
                     </div>
-                    {order.id ? (
-                      <OrderStatusControl
-                        orderId={order.id}
-                        currentStatus={order.status}
-                        mutation={mutation}
-                      />
-                    ) : null}
-                    {order.id ? (
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-                      >
-                        <Eye className="size-3.5" />
-                        <span className="hidden sm:inline">{t("view")}</span>
-                      </Link>
-                    ) : null}
+                    <AdminOrderStatusControl orderId={order.id} status={order.status} onError={setActionError} />
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
+                    >
+                      <Eye className="size-3.5" />
+                      <span className="hidden sm:inline">{t("view")}</span>
+                    </Link>
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
-  </Shell>
-  );
-}
-
-function OrderStatusControl({
-  orderId,
-  currentStatus,
-  mutation,
-}: {
-  orderId: string;
-  currentStatus?: string;
-  mutation: ReturnType<typeof useAdminOrderStatus>;
-}) {
-  const t = useTranslations("admin");
-  const [showCancel, setShowCancel] = useState(false);
-  const [reason, setReason] = useState("");
-
-  function changeStatus(nextStatus: string) {
-    if (!nextStatus || nextStatus === currentStatus) return;
-    if (nextStatus === OrderStatus.Cancelled) {
-      setReason("");
-      setShowCancel(true);
-      return;
-    }
-    void mutation.mutateAsync({ id: orderId, status: nextStatus });
-  }
-
-  async function confirmCancel() {
-    await mutation.mutateAsync({
-      id: orderId,
-      status: OrderStatus.Cancelled,
-      reason: reason.trim() || undefined,
-    });
-    setShowCancel(false);
-  }
-
-  return (
-    <>
-      <Select
-        className="h-9 w-52"
-        value={currentStatus ?? ""}
-        onChange={(event) => changeStatus(event.target.value)}
-        disabled={mutation.isPending}
-        aria-label={t("orderStatus")}
-      >
-        {orderStatusOptions(currentStatus).map((status) => (
-          <option key={status} value={status}>
-            {t.has(`statusValues.${status}`)
-              ? t(`statusValues.${status}`)
-              : status}
-          </option>
-        ))}
-      </Select>
-      {showCancel ? (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !mutation.isPending)
-              setShowCancel(false);
-          }}
-        >
-          <form
-            className="w-full max-w-md space-y-5 rounded-2xl border bg-card p-6 shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void confirmCancel();
-            }}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div>
-              <p className="eyebrow">{t("orderDetail")}</p>
-              <h2 className="mt-2 text-xl font-semibold">
-                {t("cancelOrder")}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {t("cancelReasonPrompt")}
+          {page && page.totalPages > 1 ? (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
+                {" · "}
+                {t("totalOrders", { count: page.totalElements })}
               </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`cancel-reason-${orderId}`}>{t("reason")}</Label>
-              <Textarea
-                id={`cancel-reason-${orderId}`}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                autoFocus
+              <AdminPagination
+                hasPrev={page.page > 0}
+                hasNext={!page.last}
+                onPrev={() => {
+                  setPageNumber((current) => Math.max(0, current - 1));
+                  setActionError(null);
+                }}
+                onNext={() => {
+                  setPageNumber((current) => current + 1);
+                  setActionError(null);
+                }}
               />
             </div>
-            {mutation.isError ? <ErrorMessage error={mutation.error} /> : null}
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowCancel(false)}
-                disabled={mutation.isPending}
-              >
-                {t("back")}
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={mutation.isPending}
-              >
-                {t("cancel")}
-              </Button>
-            </div>
-          </form>
-        </div>
-      ) : null}
-    </>
+          ) : null}
+        </>
+      )}
+    </Shell>
   );
 }
 
@@ -1114,40 +986,15 @@ function Employees() {
   );
 }
 
+const DISCOUNT_STATES = [DiscountState.Running, DiscountState.Scheduled, DiscountState.Expired, DiscountState.Locked];
+
 function Discounts() {
   const t = useTranslations("admin");
   const locale = useLocale();
-  const [draft, setDraft] = useState({
-    keyword: "",
-    status: "",
-    applicationScope: "",
-    discountType: "",
-  });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
-  const query = useAdminDiscounts({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
-    status: applied.status || undefined,
-    applicationScope: applied.applicationScope || undefined,
-    discountType: applied.discountType || undefined,
-  });
+  const [state, setState] = useState("");
+  const [pageNumber, setPageNumber] = useState(0);
+  const query = useAdminDiscounts({ page: pageNumber, size: 20, state: state || undefined });
   const mutation = useAdminDiscountStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
-  const reset = () => {
-    const empty = {
-      keyword: "",
-      status: "",
-      applicationScope: "",
-      discountType: "",
-    };
-    setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
-  };
   const page = query.data;
   return (
     <Shell
@@ -1155,52 +1002,39 @@ function Discounts() {
       description={t("resource.discountsDescription")}
     >
       <DiscountCreateForm />
-      <FilterBar
-        value={draft.keyword}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
-        }
-        placeholder={t("searchDiscounts")}
-        onSubmit={apply}
-        onReset={reset}
-      >
-        <FilterSelect
-          id="discount-status"
-          label={t("status")}
-          value={draft.status}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, status: value }))
-          }
-        >
-          <StatusOptions kind="discount" />
-        </FilterSelect>
-        <FilterSelect
-          id="discount-scope-filter"
-          label={t("applicationScope")}
-          value={draft.applicationScope}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, applicationScope: value }))
-          }
-        >
-          <option value="">{t("allScopes")}</option>
-          <option value={DiscountScope.Order}>{t("scopeValues.ORDER")}</option>
-          <option value={DiscountScope.AllItems}>{t("scopeValues.ALL_ITEMS")}</option>
-          <option value={DiscountScope.Category}>{t("scopeValues.CATEGORY")}</option>
-          <option value={DiscountScope.Variant}>{t("scopeValues.VARIANT")}</option>
-        </FilterSelect>
-        <FilterSelect
-          id="discount-type-filter"
-          label={t("discountType")}
-          value={draft.discountType}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, discountType: value }))
-          }
-        >
-          <option value="">{t("allTypes")}</option>
-          <option value={DiscountType.Percent}>{t("discountTypeValues.PERCENT")}</option>
-          <option value={DiscountType.Fixed}>{t("discountTypeValues.FIXED")}</option>
-        </FilterSelect>
-      </FilterBar>
+      <Card className="mb-6">
+        <CardContent className="flex flex-wrap items-end gap-3 p-4">
+          <div className="w-full sm:w-64">
+            <FilterSelect
+              id="discount-state"
+              label={t("discountState")}
+              value={state}
+              onChange={(value) => {
+                setState(value);
+                setPageNumber(0);
+              }}
+            >
+              <option value="">{t("allStates")}</option>
+              {DISCOUNT_STATES.map((value) => (
+                <option key={value} value={value}>
+                  {t(`statusValues.${value}`)}
+                </option>
+              ))}
+            </FilterSelect>
+          </div>
+          <Button
+            type="button"
+            size="field"
+            variant="outline"
+            onClick={() => {
+              setState("");
+              setPageNumber(0);
+            }}
+          >
+            {t("clearFilters")}
+          </Button>
+        </CardContent>
+      </Card>
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -1211,91 +1045,72 @@ function Discounts() {
             <EmptyState />
           ) : (
             <div className="space-y-3">
-              {(page?.items ?? []).map((discount, index) => (
+              {(page?.items ?? []).map((discount) => (
                 <Card
-                  key={discount.id ?? index}
+                  key={discount.id}
                   className="transition hover:border-primary/30 hover:shadow-md"
                 >
                   <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        {discount.id ? (
-                          <Link
-                            href={`/admin/discounts/${discount.id}`}
-                            className="font-semibold hover:text-primary hover:underline"
-                          >
-                            {discount.code ?? discount.title}
-                          </Link>
-                        ) : (
-                          <p className="font-semibold">
-                            {discount.code ?? discount.title}
-                          </p>
-                        )}
-                        <StatusBadge status={discount.status} />
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {discount.title} · {discount.applicationScope} ·{" "}
-                        {discount.discountType} {discount.value}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {t("validUntil")}{" "}
-                        {discount.endAt
-                          ? new Date(discount.endAt).toLocaleDateString(
-                              locale === "vi" ? "vi-VN" : "en-US",
-                            )
-                          : "—"}{" "}
-                        · {t("minOrderAmount")}{" "}
-                        {formatMoney(discount.minOrderAmount, locale)}
-                      </p>
-                    </div>
-                    {discount.id ? (
-                      <div className="flex items-center gap-2">
                         <Link
                           href={`/admin/discounts/${discount.id}`}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
+                          className="font-semibold hover:text-primary hover:underline"
                         >
-                          <Eye className="size-3.5" />
-                          <span className="hidden sm:inline">{t("view")}</span>
+                          {discount.code ?? discount.title}
                         </Link>
-                        <StatusSelect
-                          currentStatus={discount.status}
-                          options={[
-                            DiscountStatus.Active,
-                            DiscountStatus.Inactive,
-                            DiscountStatus.Disabled,
-                            DiscountStatus.Expired,
-                          ]}
-                          label={t("status")}
-                          onStatus={(status) =>
-                            mutation.mutateAsync({
-                              id: discount.id!,
-                              status,
-                            })
-                          }
-                          disabled={mutation.isPending}
-                        />
+                        <StatusBadge status={discount.state} />
                       </div>
-                    ) : null}
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {discount.title} · {t(`scopeValues.${discount.applicationScope}`)} ·{" "}
+                        {discount.discountType === DiscountType.Percent
+                          ? `${discount.value}%`
+                          : formatMoney(discount.value, locale)}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {new Date(discount.startAt ?? "").toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US")}
+                        {" – "}
+                        {new Date(discount.endAt ?? "").toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US")}
+                        {" · "}
+                        {t("minOrderAmount")} {formatMoney(discount.minOrderAmount, locale)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/discounts/${discount.id}`}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
+                      >
+                        <Eye className="size-3.5" />
+                        <span className="hidden sm:inline">{t("view")}</span>
+                      </Link>
+                      <StatusSelect
+                        currentStatus={discount.status}
+                        options={[DiscountStatus.Active, DiscountStatus.Inactive]}
+                        label={t("status")}
+                        onStatus={(status) =>
+                          mutation.mutateAsync({ id: discount.id, status })
+                        }
+                        disabled={mutation.isPending}
+                      />
+                    </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
+          {page && page.totalPages > 1 ? (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
+              </p>
+              <AdminPagination
+                hasPrev={page.page > 0}
+                hasNext={!page.last}
+                onPrev={() => setPageNumber((current) => Math.max(0, current - 1))}
+                onNext={() => setPageNumber((current) => current + 1)}
+              />
+            </div>
+          ) : null}
         </>
       )}
       {mutation.isError ? (
@@ -1395,38 +1210,45 @@ function Payments() {
   const locale = useLocale();
   const methods = useAdminPaymentMethods();
   const [draft, setDraft] = useState({
-    keyword: "",
+    transactionCode: "",
+    customerName: "",
     status: "",
-    paymentMethodCode: "",
     fromDate: "",
     toDate: "",
   });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
+  const [applied, setApplied] = useState(draft);
+  const [pageNumber, setPageNumber] = useState(0);
+  const [actionError, setActionError] = useState<unknown>(null);
   const query = useAdminPayments({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
+    page: pageNumber,
+    size: 20,
+    transactionCode: applied.transactionCode || undefined,
+    customerName: applied.customerName || undefined,
     status: applied.status || undefined,
-    paymentMethodCode: applied.paymentMethodCode || undefined,
-    fromDate: dateParam(applied.fromDate, false),
-    toDate: dateParam(applied.toDate, true),
+    createdFrom: dateParam(applied.fromDate, false),
+    createdTo: dateParam(applied.toDate, true),
   });
-  const mutation = useAdminPaymentStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
+  const apply = () => {
+    setApplied({
+      ...draft,
+      transactionCode: draft.transactionCode.trim(),
+      customerName: draft.customerName.trim(),
+    });
+    setPageNumber(0);
+    setActionError(null);
+  };
   const reset = () => {
     const empty = {
-      keyword: "",
+      transactionCode: "",
+      customerName: "",
       status: "",
-      paymentMethodCode: "",
       fromDate: "",
       toDate: "",
     };
     setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
+    setApplied(empty);
+    setPageNumber(0);
+    setActionError(null);
   };
   const page = query.data;
   return (
@@ -1435,14 +1257,28 @@ function Payments() {
       description={t("resource.paymentsDescription")}
     >
       <FilterBar
-        value={draft.keyword}
+        value={draft.transactionCode}
         onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
+          setDraft((current) => ({ ...current, transactionCode: value }))
         }
         placeholder={t("searchPayments")}
         onSubmit={apply}
         onReset={reset}
       >
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium text-muted-foreground">
+            {t("customerName")}
+          </span>
+          <Input
+            value={draft.customerName}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                customerName: event.target.value,
+              }))
+            }
+          />
+        </label>
         <FilterSelect
           id="payment-status"
           label={t("status")}
@@ -1452,21 +1288,6 @@ function Payments() {
           }
         >
           <StatusOptions kind="payment" />
-        </FilterSelect>
-        <FilterSelect
-          id="payment-method-filter"
-          label={t("paymentMethod")}
-          value={draft.paymentMethodCode}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, paymentMethodCode: value }))
-          }
-        >
-          <option value="">{t("allPaymentMethods")}</option>
-          {(methods.data ?? []).map((method) => (
-            <option key={method.code ?? method.id} value={method.code}>
-              {method.code} · {method.name}
-            </option>
-          ))}
         </FilterSelect>
         <DateFilter
           id="payment-from"
@@ -1485,6 +1306,7 @@ function Payments() {
           }
         />
       </FilterBar>
+      {actionError ? <div className="mb-4"><Failure error={actionError} /></div> : null}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -1495,144 +1317,137 @@ function Payments() {
             <EmptyState />
           ) : (
             <div className="space-y-3">
-              {(page?.items ?? []).map((payment, index) => (
+              {(page?.items ?? []).map((payment) => (
                 <PaymentRow
-                  key={payment.id ?? index}
+                  key={payment.id}
                   payment={payment}
                   locale={locale}
-                  mutation={mutation}
+                  onError={setActionError}
+                  method={methods.data?.find(
+                    (method) => method.id === payment.paymentMethodId,
+                  )}
                 />
               ))}
             </div>
           )}
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
+          {page && page.totalPages > 1 ? (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
+                {" · "}
+                {t("totalPayments", { count: page.totalElements })}
+              </p>
+              <AdminPagination
+                hasPrev={page.page > 0}
+                hasNext={!page.last}
+                onPrev={() => {
+                  setPageNumber((current) => Math.max(0, current - 1));
+                  setActionError(null);
+                }}
+                onNext={() => {
+                  setPageNumber((current) => current + 1);
+                  setActionError(null);
+                }}
+              />
+            </div>
+          ) : null}
         </>
       )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
     </Shell>
   );
 }
 
+/**
+ * The two changes the shop can make: cash collected on delivery, and a paid payment given back.
+ * A refused change refreshes the row, which then loses its button and its dialog, so the refusal goes to the page.
+ */
 function PaymentRow({
   payment,
   locale,
-  mutation,
+  method,
+  onError,
 }: {
-  payment: PaymentDetail;
+  payment: AdminPayment;
   locale: string;
-  mutation: ReturnType<typeof useAdminPaymentStatus>;
+  method?: AdminPaymentMethod;
+  onError: (error: unknown) => void;
 }) {
   const t = useTranslations("admin");
-  const [expanded, setExpanded] = useState(false);
-  const [providerCode, setProviderCode] = useState(
-    payment.providerTransactionCode ?? "",
-  );
+  const mutation = useUpdateAdminPaymentStatus();
+  const change = (status: PaymentStatus) => {
+    onError(null);
+    return mutation.mutateAsync({ paymentId: payment.id, status }).catch((error: unknown) => {
+      onError(error);
+      throw error;
+    });
+  };
+  const dateTime = (value: string) =>
+    new Date(value).toLocaleString(locale === "vi" ? "vi-VN" : "en-US");
+  const canCollect =
+    payment.status === PaymentStatus.Pending &&
+    method?.code === PaymentMethodCode.Cod;
+  const canRefund = payment.status === PaymentStatus.Paid;
   return (
     <Card className="transition hover:border-primary/30 hover:shadow-md">
-      <CardContent className="space-y-3 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="min-w-0 flex-1">
+      <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold">
               {payment.providerTransactionCode ?? shortId(payment.id)}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {payment.paymentMethodCode ?? "—"} ·{" "}
-              {payment.orderId ? (
-                <Link
-                  href={`/admin/orders/${payment.orderId}`}
-                  className="hover:text-primary hover:underline"
-                >
-                  {shortId(payment.orderId)}
-                </Link>
-              ) : (
-                "—"
-              )}
-            </p>
-            <p className="mt-1 font-medium">
-              {formatMoney(payment.amount, locale)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
             <StatusBadge status={payment.status} />
-            <Select
-              className="h-9 w-32"
-              value={payment.status ?? ""}
-              onChange={(event) =>
-                void mutation.mutateAsync({
-                  id: payment.id ?? "",
-                  status: event.target.value,
-                  providerTransactionCode: providerCode.trim() || undefined,
-                })
-              }
-              disabled={
-                !payment.id ||
-                mutation.isPending ||
-                payment.status !== PaymentStatus.Pending
-              }
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {method?.name ?? "—"} ·{" "}
+            <Link
+              href={`/admin/orders/${payment.orderId}`}
+              className="hover:text-primary hover:underline"
             >
-              {paymentStatusOptions(payment.status).map((status) => (
-                <option key={status} value={status}>
-                  {t.has(`statusValues.${status}`)
-                    ? t(`statusValues.${status}`)
-                    : status}
-                </option>
-              ))}
-            </Select>
-            <Button
-              type="button"
+              {shortId(payment.orderId)}
+            </Link>
+            {payment.customerId ? ` · ${shortId(payment.customerId)}` : ""}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {payment.paidAt
+              ? `${t("paidAt")}: ${dateTime(payment.paidAt)}`
+              : payment.createdAt
+                ? dateTime(payment.createdAt)
+                : "—"}
+            {payment.updatedBy ? ` · ${t("changedByStaff")}` : ""}
+          </p>
+          <p className="mt-1 font-medium">
+            {formatMoney(payment.amount, locale)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {canCollect ? (
+            <ConfirmAction
+              title={t("collectCash")}
+              description={t("collectCashDescription")}
+              confirmLabel={t("collectCash")}
+              cancelLabel={t("cancel")}
+              onConfirm={() => change(PaymentStatus.Paid)}
               size="sm"
               variant="outline"
-              onClick={() => setExpanded((value) => !value)}
+              confirmVariant="default"
             >
-              {expanded ? t("close") : t("edit")}
-            </Button>
-          </div>
-        </div>
-        {expanded ? (
-          <div className="flex flex-wrap items-end gap-3 border-t pt-3">
-            <label className="block w-full max-w-md space-y-1.5 text-sm">
-              <span className="font-medium text-muted-foreground">
-                {t("providerTransactionCode")}
-              </span>
-              <Input
-                value={providerCode}
-                onChange={(event) => setProviderCode(event.target.value)}
-              />
-            </label>
-            <Button
-              type="button"
+              {t("collectCash")}
+            </ConfirmAction>
+          ) : null}
+          {canRefund ? (
+            <ConfirmAction
+              title={t("refundPayment")}
+              description={t("refundPaymentDescription")}
+              confirmLabel={t("refundPayment")}
+              cancelLabel={t("cancel")}
+              onConfirm={() => change(PaymentStatus.Refunded)}
               size="sm"
-              onClick={() =>
-                void mutation.mutateAsync({
-                  id: payment.id ?? "",
-                  status: payment.status ?? PaymentStatus.Pending,
-                  providerTransactionCode: providerCode.trim() || undefined,
-                })
-              }
-              disabled={!payment.id || mutation.isPending}
+              variant="outline"
             >
-              {t("save")}
-            </Button>
-          </div>
-        ) : null}
+              {t("refundPayment")}
+            </ConfirmAction>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );

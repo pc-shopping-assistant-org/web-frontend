@@ -1,4 +1,3 @@
-import {mapCustomerAddress} from "@/features/account/mappers";
 import type {
   AttributeDefinitionDto,
   AttributeSchemaItemDto,
@@ -9,8 +8,7 @@ import type {
   CustomerDetailDto,
   CustomerOrderSummaryDto,
   DashboardOverviewDto,
-  DiscountDetailDto,
-  DiscountSummaryDto,
+  DiscountDto,
   DiscountsPageDto,
   EmployeeDetailDto,
   EmployeesPageDto,
@@ -54,10 +52,9 @@ import type {
   SuppliersPage,
   TopSellingProduct,
 } from "@/features/admin/models";
-import {mapProductVariant} from "@/features/catalog/mappers";
 
 const text = (value?: string) => value?.trim() ?? "";
-const number = (value?: number) => value ?? 0;
+const number = (value?: number | null) => value ?? 0;
 
 export function mapAttributeDefinition(dto: AttributeDefinitionDto): AttributeDefinition {
   return {
@@ -93,10 +90,21 @@ export function mapAttributeSchemaItem(dto: AttributeSchemaItemDto): AttributeSc
 
 export function mapGroupSchemaItem(dto: GroupSchemaItemDto): CategorySpecs["groups"][number] {
   return {
-    groupId: text(dto.groupId),
-    groupName: text(dto.groupName),
+    groupId: dto.id,
+    groupName: dto.name,
     displayOrder: number(dto.displayOrder),
-    attributes: (dto.attributes ?? []).map(mapAttributeSchemaItem),
+    attributes: (dto.attributes ?? []).map((attribute) => ({
+      attributeId: attribute.attributeId,
+      key: attribute.key,
+      displayName: attribute.displayName,
+      dataType: attribute.dataType as AttributeSchemaItem["dataType"],
+      unit: attribute.unit ?? undefined,
+      allowedValues: attribute.allowedValues ?? [],
+      required: attribute.required,
+      displayOrder: number(attribute.displayOrder),
+      filterable: false,
+      comparable: false,
+    })),
   };
 }
 
@@ -126,8 +134,8 @@ export function mapCategoryAttribute(dto: CategoryAttributeDto): CategoryAttribu
 
 export function mapCategorySpecs(dto: CategorySpecsDto): CategorySpecs {
   return {
-    categoryId: text(dto.categoryId),
-    categoryName: text(dto.categoryName),
+    categoryId: dto.categoryId,
+    categoryName: "",
     groups: (dto.groups ?? []).map(mapGroupSchemaItem),
   };
 }
@@ -145,7 +153,13 @@ export function mapCustomerDetail(dto: CustomerDetailDto): CustomerDetail {
     gender: dto.gender,
     status: dto.status,
     createdAt: dto.createdAt,
-    addresses: (dto.addresses ?? []).map(mapCustomerAddress),
+    addresses: (dto.addresses ?? []).map((address) => ({
+      id: address.id ?? "",
+      addressLine: address.addressLine ?? "",
+      default: address.default ?? false,
+      phone: address.phone ?? "",
+      recipientName: address.recipientName ?? "",
+    })),
     totalOrders: number(dto.totalOrders),
     totalSpent: number(dto.totalSpent),
   };
@@ -196,12 +210,12 @@ export function mapOrderStatusStat(dto: OrderStatusStatDto): OrderStatusStat {
   };
 }
 
-export function mapDiscountSummary(dto: DiscountSummaryDto): DiscountSummary {
+export function mapDiscountSummary(dto: DiscountDto): DiscountSummary {
   return {
-    id: text(dto.id),
-    code: dto.code,
+    id: dto.id,
+    code: dto.code ?? undefined,
     title: dto.title,
-    description: dto.description,
+    description: dto.description ?? undefined,
     discountType: dto.discountType,
     applicationScope: dto.applicationScope,
     value: number(dto.value),
@@ -209,27 +223,24 @@ export function mapDiscountSummary(dto: DiscountSummaryDto): DiscountSummary {
     startAt: dto.startAt,
     endAt: dto.endAt,
     status: dto.status,
+    state: dto.state,
+    categoryIds: dto.categoryIds ?? [],
     createdAt: dto.createdAt,
   };
 }
 
-export function mapDiscountDetail(dto: DiscountDetailDto): DiscountDetail {
-  return {
-    ...mapDiscountSummary(dto),
-    updatedAt: dto.updatedAt,
-    appliedCategoryIds: dto.appliedCategoryIds ?? [],
-    appliedVariants: (dto.appliedVariants ?? []).map(mapProductVariant),
-  };
+export function mapDiscountDetail(dto: DiscountDto): DiscountDetail {
+  return {...mapDiscountSummary(dto), updatedAt: dto.updatedAt};
 }
 
 export function mapDiscountsPage(dto: DiscountsPageDto): DiscountsPage {
   return {
-    hasNext: dto.hasNext ?? false,
-    hasPrev: dto.hasPrev ?? false,
-    items: (dto.items ?? []).map(mapDiscountSummary),
-    nextCursor: dto.nextCursor,
-    prevCursor: dto.prevCursor,
-    size: number(dto.size),
+    items: (dto.content ?? []).map(mapDiscountSummary),
+    page: dto.page,
+    size: dto.size,
+    totalElements: dto.totalElements,
+    totalPages: dto.totalPages,
+    last: dto.last,
   };
 }
 

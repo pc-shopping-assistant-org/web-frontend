@@ -1,6 +1,7 @@
 import {z} from "zod";
 
-import {PAYMENT_METHOD_CODE_VALUES, PaymentMethodCode} from "@/lib/domain/commerce-enums";
+import {ORDER_STATUS_VALUES} from "@/lib/domain/commerce-enums";
+
 import {
   money,
   nonEmptyText,
@@ -11,44 +12,51 @@ import {
   uuid,
 } from "@/lib/api/contracts/primitives";
 
-export const orderItemRequestSchema = z.object({
-  productVariantId: uuid,
-  quantity: positiveQuantity,
-}).strict();
-
+/** Delivery is a saved address or the recipient typed in, never a mix (the backend rejects both). */
 export const createOrderRequestSchema = z.object({
+  idempotencyKey: nonEmptyText.max(100),
+  shippingMethodId: uuid,
+  paymentMethodId: uuid,
   customerAddressId: optionalUuid,
-  deliveryAddress: optionalText,
-  discountCode: optionalText,
-  items: z.array(orderItemRequestSchema).min(1),
-  note: optionalText,
-  paymentMethod: z.enum(PAYMENT_METHOD_CODE_VALUES),
   recipientName: optionalText,
   recipientPhone: optionalPhone,
-  shippingMethodCode: optionalText,
-}).strict();
+  deliveryAddress: optionalText,
+  discountCode: optionalText,
+  note: optionalText,
+}).strict().superRefine((value, context) => {
+  const typedIn = [value.recipientName, value.recipientPhone, value.deliveryAddress];
+  if (value.customerAddressId) {
+    if (typedIn.some(Boolean)) context.addIssue({code: "custom", path: ["customerAddressId"], message: "Use a saved address or type the recipient, not both"});
+  } else if (!typedIn.every(Boolean)) {
+    context.addIssue({code: "custom", path: ["recipientName"], message: "Provide a saved address or the recipient name, phone and address"});
+  }
+});
 
 export const cancelOrderRequestSchema = z.object({
   reason: optionalText,
 }).strict();
 
-export const validateDiscountRequestSchema = z.object({
-  code: nonEmptyText,
+/** The shop moves an order on to its next status; cancelling is its own request, with a reason. */
+export const advanceOrderRequestSchema = z.object({
+  status: z.enum(ORDER_STATUS_VALUES),
+}).strict();
+
+export const adminCancelOrderRequestSchema = z.object({
+  reason: nonEmptyText.max(500),
+}).strict();
+
+/** What the promotion-service needs to price a cart: the lines with their category, and an optional voucher. */
+export const discountPreviewRequestSchema = z.object({
+  code: optionalText,
   orderAmount: money,
   items: z.array(z.object({
     productVariantId: uuid,
     quantity: positiveQuantity,
     unitPrice: money,
-  }).strict()).optional(),
+    categoryId: optionalUuid,
+  }).strict()).min(1),
 }).strict();
 
-export const createPaymentIntentRequestSchema = z.object({
-  orderId: uuid,
-  paymentMethod: z.literal(PaymentMethodCode.StripeCard),
-}).strict();
-
-export type OrderItemRequest = z.infer<typeof orderItemRequestSchema>;
-export type CreateOrderRequest = z.infer<typeof createOrderRequestSchema>;
+export type CreateOrderRequest = z.input<typeof createOrderRequestSchema>;
 export type CancelOrderRequest = z.infer<typeof cancelOrderRequestSchema>;
-export type ValidateDiscountRequest = z.infer<typeof validateDiscountRequestSchema>;
-export type CreatePaymentIntentRequest = z.infer<typeof createPaymentIntentRequestSchema>;
+export type DiscountPreviewRequest = z.input<typeof discountPreviewRequestSchema>;

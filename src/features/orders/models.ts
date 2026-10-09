@@ -118,3 +118,135 @@ export type InvoicesPage = {
   prevCursor?: string;
   size: number;
 };
+
+/** What the customer sees of an order: the snapshot taken when it was placed. */
+export type OrderLine = {
+  id: string;
+  productVariantId?: string;
+  productName: string;
+  sku?: string;
+  variantLabel?: string;
+  quantity: number;
+  unitPrice: number;
+  discountAmount: number;
+  lineTotal: number;
+};
+
+export type OrderPayment = {
+  id: string;
+  paymentMethodId?: string;
+  amount: number;
+  status: string;
+  paidAt?: string;
+  createdAt?: string;
+};
+
+export type OrderDetail = {
+  id: string;
+  invoiceNumber: string;
+  status: string;
+  cancellationReason?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  deliveryAddress?: string;
+  note?: string;
+  shippingMethodId?: string;
+  paymentMethodId?: string;
+  items: OrderLine[];
+  subtotalAmount: number;
+  discountAmount: number;
+  shippingFee: number;
+  totalAmount: number;
+  payments: OrderPayment[];
+  createdAt?: string;
+  deliveredAt?: string;
+};
+
+export type OrderSummary = {
+  id: string;
+  invoiceNumber: string;
+  status: string;
+  totalAmount: number;
+  itemCount: number;
+  firstProductName?: string;
+  createdAt?: string;
+};
+
+/** Orders are paged by cursor, forward only. */
+export type OrderSummaryPage = {
+  items: OrderSummary[];
+  nextCursor?: string;
+  hasNext: boolean;
+  size: number;
+};
+
+export type OrderStatusChange = {
+  fromStatus?: string;
+  toStatus: string;
+  /** The employee who made the change; absent when the customer or the system did. */
+  changedBy?: string;
+  reason?: string;
+  createdAt?: string;
+};
+
+export type AdminOrderSummary = OrderSummary & {
+  customerId?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+};
+
+/** The shop's order list is paged by page number. */
+export type AdminOrderPage = {
+  items: AdminOrderSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+};
+
+export type AdminOrderDetail = OrderDetail & {
+  customerId?: string;
+  statusHistory: OrderStatusChange[];
+};
+
+export type AdminInvoiceSummary = {
+  id: string;
+  invoiceNumber: string;
+  recipientName?: string;
+  totalAmount: number;
+  invoiceDate?: string;
+};
+
+export type AdminInvoicePage = {
+  items: AdminInvoiceSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+};
+
+export type AdminInvoiceDetail = {
+  id: string;
+  invoiceNumber: string;
+  invoiceDate?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  deliveryAddress?: string;
+  items: OrderLine[];
+  subtotalAmount: number;
+  discountAmount: number;
+  shippingFee: number;
+  totalAmount: number;
+};
+
+export type VnpayResult = {paymentId: string; orderId: string; result: "PAID" | "FAILED" | "CANCELLED" | "PENDING"; amount: number};
+
+export type DiscountPreview = {
+  /** Sum of the line discounts. */
+  itemDiscountAmount: number;
+  /** The voucher taken off the order. */
+  orderDiscountAmount: number;
+  lineDiscounts: Record<string, number>;
+};

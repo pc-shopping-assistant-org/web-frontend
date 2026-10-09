@@ -2,11 +2,12 @@ import { useTranslations } from "next-intl";
 
 import { Badge } from "./badge";
 import {AccountStatus} from "@/lib/domain/account-enums";
-import {OrderStatus, PaymentStatus} from "@/lib/domain/commerce-enums";
+import {DiscountState, OrderStatus, PaymentStatus} from "@/lib/domain/commerce-enums";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-const positive = new Set<string>([ResourceStatus.Active, OrderStatus.Completed, OrderStatus.Confirmed, PaymentStatus.Paid]);
+const positive = new Set<string>([ResourceStatus.Active, DiscountState.Running, OrderStatus.Completed, OrderStatus.Confirmed, PaymentStatus.Paid]);
 const warning = new Set<string>([
+  DiscountState.Scheduled,
   OrderStatus.PendingPayment,
   OrderStatus.PendingConfirmation,
   PaymentStatus.Pending,
@@ -15,9 +16,13 @@ const warning = new Set<string>([
 const negative = new Set<string>([
   OrderStatus.Cancelled,
   PaymentStatus.Failed,
+  PaymentStatus.Cancelled,
+  PaymentStatus.Refunded,
   AccountStatus.Inactive,
   AccountStatus.Locked,
   ResourceStatus.Deleted,
+  DiscountState.Locked,
+  DiscountState.Expired,
 ]);
 
 export function StatusBadge({

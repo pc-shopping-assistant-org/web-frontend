@@ -4,12 +4,11 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
-  ImagePlus,
   Pencil,
   Plus,
   Save,
   Trash2,
+  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState, type FormEvent } from "react";
@@ -28,7 +27,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
@@ -36,10 +34,8 @@ import { Link, useRouter } from "@/i18n/navigation";
 import type {
   CategoryTree,
   ProductDetail,
-  ProductOption,
   ProductVariant,
 } from "@/features/catalog/contracts/responses";
-import type {PaymentSummary} from "@/features/orders/contracts/responses";
 import type {
   DiscountDetail,
   EmployeeDetail,
@@ -56,16 +52,21 @@ import {
   DiscountStatus,
   DiscountType,
   OrderStatus,
-  PaymentStatus,
-  ORDER_STATUS_TRANSITIONS,
-  type EditableDiscountStatus,
 } from "@/lib/domain/commerce-enums";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
 import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import { AdminPagination } from "./admin-pagination";
+import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
+import { useAdminInvoice, useAdminInvoices, useAdminOrder, usePaymentMethods, useShippingMethods } from "@/features/orders/queries";
 import { ConfirmAction } from "./confirm-action";
 import { FileUploadField, type UploadedFile } from "./file-upload";
-import { VariantTargetPicker } from "./management-forms";
+import {
+  galleryFromProduct,
+  galleryRequest,
+  optionsRequest,
+  ProductGalleryEditor,
+  VariantOptionsEditor,
+} from "./product-fields";
 import { SpecificationsEditor } from "./specifications-editor";
 import { StatusSelect } from "./status-select";
 
@@ -77,24 +78,15 @@ import {
   useAdminDiscount,
   useAdminEmployee,
   useAdminEmployeeStatus,
-  useAdminOrder,
-  useAdminOrderStatus,
-  useAdminPaymentStatus,
   useAdminProduct,
   useAdminProductStatus,
-  useAdminSuppliers,
   useAdminSupplier,
   useAdminDiscountStatus,
-  useAddAdminVariantImage,
   useCreateAdminVariant,
   useDeleteAdminDiscount,
   useDeleteAdminProduct,
   useDeleteAdminSupplier,
   useDeleteAdminVariant,
-  useDeleteAdminVariantImage,
-  useOptions,
-  useInvoices,
-  useOrderInvoice,
   useRoles,
   useUpdateAdminDiscount,
   useUpdateAdminEmployee,
@@ -215,14 +207,15 @@ function flatten(
     ...flatten(category.children ?? [], depth + 1),
   ]);
 }
+/** The backend sends UTC instants; a datetime-local input shows (and `toIso` reads) the browser's local time. */
 function toDateTimeInput(value?: string) {
-  return value ? value.slice(0, 16) : "";
+  if (!value) return "";
+  const date = new Date(value);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 function toIso(value: string) {
   return value ? new Date(value).toISOString() : new Date().toISOString();
-}
-function orderStatusOptions(current?: string) {
-  return ORDER_STATUS_TRANSITIONS[current as OrderStatus] ?? Object.values(OrderStatus);
 }
 
 export function AdminProductDetailPage({ productId }: { productId: string }) {
@@ -251,17 +244,6 @@ export function AdminProductDetailPage({ productId }: { productId: string }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={product.data.status} />
-          {product.data.seoName ? (
-            <Link
-              href={`/products/${product.data.seoName}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-            >
-              <ExternalLink className="size-3.5" />
-              {t("previewStorefront")}
-            </Link>
-          ) : null}
           <ConfirmAction
             title={t("confirmDelete")}
             confirmLabel={t("delete")}
@@ -279,7 +261,6 @@ export function AdminProductDetailPage({ productId }: { productId: string }) {
           </ConfirmAction>
         </div>
       </div>
-      {remove.isError ? <FormError error={remove.error} /> : null}
       <div className="space-y-6">
         <ProductEditor product={product.data} />
         <VariantManager product={product.data} />
@@ -292,7 +273,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
   const t = useTranslations("admin");
   const categories = useCategories();
   const brands = useBrands();
-  const suppliers = useAdminSuppliers({ limit: 100 });
   const update = useUpdateAdminProduct();
   const status = useAdminProductStatus();
   const defaults = useMemo(
@@ -305,10 +285,7 @@ function ProductEditor({ product }: { product: ProductDetail }) {
       specifications: product.specifications
         ? JSON.stringify(product.specifications, null, 2)
         : "{}",
-      supplierIds:
-        product.suppliers?.flatMap((supplier) =>
-          supplier.id ? [supplier.id] : [],
-        ) ?? [],
+      images: galleryFromProduct(product.images),
     }),
     [product],
   );
@@ -331,24 +308,29 @@ function ProductEditor({ product }: { product: ProductDetail }) {
       setFormError(t("invalidJson"));
       return;
     }
-    const saved = await update.mutateAsync({
-      id: product.id!,
-      request: {
-        name: form.name.trim(),
-        seoName: form.seoName.trim(),
-        categoryId: form.categoryId,
-        brandId: form.brandId || undefined,
-        supplierIds: form.supplierIds,
-        description: form.description.trim() || undefined,
-        specifications,
-      },
-    });
-    if (saved)
-      setDraft({
-        ...form,
-        name: saved.name ?? form.name,
-        seoName: saved.seoName ?? form.seoName,
+    let saved;
+    try {
+      saved = await update.mutateAsync({
+        id: product.id!,
+        request: {
+          name: form.name.trim(),
+          seoName: form.seoName.trim(),
+          categoryId: form.categoryId,
+          brandId: form.brandId || undefined,
+          description: form.description.trim() || undefined,
+          specifications,
+          images: galleryRequest(form.images),
+        },
       });
+    } catch {
+      return;
+    }
+    setDraft({
+      ...form,
+      name: saved.name,
+      seoName: saved.seoName,
+      images: galleryFromProduct(saved.images),
+    });
   }
   return (
     <Card>
@@ -373,7 +355,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
             label={t("seoName")}
             value={form.seoName}
             onChange={(value) => set("seoName", value)}
-            required
           />
           <div className="space-y-2">
             <Label htmlFor="admin-product-category">{t("category")}</Label>
@@ -408,23 +389,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
                 ))}
             </Select>
           </div>
-          <MultiSelectList
-            id="admin-product-suppliers"
-            label={t("suppliers")}
-            hint={t("supplierHint")}
-            options={(suppliers.data?.items ?? [])
-              .filter((supplier) => supplier.id && supplier.status === ResourceStatus.Active)
-              .map((supplier) => ({
-                value: supplier.id!,
-                label: supplier.name ?? supplier.id!,
-                description: supplier.email ?? supplier.phone,
-              }))}
-            value={form.supplierIds}
-            onChange={(value) => set("supplierIds", value)}
-            selectedLabel={t("selectedCount", {count: form.supplierIds.length})}
-            emptyLabel={t("noSuppliers")}
-            className="sm:col-span-2"
-          />
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="admin-product-description">
               {t("description")}
@@ -435,6 +399,11 @@ function ProductEditor({ product }: { product: ProductDetail }) {
               onChange={(event) => set("description", event.target.value)}
             />
           </div>
+          <ProductGalleryEditor
+            id="admin-product-gallery"
+            items={form.images}
+            onChange={(images) => set("images", images)}
+          />
           <SpecificationsEditor
             categoryId={form.categoryId}
             value={form.specifications}
@@ -469,74 +438,9 @@ function ProductEditor({ product }: { product: ProductDetail }) {
 
 function VariantManager({ product }: { product: ProductDetail }) {
   const t = useTranslations("admin");
-  const create = useCreateAdminVariant();
   const remove = useDeleteAdminVariant();
-  const options = useOptions();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [form, setForm] = useState({
-    sku: "",
-    model: "",
-    barcode: "",
-    releaseAt: "",
-    listPrice: "",
-    quantity: "0",
-    warranty: "12",
-    description: "",
-    optionIds: [] as string[],
-    images: [] as UploadedFile[],
-    mainImageId: "",
-  });
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setFormError("");
-    const selectedOptions = (options.data ?? []).filter(
-      (option) => option.id && form.optionIds.includes(option.id),
-    );
-    const selectedTypes = selectedOptions
-      .map((option) => option.type?.trim().toLowerCase())
-      .filter(Boolean);
-    if (new Set(selectedTypes).size !== selectedTypes.length) {
-      setFormError(t("duplicateOptionType"));
-      return;
-    }
-    await create.mutateAsync({
-      productId: product.id!,
-      request: {
-        sku: form.sku.trim(),
-        model: form.model.trim() || undefined,
-        barcode: form.barcode.trim() || undefined,
-        releaseAt: form.releaseAt || undefined,
-        listPrice: Number(form.listPrice),
-        quantity: Number(form.quantity),
-        warranty: form.warranty.trim() || undefined,
-        description: form.description.trim() || undefined,
-        optionIds: form.optionIds,
-        images: form.images
-          .filter((file) => file.id)
-          .map((file) => ({
-            fileId: file.id!,
-            name: file.originalName,
-            isMain: file.id === form.mainImageId,
-          })),
-      },
-    });
-    setForm({
-      sku: "",
-      model: "",
-      barcode: "",
-      releaseAt: "",
-      listPrice: "",
-      quantity: "0",
-      warranty: "12",
-      description: "",
-      optionIds: [],
-      images: [],
-      mainImageId: "",
-    });
-  }
 
   const variants = product.variants ?? [];
   return (
@@ -570,9 +474,9 @@ function VariantManager({ product }: { product: ProductDetail }) {
           </p>
         ) : (
           <div className="space-y-4">
-            {variants.map((variant, index) => (
+            {variants.map((variant) => (
               <div
-                key={variant.id ?? index}
+                key={variant.id}
                 className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -581,7 +485,7 @@ function VariantManager({ product }: { product: ProductDetail }) {
                       {variant.imageUrl ? (
                         <Image
                           src={variant.imageUrl}
-                          alt={variant.sku ?? ""}
+                          alt={variant.sku}
                           fill
                           sizes="64px"
                           unoptimized
@@ -598,59 +502,60 @@ function VariantManager({ product }: { product: ProductDetail }) {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold">{variant.sku ?? "—"}</p>
+                      <p className="font-semibold">{variant.sku}</p>
                       <p className="mt-1 text-sm font-medium">
-                        {formatMoney(variant.listPrice, "vi")}
+                        {formatMoney(variant.price, "vi")}
                       </p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {t("stockLabel")}: {variant.quantity ?? 0} ·{" "}
-                        {t("warranty")}: {variant.warranty ?? "—"}
+                        {t("stockLabel")}: {variant.quantity} ·{" "}
+                        {t("warranty")}:{" "}
+                        {variant.warrantyMonths
+                          ? t("warrantyMonthsValue", { count: variant.warrantyMonths })
+                          : "—"}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {variant.options
-                          ?.map((option) => `${option.type}: ${option.name}`)
+                          .map((option) => `${option.name}: ${option.value}`)
                           .join(" · ") || t("noOptions")}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge status={variant.status} />
-                    {variant.id ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() =>
-                          setEditingId((current) =>
-                            current === variant.id ? null : variant.id!,
-                          )
-                        }
-                      >
-                        <Pencil className="size-3.5" />
-                        {editingId === variant.id ? t("close") : t("edit")}
-                      </Button>
-                    ) : null}
-                    {variant.id ? (
-                      <ConfirmAction
-                        title={t("confirmDelete")}
-                        confirmLabel={t("delete")}
-                        cancelLabel={t("cancel")}
-                        onConfirm={() => remove.mutateAsync(variant.id!)}
-                        size="sm"
-                        variant="destructive"
-                      >
-                        <Trash2 className="size-3.5" />
-                        {t("delete")}
-                      </ConfirmAction>
-                    ) : null}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        setEditingId((current) =>
+                          current === variant.id ? null : variant.id,
+                        )
+                      }
+                    >
+                      <Pencil className="size-3.5" />
+                      {editingId === variant.id ? t("close") : t("edit")}
+                    </Button>
+                    <ConfirmAction
+                      title={t("confirmDelete")}
+                      confirmLabel={t("delete")}
+                      cancelLabel={t("cancel")}
+                      onConfirm={() =>
+                        remove.mutateAsync({ productId: product.id, id: variant.id })
+                      }
+                      size="sm"
+                      variant="destructive"
+                    >
+                      <Trash2 className="size-3.5" />
+                      {t("delete")}
+                    </ConfirmAction>
                   </div>
                 </div>
-                {editingId === variant.id && variant.id ? (
-                  <div className="mt-5 space-y-5 border-t pt-5">
-                    <VariantEditForm
+                {editingId === variant.id ? (
+                  <div className="mt-5 border-t pt-5">
+                    <VariantForm
+                      productId={product.id}
                       variant={variant}
-                      options={options.data ?? []}
+                      onSaved={() => setEditingId(null)}
                     />
-                    <VariantImageManager variant={variant} />
                   </div>
                 ) : null}
               </div>
@@ -658,463 +563,212 @@ function VariantManager({ product }: { product: ProductDetail }) {
           </div>
         )}
         {createOpen ? (
-          <form
-            className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2"
-            onSubmit={(event) => void submit(event)}
-          >
-            <div className="sm:col-span-2">
-              <p className="font-semibold">{t("createVariant")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t("variantCreateHint")}
-              </p>
-            </div>
-            <Field
-              id="variant-sku"
-              label="SKU"
-              value={form.sku}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, sku: value }))
-              }
-              required
-            />
-            <Field
-              id="variant-model"
-              label={t("model")}
-              value={form.model}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, model: value }))
-              }
-            />
-            <Field
-              id="variant-barcode"
-              label={t("barcode")}
-              value={form.barcode}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, barcode: value }))
-              }
-            />
-            <Field
-              id="variant-release"
-              label={t("releaseAt")}
-              type="date"
-              value={form.releaseAt}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, releaseAt: value }))
-              }
-            />
-            <Field
-              id="variant-price"
-              label={t("listPrice")}
-              type="number"
-              min="0"
-              value={form.listPrice}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, listPrice: value }))
-              }
-              required
-            />
-            <Field
-              id="variant-quantity"
-              label={t("quantity")}
-              type="number"
-              min="0"
-              value={form.quantity}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, quantity: value }))
-              }
-              required
-            />
-            <Field
-              id="variant-warranty"
-              label={t("warranty")}
-              value={form.warranty}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, warranty: value }))
-              }
-            />
-            <MultiSelectList
-              id="variant-options"
-              label={t("options")}
-              hint={t("optionTypeHint")}
-              options={(options.data ?? [])
-                .filter((option) => option.id && option.status === ResourceStatus.Active)
-                .map((option) => ({
-                  value: option.id!,
-                  label: option.name ?? option.id!,
-                  description: `${option.type ?? "—"} · ${option.value ?? "—"}`,
-                }))}
-              value={form.optionIds}
-              onChange={(value) =>
-                setForm((current) => ({...current, optionIds: value}))
-              }
-              selectedLabel={t("selectedCount", {count: form.optionIds.length})}
-              emptyLabel={t("noOptions")}
-              className="sm:col-span-2"
-            />
-            <FileUploadField
-              id="variant-files"
-              label={t("variantImages")}
-              multiple
-              value={form.images}
-              selectedMainId={form.mainImageId}
-              onUploaded={(file) =>
-                setForm((current) => ({
-                  ...current,
-                  images: [...current.images, file],
-                  mainImageId: current.mainImageId || file.id || "",
-                }))
-              }
-              onSelectMain={(fileId) =>
-                setForm((current) => ({ ...current, mainImageId: fileId }))
-              }
-              onRemove={(fileId) =>
-                setForm((current) => {
-                  const images = current.images.filter(
-                    (file) => file.id !== fileId,
-                  );
-                  return {
-                    ...current,
-                    images,
-                    mainImageId:
-                      current.mainImageId === fileId
-                        ? (images[0]?.id ?? "")
-                        : current.mainImageId,
-                  };
-                })
-              }
-            />
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="variant-description">{t("description")}</Label>
-              <Textarea
-                id="variant-description"
-                value={form.description}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-              <Button
-                type="submit"
-                disabled={create.isPending || !form.sku || !form.listPrice}
-              >
-                <Plus className="size-4" />
-                {t("create")}
-              </Button>
-              {formError ? (
-                <p className="text-sm text-destructive">{formError}</p>
-              ) : null}
-              {create.isError ? <FormError error={create.error} /> : null}
-            </div>
-          </form>
+          <VariantForm productId={product.id} onSaved={() => undefined} />
         ) : null}
-        {remove.isError ? <FormError error={remove.error} /> : null}
       </CardContent>
     </Card>
   );
 }
 
-function VariantEditForm({
+/** Creates a variant, or edits `variant` when it is given. */
+function VariantForm({
+  productId,
   variant,
-  options,
+  onSaved,
 }: {
-  variant: ProductVariant;
-  options: ProductOption[];
+  productId: string;
+  variant?: ProductVariant;
+  onSaved: () => void;
 }) {
   const t = useTranslations("admin");
+  const create = useCreateAdminVariant();
   const update = useUpdateAdminVariant();
-  const defaults = useMemo(
+  const mutation = variant ? update : create;
+  const initial = useMemo(
     () => ({
-      model: variant.model ?? "",
-      barcode: variant.barcode ?? "",
-      releaseAt: variant.releaseAt ?? "",
-      listPrice: String(variant.listPrice ?? 0),
-      quantity: String(variant.quantity ?? 0),
-      warranty: variant.warranty ?? "",
-      description: variant.description ?? "",
-      optionIds:
-        variant.options?.flatMap((option) => (option.id ? [option.id] : [])) ??
-        [],
-      status: (variant.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
+      sku: variant?.sku ?? "",
+      model: variant?.model ?? "",
+      barcode: variant?.barcode ?? "",
+      releaseAt: variant?.releaseAt ?? "",
+      price: variant ? String(variant.price) : "",
+      quantity: variant ? String(variant.quantity) : "0",
+      warrantyMonths: String(variant?.warrantyMonths ?? 12),
+      description: variant?.description ?? "",
+      options: (variant?.options ?? []).map(({ name, value }) => ({ name, value })),
+      image: variant?.imageFileId
+        ? { fileId: variant.imageFileId, url: variant.imageUrl }
+        : (null as { fileId: string; url?: string } | null),
+      status: (variant?.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
     }),
     [variant],
   );
-  const [form, setForm] = useState<typeof defaults | null>(null);
+  const [form, setForm] = useState(initial);
   const [formError, setFormError] = useState("");
-  const value = form ?? defaults;
-  function set<K extends keyof typeof defaults>(
-    key: K,
-    next: (typeof defaults)[K],
-  ) {
-    setForm((current) => ({ ...(current ?? defaults), [key]: next }));
-  }
+  const idPrefix = variant ? `variant-${variant.id}` : "variant-new";
+  const set = <K extends keyof typeof initial>(key: K, value: (typeof initial)[K]) =>
+    setForm((current) => ({ ...current, [key]: value }));
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     setFormError("");
-    const selectedOptions = options.filter(
-      (option) => option.id && value.optionIds.includes(option.id),
-    );
-    const selectedTypes = selectedOptions
-      .map((option) => option.type?.trim().toLowerCase())
-      .filter(Boolean);
-    if (new Set(selectedTypes).size !== selectedTypes.length) {
+    const options = optionsRequest(form.options);
+    if (options.some((option) => !option.name || !option.value)) {
+      setFormError(t("optionIncomplete"));
+      return;
+    }
+    if (new Set(options.map((option) => option.name.toLowerCase())).size !== options.length) {
       setFormError(t("duplicateOptionType"));
       return;
     }
-    await update.mutateAsync({
-      id: variant.id!,
-      request: {
-        model: value.model.trim() || undefined,
-        barcode: value.barcode.trim() || undefined,
-        releaseAt: value.releaseAt || undefined,
-        listPrice: Number(value.listPrice),
-        quantity: Number(value.quantity),
-        warranty: value.warranty.trim() || undefined,
-        description: value.description.trim() || undefined,
-        optionIds: value.optionIds,
-        status: value.status,
-      },
-    });
+    const request = {
+      sku: form.sku.trim(),
+      model: form.model.trim() || undefined,
+      barcode: form.barcode.trim() || undefined,
+      releaseAt: form.releaseAt || undefined,
+      price: Number(form.price),
+      quantity: Number(form.quantity),
+      warrantyMonths: Number(form.warrantyMonths),
+      description: form.description.trim() || undefined,
+      imageFileId: form.image?.fileId,
+      options,
+    };
+    try {
+      if (variant) {
+        await update.mutateAsync({ productId, id: variant.id, request: { ...request, status: form.status } });
+      } else {
+        await create.mutateAsync({ productId, request });
+        setForm(initial);
+      }
+    } catch {
+      return;
+    }
+    onSaved();
   }
+
   return (
     <form
-      className="grid gap-4 rounded-xl border bg-muted/20 p-4 sm:grid-cols-2"
+      className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2"
       onSubmit={(event) => void submit(event)}
     >
       <div className="sm:col-span-2">
-        <p className="font-medium">{t("editVariant")}</p>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={`variant-sku-${variant.id}`}>SKU</Label>
-        <Input
-          id={`variant-sku-${variant.id}`}
-          value={variant.sku ?? "—"}
-          readOnly
-        />
+        <p className="font-semibold">{variant ? t("editVariant") : t("createVariant")}</p>
+        {variant ? null : (
+          <p className="mt-1 text-sm text-muted-foreground">{t("variantCreateHint")}</p>
+        )}
       </div>
       <Field
-        id={`variant-model-${variant.id}`}
-        label={t("model")}
-        value={value.model}
-        onChange={(next) => set("model", next)}
-      />
-      <Field
-        id={`variant-barcode-${variant.id}`}
-        label={t("barcode")}
-        value={value.barcode}
-        onChange={(next) => set("barcode", next)}
-      />
-      <Field
-        id={`variant-release-${variant.id}`}
-        label={t("releaseAt")}
-        type="date"
-        value={value.releaseAt}
-        onChange={(next) => set("releaseAt", next)}
-      />
-      <Field
-        id={`variant-price-${variant.id}`}
-        label={t("listPrice")}
-        type="number"
-        min="0"
-        value={value.listPrice}
-        onChange={(next) => set("listPrice", next)}
+        id={`${idPrefix}-sku`}
+        label="SKU"
+        value={form.sku}
+        onChange={(value) => set("sku", value)}
         required
       />
       <Field
-        id={`variant-quantity-${variant.id}`}
+        id={`${idPrefix}-model`}
+        label={t("model")}
+        value={form.model}
+        onChange={(value) => set("model", value)}
+      />
+      <Field
+        id={`${idPrefix}-barcode`}
+        label={t("barcode")}
+        value={form.barcode}
+        onChange={(value) => set("barcode", value)}
+      />
+      <Field
+        id={`${idPrefix}-release`}
+        label={t("releaseAt")}
+        type="date"
+        value={form.releaseAt}
+        onChange={(value) => set("releaseAt", value)}
+      />
+      <Field
+        id={`${idPrefix}-price`}
+        label={t("price")}
+        type="number"
+        min="0"
+        value={form.price}
+        onChange={(value) => set("price", value)}
+        required
+      />
+      <Field
+        id={`${idPrefix}-quantity`}
         label={t("quantity")}
         type="number"
         min="0"
-        value={value.quantity}
-        onChange={(next) => set("quantity", next)}
+        value={form.quantity}
+        onChange={(value) => set("quantity", value)}
         required
       />
       <Field
-        id={`variant-warranty-${variant.id}`}
-        label={t("warranty")}
-        value={value.warranty}
-        onChange={(next) => set("warranty", next)}
+        id={`${idPrefix}-warranty`}
+        label={t("warrantyMonths")}
+        type="number"
+        min="1"
+        value={form.warrantyMonths}
+        onChange={(value) => set("warrantyMonths", value)}
+        required
       />
-      <div className="space-y-2">
-        <Label htmlFor={`variant-status-${variant.id}`}>{t("status")}</Label>
-        <Select
-          id={`variant-status-${variant.id}`}
-          value={value.status}
-          onChange={(event) => set("status", event.target.value as EditableResourceStatus)}
-        >
-          <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
-          <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
-        </Select>
-      </div>
-      <MultiSelectList
-        id={`variant-options-${variant.id}`}
-        label={t("options")}
-        hint={t("optionTypeHint")}
-        options={options
-          .filter((option) => option.id && option.status === ResourceStatus.Active)
-          .map((option) => ({
-            value: option.id!,
-            label: option.name ?? option.id!,
-            description: `${option.type ?? "—"} · ${option.value ?? "—"}`,
-          }))}
-        value={value.optionIds}
-        onChange={(next) => set("optionIds", next)}
-        selectedLabel={t("selectedCount", {count: value.optionIds.length})}
-        emptyLabel={t("noOptions")}
-        className="sm:col-span-2"
+      {variant ? (
+        <div className="space-y-2">
+          <Label htmlFor={`${idPrefix}-status`}>{t("status")}</Label>
+          <Select
+            id={`${idPrefix}-status`}
+            value={form.status}
+            onChange={(event) => set("status", event.target.value as EditableResourceStatus)}
+          >
+            <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
+            <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
+          </Select>
+        </div>
+      ) : null}
+      <VariantOptionsEditor
+        id={`${idPrefix}-options`}
+        rows={form.options}
+        onChange={(rows) => set("options", rows)}
+      />
+      {form.image ? (
+        <div className="flex items-center gap-3 rounded-lg border bg-background p-2 sm:col-span-2">
+          <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
+            {form.image.url ? (
+              <Image src={form.image.url} alt="" fill sizes="48px" unoptimized className="object-cover" />
+            ) : null}
+          </div>
+          <span className="min-w-0 flex-1 truncate text-sm">{t("variantImage")}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t("removeFile")}
+            onClick={() => set("image", null)}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+      ) : null}
+      <FileUploadField
+        id={`${idPrefix}-image`}
+        label={t("variantImage")}
+        onUploaded={(file) => set("image", { fileId: file.id, url: file.publicUrl })}
       />
       <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor={`variant-description-${variant.id}`}>
-          {t("description")}
-        </Label>
+        <Label htmlFor={`${idPrefix}-description`}>{t("description")}</Label>
         <Textarea
-          id={`variant-description-${variant.id}`}
-          value={value.description}
+          id={`${idPrefix}-description`}
+          value={form.description}
           onChange={(event) => set("description", event.target.value)}
         />
       </div>
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+        <Button type="submit" disabled={mutation.isPending || !form.sku.trim() || !form.price}>
+          {variant ? <Save className="size-4" /> : <Plus className="size-4" />}
+          {variant ? t("save") : t("create")}
+        </Button>
+      </div>
       <div className="sm:col-span-2">
-        <Button type="submit" disabled={update.isPending}>
-          <Save className="size-4" />
-          {t("save")}
-        </Button>
+        <FormError error={mutation.error} formError={formError} />
       </div>
-      {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
-      <FormError error={update.error} />{" "}
     </form>
-  );
-}
-
-function VariantImageManager({
-  variant,
-}: {
-  variant: ProductVariant;
-}) {
-  const t = useTranslations("admin");
-  const add = useAddAdminVariantImage();
-  const remove = useDeleteAdminVariantImage();
-  const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null);
-  const [form, setForm] = useState({ name: "", isMain: false });
-  const images = (variant.images ?? []).filter(
-    (image) => image.status !== ResourceStatus.Deleted,
-  );
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    if (!uploadedFile?.id) return;
-    await add.mutateAsync({
-      variantId: variant.id!,
-      request: {
-        fileId: uploadedFile.id,
-        name: form.name.trim() || undefined,
-        isMain: form.isMain,
-      },
-    });
-    setUploadedFile(null);
-    setForm({ name: "", isMain: false });
-  }
-  return (
-    <div className="space-y-4 rounded-xl border p-4">
-      <div>
-        <p className="font-medium">{t("gallery")}</p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {t("galleryDescription")}
-        </p>
-      </div>
-      {images.length ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {images.map((image, index) => (
-            <div
-              key={image.id ?? index}
-              className="flex items-center gap-3 rounded-lg border p-3"
-            >
-              <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                {image.imageUrl ? (
-                  <Image
-                    src={image.imageUrl}
-                    alt={image.name ?? ""}
-                    fill
-                    sizes="48px"
-                    unoptimized
-                    className="object-cover"
-                  />
-                ) : null}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">
-                  {image.name ?? t("image")}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {image.main ? t("mainImage") : t("galleryImage")}
-                </p>
-              </div>
-              {image.id ? (
-                <ConfirmAction
-                  title={t("confirmDelete")}
-                  confirmLabel={t("delete")}
-                  cancelLabel={t("cancel")}
-                  onConfirm={() => remove.mutateAsync(image.id!)}
-                  size="icon-sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                  ariaLabel={t("delete")}
-                >
-                  <Trash2 className="size-4" />
-                </ConfirmAction>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
-          {t("noImages")}
-        </p>
-      )}
-      <form
-        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] sm:items-end"
-        onSubmit={(event) => void submit(event)}
-      >
-        <FileUploadField
-          id={`new-image-file-${variant.id}`}
-          label={t("image")}
-          value={uploadedFile ? [uploadedFile] : []}
-          onUploaded={setUploadedFile}
-          onRemove={() => setUploadedFile(null)}
-        />
-        <Field
-          id={`new-image-name-${variant.id}`}
-          label={t("imageName")}
-          value={form.name}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, name: value }))
-          }
-        />
-        <label className="flex h-10 items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.isMain}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                isMain: event.target.checked,
-              }))
-            }
-          />
-          {t("mainImage")}
-        </label>
-        <Button
-          type="submit"
-          size="sm"
-          disabled={add.isPending || !uploadedFile?.id}
-        >
-          <ImagePlus className="size-4" />
-          {t("addImage")}
-        </Button>
-        <FormError error={add.error ?? remove.error} />
-      </form>
-    </div>
   );
 }
 
@@ -1523,11 +1177,7 @@ function DiscountForm({
       startAt: toDateTimeInput(discount?.startAt),
       endAt: toDateTimeInput(discount?.endAt),
       description: discount?.description ?? "",
-      categoryIds: discount?.appliedCategoryIds ?? [],
-      variantIds:
-        discount?.appliedVariants?.flatMap((variant) =>
-          variant.id ? [variant.id] : [],
-        ) ?? [],
+      categoryIds: discount?.categoryIds ?? [],
     }),
     [discount],
   );
@@ -1544,9 +1194,8 @@ function DiscountForm({
     event.preventDefault();
     setFormError("");
     if (
-      (value.applicationScope === DiscountScope.Category &&
-        value.categoryIds.length === 0) ||
-      (value.applicationScope === DiscountScope.Variant && value.variantIds.length === 0)
+      value.applicationScope === DiscountScope.Category &&
+      value.categoryIds.length === 0
     ) {
       setFormError(t("discountTargetRequired"));
       return;
@@ -1564,15 +1213,16 @@ function DiscountForm({
       applicationScope: value.applicationScope,
       minOrderAmount: Number(value.minOrderAmount),
       description: value.description.trim() || undefined,
-      appliedCategoryIds:
+      categoryIds:
         value.applicationScope === DiscountScope.Category ? value.categoryIds : [],
-      appliedVariantIds:
-        value.applicationScope === DiscountScope.Variant ? value.variantIds : [],
-      ...(discount && !create
-        ? {status: discount.status as EditableDiscountStatus | undefined}
-        : {}),
     };
-    if (discount?.id) await update.mutateAsync({ id: discount.id, request });
+    if (!discount?.id) return;
+    try {
+      const saved = await update.mutateAsync({ id: discount.id, request });
+      setForm({ ...value, startAt: toDateTimeInput(saved.startAt), endAt: toDateTimeInput(saved.endAt) });
+    } catch {
+      // the failed mutation shows its own error
+    }
   }
   return (
     <Card>
@@ -1658,7 +1308,6 @@ function DiscountForm({
               <option value={DiscountScope.Order}>{t("scopeValues.ORDER")}</option>
               <option value={DiscountScope.AllItems}>{t("scopeValues.ALL_ITEMS")}</option>
               <option value={DiscountScope.Category}>{t("scopeValues.CATEGORY")}</option>
-              <option value={DiscountScope.Variant}>{t("scopeValues.VARIANT")}</option>
             </Select>
           </div>
           {value.applicationScope === DiscountScope.Category ? (
@@ -1675,12 +1324,6 @@ function DiscountForm({
               selectedLabel={t("selectedCount", {count: value.categoryIds.length})}
               emptyLabel={t("noCategories")}
               className="sm:col-span-2"
-            />
-          ) : null}
-          {value.applicationScope === DiscountScope.Variant ? (
-            <VariantTargetPicker
-              value={value.variantIds}
-              onChange={(next) => set("variantIds", next)}
             />
           ) : null}
           <div className="space-y-2 sm:col-span-2">
@@ -1700,7 +1343,7 @@ function DiscountForm({
               <>
                 <StatusSelect
                   currentStatus={discount.status ?? DiscountStatus.Active}
-                  options={[DiscountStatus.Active, DiscountStatus.Inactive, DiscountStatus.Disabled, DiscountStatus.Expired]}
+                  options={[DiscountStatus.Active, DiscountStatus.Inactive]}
                   label={t("status")}
                   onStatus={(nextStatus) =>
                     status.mutateAsync({
@@ -1730,7 +1373,7 @@ function DiscountForm({
             ) : null}
           </div>
           <FormError
-            error={update.error ?? status.error ?? remove.error}
+            error={update.error ?? status.error}
             formError={formError}
           />
         </form>
@@ -1743,11 +1386,8 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
   const t = useTranslations("admin");
   const locale = useLocale();
   const order = useAdminOrder(orderId);
-  const update = useAdminOrderStatus();
-  const paymentStatus = useAdminPaymentStatus();
-  const invoice = useOrderInvoice(orderId, order.data?.status === OrderStatus.Completed);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
+  const paymentMethods = usePaymentMethods();
+  const shippingMethods = useShippingMethods();
   if (order.isPending) return <Loading />;
   if (order.isError || !order.data)
     return (
@@ -1757,55 +1397,45 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
       </>
     );
   const item = order.data;
-  const changeStatus = (nextStatus: string) => {
-    if (!nextStatus || nextStatus === item.status) return;
-    if (nextStatus === OrderStatus.Cancelled) {
-      setCancelReason("");
-      setShowCancelDialog(true);
-      return;
-    }
-    void update.mutateAsync({
-      id: orderId,
-      status: nextStatus,
-    });
-  };
-  async function confirmCancel() {
-    await update.mutateAsync({
-      id: orderId,
-      status: OrderStatus.Cancelled,
-      reason: cancelReason.trim() || undefined,
-    });
-    setShowCancelDialog(false);
-  }
+  const dateTime = (value?: string) =>
+    value ? new Date(value).toLocaleString(locale === "vi" ? "vi-VN" : "en-US") : "—";
+  const statusLabel = (status: string) =>
+    t.has(`statusValues.${status}`) ? t(`statusValues.${status}`) : status;
+  const cancellation = item.status === OrderStatus.Cancelled
+    ? item.statusHistory.findLast((change) => change.toStatus === OrderStatus.Cancelled)
+    : undefined;
+  const shippingMethod = shippingMethods.data?.find((method) => method.id === item.shippingMethodId);
   return (
     <div>
       <BackLink href="/admin/orders">{t("back")}</BackLink>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{t("orderDetail")}</p>
-          <h1 className="mt-2 text-3xl font-semibold">{item.id}</h1>
+          <h1 className="mt-2 text-3xl font-semibold">{item.invoiceNumber}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {item.customerName ?? item.customerEmail ?? "—"}
+            {dateTime(item.createdAt)}
+            {item.customerId ? ` · ${t("customerId")}: ${item.customerId}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={item.status} />
-          <Select
-            className="w-52"
-            value={item.status ?? ""}
-            onChange={(event) => changeStatus(event.target.value)}
-            disabled={update.isPending}
-          >
-            {orderStatusOptions(item.status).map((status) => (
-              <option key={status} value={status}>
-                {t.has(`statusValues.${status}`)
-                  ? t(`statusValues.${status}`)
-                  : status}
-              </option>
-            ))}
-          </Select>
+          <AdminOrderStatusControl orderId={orderId} status={item.status} className="w-52" />
+          {item.status === OrderStatus.Completed ? (
+            <Link
+              href={`/admin/invoices/${orderId}`}
+              className="inline-flex h-9 items-center rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
+            >
+              {t("viewInvoice")}
+            </Link>
+          ) : null}
         </div>
       </div>
+      {cancellation ? (
+        <p className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
+          <span className="font-medium">{t("cancellationReason")}:</span>{" "}
+          {cancellation.reason ?? "—"}
+        </p>
+      ) : null}
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-6">
           <Card>
@@ -1813,34 +1443,32 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
               <CardTitle>{t("items")}</CardTitle>
             </CardHeader>
             <CardContent className="divide-y">
-              {item.items?.length ? (
-                item.items.map((line, index) => (
+              {item.items.length ? (
+                item.items.map((line) => (
                   <div
-                    key={line.id ?? index}
+                    key={line.id}
                     className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
                   >
                     <div className="min-w-0">
-                      <p className="font-medium">
-                        {line.productName ?? line.sku ?? "—"}
-                      </p>
+                      <p className="font-medium">{line.productName}</p>
+                      {line.variantLabel ? (
+                        <p className="text-sm text-muted-foreground">{line.variantLabel}</p>
+                      ) : null}
                       <p className="text-sm text-muted-foreground">
+                        {line.sku ? `${line.sku} · ` : ""}
                         {line.quantity} × {formatMoney(line.unitPrice, locale)}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span>
-                          {t("itemGross")}: {formatMoney(line.itemGross, locale)}
-                        </span>
-                        <span>
-                          {t("itemDiscount")}: −{" "}
-                          {formatMoney(line.itemDiscount, locale)}
-                        </span>
-                      </div>
+                      {line.discountAmount > 0 ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("itemDiscount")}: − {formatMoney(line.discountAmount, locale)}
+                        </p>
+                      ) : null}
                     </div>
                     <span className="shrink-0 text-right font-semibold">
                       <span className="block text-xs font-normal text-muted-foreground">
                         {t("itemNet")}
                       </span>
-                      {formatMoney(line.totalAmount, locale)}
+                      {formatMoney(line.lineTotal, locale)}
                     </span>
                   </div>
                 ))
@@ -1854,75 +1482,55 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
               <CardTitle>{t("paymentAttempts")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {item.payments?.length ? (
-                item.payments.map((payment, index) => (
-                    <AdminOrderPaymentRow
-                      key={payment.id ?? index}
-                      payment={payment}
-                      locale={locale}
-                      mutation={paymentStatus}
-                    />
+              {item.payments.length ? (
+                item.payments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/10 p-3 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium">
+                        {paymentMethods.data?.find((method) => method.id === payment.paymentMethodId)?.name ?? "—"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {payment.paidAt ? `${t("paidAt")}: ${dateTime(payment.paidAt)}` : dateTime(payment.createdAt)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold">{formatMoney(payment.amount, locale)}</span>
+                      <StatusBadge status={payment.status} />
+                    </div>
+                  </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("noPayments")}
-                </p>
+                <p className="text-sm text-muted-foreground">{t("noPayments")}</p>
               )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>{t("invoice")}</CardTitle>
+              <CardTitle>{t("statusHistory")}</CardTitle>
             </CardHeader>
             <CardContent>
-              {item.status !== OrderStatus.Completed ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("invoiceUnavailable")}
-                </p>
-              ) : invoice.isPending ? (
-                <Skeleton className="h-12 rounded-lg" />
-              ) : invoice.isError ? (
-                <Failure error={invoice.error} />
-              ) : invoice.data ? (
-                <div className="space-y-2 text-sm">
-                  <p>
-                    <strong>{t("invoiceCode")}:</strong>{" "}
-                    {invoice.data.invoiceId ?? "—"}
-                  </p>
-                  <p>
-                    <strong>{t("paymentStatus")}:</strong>{" "}
-                    {invoice.data.paymentStatus ?? "—"}
-                  </p>
-                  <p>
-                    {invoice.data.recipientName} · {invoice.data.recipientPhone}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {invoice.data.deliveryAddress}
-                  </p>
-                  <SummaryLine
-                    label={t("subtotal")}
-                    value={formatMoney(invoice.data.subtotalAmount, locale)}
-                  />
-                  <SummaryLine
-                    label={t("discount")}
-                    value={`− ${formatMoney(invoice.data.discountAmount, locale)}`}
-                  />
-                  <SummaryLine
-                    label={t("shippingFee")}
-                    value={formatMoney(invoice.data.shippingFee, locale)}
-                  />
-                  <div className="border-t pt-2">
-                    <SummaryLine
-                      label={t("total")}
-                      value={formatMoney(invoice.data.totalAmount, locale)}
-                      strong
-                    />
-                  </div>
-                </div>
+              {item.statusHistory.length ? (
+                <ol className="space-y-4 border-l pl-4">
+                  {[...item.statusHistory].reverse().map((change, index) => (
+                    <li key={`${change.toStatus}-${change.createdAt}-${index}`} className="text-sm">
+                      <p className="font-medium">
+                        {change.fromStatus ? `${statusLabel(change.fromStatus)} → ` : ""}
+                        {statusLabel(change.toStatus)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {dateTime(change.createdAt)} · {change.changedBy ? t("changedByStaff") : t("changedBySystem")}
+                      </p>
+                      {change.reason ? (
+                        <p className="mt-1 text-muted-foreground">{t("reason")}: {change.reason}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("invoiceUnavailable")}
-                </p>
+                <p className="text-sm text-muted-foreground">{t("noStatusHistory")}</p>
               )}
             </CardContent>
           </Card>
@@ -1940,7 +1548,7 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
               </p>
               <div className="border-t pt-3 text-sm text-muted-foreground">
                 <p>
-                  {t("shippingMethod")}: {item.shippingMethodCode ?? "—"}
+                  {t("shippingMethod")}: {shippingMethod?.name ?? "—"}
                 </p>
                 <p className="mt-1">
                   {t("shippingFee")}: {formatMoney(item.shippingFee, locale)}
@@ -1980,136 +1588,15 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
                   strong
                 />
               </div>
+              {item.deliveredAt ? (
+                <p className="border-t pt-3 text-xs text-muted-foreground">
+                  {t("deliveredAt")}: {dateTime(item.deliveredAt)}
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </div>
       </div>
-      <FormError error={update.error ?? paymentStatus.error} />
-      {showCancelDialog ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <form
-            className="w-full max-w-md space-y-5 rounded-2xl border bg-card p-6 shadow-2xl"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void confirmCancel();
-            }}
-          >
-            <div>
-              <p className="eyebrow">{t("orderDetail")}</p>
-              <h2 className="mt-2 text-xl font-semibold">
-                {t("cancelOrder")}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {t("cancelReasonPrompt")}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-cancel-reason">{t("reason")}</Label>
-              <Textarea
-                id="admin-cancel-reason"
-                value={cancelReason}
-                onChange={(event) => setCancelReason(event.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowCancelDialog(false)}
-                disabled={update.isPending}
-              >
-                {t("back")}
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={update.isPending}
-              >
-                <Trash2 className="size-4" />
-                {t("cancel")}
-              </Button>
-            </div>
-          </form>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function AdminOrderPaymentRow({
-  payment,
-  locale,
-  mutation,
-}: {
-  payment: PaymentSummary;
-  locale: string;
-  mutation: ReturnType<typeof useAdminPaymentStatus>;
-}) {
-  const t = useTranslations("admin");
-  const [providerCode, setProviderCode] = useState(
-    payment.providerTransactionCode ?? "",
-  );
-  const isPending = payment.status === PaymentStatus.Pending;
-  const update = (status: string) => {
-    if (!payment.id || status === payment.status) return;
-    void mutation.mutateAsync({
-      id: payment.id,
-      status,
-      providerTransactionCode: providerCode.trim() || undefined,
-    });
-  };
-  return (
-    <div className="rounded-xl border bg-muted/10 p-3 text-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-medium">{payment.paymentMethodCode ?? "—"}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {payment.providerTransactionCode ?? t("noTransactionCode")}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="font-semibold">
-            {formatMoney(payment.amount, locale)}
-          </span>
-          <StatusBadge status={payment.status} />
-          <Select
-            className="h-9 w-36"
-            value={payment.status ?? PaymentStatus.Pending}
-            onChange={(event) => update(event.target.value)}
-            disabled={!payment.id || !isPending || mutation.isPending}
-            aria-label={t("paymentStatus")}
-          >
-            {isPending ? (
-              <>
-                <option value={PaymentStatus.Pending}>{t("statusValues.PENDING")}</option>
-                <option value={PaymentStatus.Paid}>{t("statusValues.PAID")}</option>
-                <option value={PaymentStatus.Failed}>{t("statusValues.FAILED")}</option>
-              </>
-            ) : (
-              <option value={payment.status ?? PaymentStatus.Pending}>
-                {t.has(`statusValues.${payment.status}`)
-                  ? t(`statusValues.${payment.status}`)
-                  : payment.status ?? "—"}
-              </option>
-            )}
-          </Select>
-        </div>
-      </div>
-      {isPending ? (
-        <div className="mt-3 border-t pt-3">
-          <label className="block space-y-1.5 text-xs">
-            <span className="font-medium text-muted-foreground">
-              {t("providerTransactionCode")}
-            </span>
-            <Input
-              value={providerCode}
-              onChange={(event) => setProviderCode(event.target.value)}
-              placeholder={t("transactionCodePlaceholder")}
-            />
-          </label>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -2311,27 +1798,21 @@ function SupplierForm({
 export function AdminInvoicesPage() {
   const t = useTranslations("admin");
   const locale = useLocale();
-  const [keyword, setKeyword] = useState("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [applied, setApplied] = useState({
-    keyword: "",
-    fromDate: "",
-    toDate: "",
-    cursor: undefined as string | undefined,
-  });
-  const invoices = useInvoices({
-    limit: 30,
-    cursor: applied.cursor,
+  const [draft, setDraft] = useState({ keyword: "", fromDate: "", toDate: "" });
+  const [applied, setApplied] = useState(draft);
+  const [pageNumber, setPageNumber] = useState(0);
+  const invoices = useAdminInvoices({
+    page: pageNumber,
+    size: 20,
     keyword: applied.keyword || undefined,
-    fromDate: applied.fromDate ? `${applied.fromDate}T00:00:00Z` : undefined,
-    toDate: applied.toDate ? `${applied.toDate}T23:59:59Z` : undefined,
+    invoiceFrom: applied.fromDate ? `${applied.fromDate}T00:00:00Z` : undefined,
+    invoiceTo: applied.toDate ? `${applied.toDate}T23:59:59Z` : undefined,
   });
   const reset = () => {
-    setKeyword("");
-    setFromDate("");
-    setToDate("");
-    setApplied({ keyword: "", fromDate: "", toDate: "", cursor: undefined });
+    const empty = { keyword: "", fromDate: "", toDate: "" };
+    setDraft(empty);
+    setApplied(empty);
+    setPageNumber(0);
   };
   const page = invoices.data;
   return (
@@ -2351,33 +1832,35 @@ export function AdminInvoicesPage() {
             className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_10rem_auto_auto]"
             onSubmit={(event) => {
               event.preventDefault();
-              setApplied({
-                keyword: keyword.trim(),
-                fromDate,
-                toDate,
-                cursor: undefined,
-              });
+              setApplied({ ...draft, keyword: draft.keyword.trim() });
+              setPageNumber(0);
             }}
           >
             <Input
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
+              value={draft.keyword}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, keyword: event.target.value }))
+              }
               placeholder={t("searchInvoices")}
             />
             <Input
               aria-label={t("fromDate")}
               type="date"
-              value={fromDate}
-              onChange={(event) => setFromDate(event.target.value)}
+              value={draft.fromDate}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, fromDate: event.target.value }))
+              }
             />
             <Input
               aria-label={t("toDate")}
               type="date"
-              value={toDate}
-              onChange={(event) => setToDate(event.target.value)}
+              value={draft.toDate}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, toDate: event.target.value }))
+              }
             />
-            <Button type="submit">{t("search")}</Button>
-            <Button type="button" variant="outline" onClick={reset}>
+            <Button type="submit" size="field">{t("search")}</Button>
+            <Button type="button" size="field" variant="outline" onClick={reset}>
               {t("clearFilters")}
             </Button>
           </form>
@@ -2395,69 +1878,56 @@ export function AdminInvoicesPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {(page?.items ?? []).map((invoice, index) => (
+              {(page?.items ?? []).map((invoice) => (
                 <Card
-                  key={invoice.invoiceId ?? invoice.orderId ?? index}
+                  key={invoice.id}
                   className="transition hover:border-primary/30 hover:shadow-md"
                 >
                   <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
                     <div className="min-w-0">
-                      <p className="font-semibold">
-                        {invoice.invoiceId ?? "—"}
-                      </p>
+                      <Link
+                        href={`/admin/invoices/${invoice.id}`}
+                        className="font-semibold hover:text-primary hover:underline"
+                      >
+                        {invoice.invoiceNumber}
+                      </Link>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {invoice.customerName ?? invoice.recipientName ?? "—"} ·{" "}
-                        {invoice.issuedAt
-                          ? new Date(invoice.issuedAt).toLocaleDateString(
+                        {invoice.recipientName ?? "—"} ·{" "}
+                        {invoice.invoiceDate
+                          ? new Date(invoice.invoiceDate).toLocaleDateString(
                               locale === "vi" ? "vi-VN" : "en-US",
                             )
                           : "—"}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {invoice.paymentMethodCode ?? "—"} ·{" "}
-                        {invoice.paymentStatus ?? "—"}
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="font-semibold">
                         {formatMoney(invoice.totalAmount, locale)}
                       </span>
-                      {invoice.orderId ? (
-                        <Link
-                          href={`/admin/orders/${invoice.orderId}`}
-                          className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                        >
-                          {t("view")}
-                        </Link>
-                      ) : null}
+                      <Link
+                        href={`/admin/invoices/${invoice.id}`}
+                        className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        {t("view")}
+                      </Link>
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
-          )}{" "}
-          {page && (page.hasPrev || page.hasNext) ? (
+          )}
+          {page && page.totalPages > 1 ? (
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                {t("showingItems", {
-                  count: page.size ?? page.items?.length ?? 0,
-                })}
+                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
+                {" · "}
+                {t("totalInvoices", { count: page.totalElements })}
               </p>
               <AdminPagination
-                hasPrev={Boolean(page.hasPrev)}
-                hasNext={Boolean(page.hasNext)}
-                onPrev={() =>
-                  setApplied((current) => ({
-                    ...current,
-                    cursor: page.prevCursor,
-                  }))
-                }
-                onNext={() =>
-                  setApplied((current) => ({
-                    ...current,
-                    cursor: page.nextCursor,
-                  }))
-                }
+                hasPrev={page.page > 0}
+                hasNext={!page.last}
+                onPrev={() => setPageNumber((current) => Math.max(0, current - 1))}
+                onNext={() => setPageNumber((current) => current + 1)}
               />
             </div>
           ) : null}
@@ -2466,3 +1936,105 @@ export function AdminInvoicesPage() {
     </div>
   );
 }
+
+export function AdminInvoiceDetailPage({ orderId }: { orderId: string }) {
+  const t = useTranslations("admin");
+  const locale = useLocale();
+  const invoice = useAdminInvoice(orderId);
+  if (invoice.isPending) return <Loading />;
+  if (invoice.isError || !invoice.data)
+    return (
+      <>
+        <BackLink href="/admin/invoices">{t("back")}</BackLink>
+        <Failure error={invoice.error} />
+      </>
+    );
+  const item = invoice.data;
+  return (
+    <div>
+      <BackLink href="/admin/invoices">{t("back")}</BackLink>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow">{t("invoiceDetail")}</p>
+          <h1 className="mt-2 text-3xl font-semibold">{item.invoiceNumber}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {item.invoiceDate
+              ? new Date(item.invoiceDate).toLocaleString(locale === "vi" ? "vi-VN" : "en-US")
+              : "—"}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href={`/admin/orders/${item.id}`}
+            className="inline-flex h-9 items-center rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
+          >
+            {t("viewOrder")}
+          </Link>
+          <Button type="button" size="sm" variant="outline" onClick={() => window.print()}>
+            {t("printInvoice")}
+          </Button>
+        </div>
+      </div>
+      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("items")}</CardTitle>
+          </CardHeader>
+          <CardContent className="divide-y">
+            {item.items.map((line) => (
+              <div
+                key={line.id}
+                className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <p className="font-medium">{line.productName}</p>
+                  {line.variantLabel ? (
+                    <p className="text-sm text-muted-foreground">{line.variantLabel}</p>
+                  ) : null}
+                  <p className="text-sm text-muted-foreground">
+                    {line.sku ? `${line.sku} · ` : ""}
+                    {line.quantity} × {formatMoney(line.unitPrice, locale)}
+                  </p>
+                  {line.discountAmount > 0 ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("itemDiscount")}: − {formatMoney(line.discountAmount, locale)}
+                    </p>
+                  ) : null}
+                </div>
+                <span className="shrink-0 font-semibold">
+                  {formatMoney(line.lineTotal, locale)}
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("deliverySnapshot")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p className="font-medium">{item.recipientName ?? "—"}</p>
+              <p>{item.recipientPhone}</p>
+              <p className="leading-6 text-muted-foreground">{item.deliveryAddress}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("summary")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <SummaryLine label={t("subtotal")} value={formatMoney(item.subtotalAmount, locale)} />
+              <SummaryLine label={t("discount")} value={`− ${formatMoney(item.discountAmount, locale)}`} />
+              <SummaryLine label={t("shippingFee")} value={formatMoney(item.shippingFee, locale)} />
+              <div className="border-t pt-3">
+                <SummaryLine label={t("total")} value={formatMoney(item.totalAmount, locale)} strong />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+

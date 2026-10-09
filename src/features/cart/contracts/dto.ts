@@ -1,5 +1,23 @@
-import type {BackendSchema} from "@/lib/api/generated/types";
+/** order-service cart line; an unavailable line (hidden, deleted, out of sale) has no price or product data. */
+export type CartItemDto = {
+  productVariantId: string;
+  productId?: string | null;
+  categoryId?: string | null;
+  productName?: string | null;
+  sku?: string | null;
+  model?: string | null;
+  variantLabel?: string | null;
+  imageUrl?: string | null;
+  price?: number | null;
+  quantity: number;
+  subtotal: number;
+  stockQuantity?: number | null;
+  available: boolean;
+};
 
-/** OpenAPI transport shapes kept inside the cart adapter boundary. */
-export type CartItemDto = BackendSchema["CartItemResponse"];
-export type CartDto = BackendSchema["CartResponse"];
+export type CartDto = {
+  id?: string | null;
+  items: CartItemDto[];
+  totalItems: number;
+  subtotalAmount: number;
+};

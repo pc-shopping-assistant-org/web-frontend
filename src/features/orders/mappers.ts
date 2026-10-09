@@ -163,3 +163,180 @@ export function mapInvoicesPage(dto: InvoicesPageDto): InvoicesPage {
     size: number(dto.size),
   };
 }
+
+import type {
+  CheckoutPaymentMethodDto,
+  CheckoutShippingMethodDto,
+  AdminInvoiceDetailDto,
+  AdminInvoicePageDto,
+  AdminOrderDetailDto,
+  AdminOrderPageDto,
+  AdminOrderSummaryDto,
+  DiscountPreviewDto,
+  OrderDetailDto,
+  OrderLineDto,
+  OrderSummaryDto,
+  OrderSummaryPageDto,
+} from "@/features/orders/contracts/dto";
+import type {
+  AdminInvoiceDetail,
+  AdminInvoicePage,
+  AdminOrderDetail,
+  AdminOrderPage,
+  AdminOrderSummary,
+  DiscountPreview,
+  OrderDetail,
+  OrderLine,
+  OrderSummary,
+  OrderSummaryPage,
+} from "@/features/orders/models";
+
+export function mapOrderDetail(dto: OrderDetailDto): OrderDetail {
+  return {
+    id: dto.id,
+    invoiceNumber: dto.invoiceNumber,
+    status: dto.status,
+    cancellationReason: dto.cancellationReason ?? undefined,
+    recipientName: dto.recipientName ?? undefined,
+    recipientPhone: dto.recipientPhone ?? undefined,
+    deliveryAddress: dto.deliveryAddress ?? undefined,
+    note: dto.note ?? undefined,
+    shippingMethodId: dto.shippingMethodId ?? undefined,
+    paymentMethodId: dto.paymentMethodId ?? undefined,
+    items: (dto.items ?? []).map(mapOrderLine),
+    subtotalAmount: number(dto.subtotalAmount),
+    discountAmount: number(dto.discountAmount),
+    shippingFee: number(dto.shippingFee),
+    totalAmount: number(dto.totalAmount),
+    payments: (dto.payments ?? []).map((payment) => ({
+      id: payment.id,
+      paymentMethodId: payment.paymentMethodId ?? undefined,
+      amount: number(payment.amount),
+      status: payment.status,
+      paidAt: payment.paidAt ?? undefined,
+      createdAt: payment.createdAt ?? undefined,
+    })),
+    createdAt: dto.createdAt ?? undefined,
+    deliveredAt: dto.deliveredAt ?? undefined,
+  };
+}
+
+export function mapOrderSummary(dto: OrderSummaryDto): OrderSummary {
+  return {
+    id: dto.id,
+    invoiceNumber: dto.invoiceNumber,
+    status: dto.status,
+    totalAmount: number(dto.totalAmount),
+    itemCount: number(dto.itemCount),
+    firstProductName: dto.firstProductName ?? undefined,
+    createdAt: dto.createdAt ?? undefined,
+  };
+}
+
+export function mapOrderSummaryPage(dto: OrderSummaryPageDto): OrderSummaryPage {
+  return {
+    items: (dto.items ?? []).map(mapOrderSummary),
+    nextCursor: dto.nextCursor ?? undefined,
+    hasNext: dto.hasNext ?? false,
+    size: number(dto.size),
+  };
+}
+
+export function mapAdminOrderDetail(dto: AdminOrderDetailDto): AdminOrderDetail {
+  return {
+    ...mapOrderDetail(dto),
+    customerId: dto.customerId ?? undefined,
+    statusHistory: (dto.statusHistory ?? []).map((change) => ({
+      fromStatus: change.fromStatus ?? undefined,
+      toStatus: change.toStatus,
+      changedBy: change.changedBy ?? undefined,
+      reason: change.reason ?? undefined,
+      createdAt: change.createdAt ?? undefined,
+    })),
+  };
+}
+
+function mapAdminOrderSummary(dto: AdminOrderSummaryDto): AdminOrderSummary {
+  return {
+    ...mapOrderSummary(dto),
+    customerId: dto.customerId ?? undefined,
+    recipientName: dto.recipientName ?? undefined,
+    recipientPhone: dto.recipientPhone ?? undefined,
+  };
+}
+
+function mapOrderLine(line: OrderLineDto): OrderLine {
+  return {
+    id: line.id,
+    productVariantId: line.productVariantId ?? undefined,
+    productName: text(line.productName ?? undefined),
+    sku: line.sku ?? undefined,
+    variantLabel: line.variantLabel ?? undefined,
+    quantity: number(line.quantity),
+    unitPrice: number(line.unitPrice),
+    discountAmount: number(line.discountAmount),
+    lineTotal: number(line.lineTotal),
+  };
+}
+
+export function mapAdminInvoiceDetail(dto: AdminInvoiceDetailDto): AdminInvoiceDetail {
+  return {
+    id: dto.id,
+    invoiceNumber: dto.invoiceNumber,
+    invoiceDate: dto.invoiceDate ?? undefined,
+    recipientName: dto.recipientName ?? undefined,
+    recipientPhone: dto.recipientPhone ?? undefined,
+    deliveryAddress: dto.deliveryAddress ?? undefined,
+    items: (dto.items ?? []).map(mapOrderLine),
+    subtotalAmount: number(dto.subtotalAmount),
+    discountAmount: number(dto.discountAmount),
+    shippingFee: number(dto.shippingFee),
+    totalAmount: number(dto.totalAmount),
+  };
+}
+
+export function mapAdminInvoicePage(dto: AdminInvoicePageDto): AdminInvoicePage {
+  return {
+    items: (dto.content ?? []).map((invoice) => ({
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      recipientName: invoice.recipientName ?? undefined,
+      totalAmount: number(invoice.totalAmount),
+      invoiceDate: invoice.invoiceDate ?? undefined,
+    })),
+    page: number(dto.page),
+    size: number(dto.size),
+    totalElements: number(dto.totalElements),
+    totalPages: number(dto.totalPages),
+    last: dto.last ?? true,
+  };
+}
+
+export function mapAdminOrderPage(dto: AdminOrderPageDto): AdminOrderPage {
+  return {
+    items: (dto.content ?? []).map(mapAdminOrderSummary),
+    page: number(dto.page),
+    size: number(dto.size),
+    totalElements: number(dto.totalElements),
+    totalPages: number(dto.totalPages),
+    last: dto.last ?? true,
+  };
+}
+
+export const mapCheckoutPaymentMethod = (dto: CheckoutPaymentMethodDto): PaymentMethod => ({id: dto.id, code: dto.code, name: dto.name});
+export const mapCheckoutShippingMethod = (dto: CheckoutShippingMethodDto): ShippingMethod => ({
+  id: dto.id,
+  code: dto.code,
+  name: dto.name,
+  fee: number(dto.fee),
+});
+
+export function mapDiscountPreview(dto: DiscountPreviewDto): DiscountPreview {
+  const lineDiscounts: Record<string, number> = {};
+  for (const line of dto.itemDiscounts ?? []) lineDiscounts[line.productVariantId] = number(line.discountAmount);
+  return {
+    itemDiscountAmount: Object.values(lineDiscounts).reduce((sum, amount) => sum + amount, 0),
+    orderDiscountAmount: number(dto.orderDiscountAmount),
+    lineDiscounts,
+  };
+}
