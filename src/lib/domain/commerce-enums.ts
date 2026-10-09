@@ -74,13 +74,9 @@ export const DISCOUNT_STATE_VALUES = enumValues(DiscountState);
 export const DISCOUNT_TYPE_VALUES = enumValues(DiscountType);
 export const DISCOUNT_SCOPE_VALUES = enumValues(DiscountScope);
 
-/** Legal order transitions used by admin controls and order detail. */
+/** What the shop can do with an order, current status first; PENDING_PAYMENT to PENDING_CONFIRMATION belongs to the payment result. */
 export const ORDER_STATUS_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> = {
-  [OrderStatus.PendingPayment]: [
-    OrderStatus.PendingPayment,
-    OrderStatus.PendingConfirmation,
-    OrderStatus.Cancelled,
-  ],
+  [OrderStatus.PendingPayment]: [OrderStatus.PendingPayment, OrderStatus.Cancelled],
   [OrderStatus.PendingConfirmation]: [
     OrderStatus.PendingConfirmation,
     OrderStatus.Confirmed,

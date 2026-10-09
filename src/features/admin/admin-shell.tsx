@@ -9,7 +9,6 @@ import {
   ChevronRight,
   CircleDollarSign,
   CreditCard,
-  ExternalLink,
   FileText,
   FolderTree,
   Home,
@@ -320,19 +319,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </nav>
 
             <div className="border-t border-white/10 p-3">
-              <Link
-                href="/"
-                prefetch={false}
-                className={cn(
-                  "flex items-center rounded-xl py-2.5 text-sm text-slate-400 transition hover:bg-white/10 hover:text-white",
-                  sidebarCollapsed ? "justify-center px-2" : "gap-3 px-3",
-                )}
-                onClick={() => setMobileOpen(false)}
-                title={sidebarCollapsed ? t("viewStore") : undefined}
-              >
-                <ExternalLink className="size-4" />
-                {!sidebarCollapsed ? t("viewStore") : null}
-              </Link>
               <button
                 type="button"
                 className={cn(
@@ -367,14 +353,6 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <span className="hidden rounded-full border bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 sm:inline-flex">
                   {t("workspaceReady")}
                 </span>
-                <Link
-                  href="/"
-                  prefetch={false}
-                  className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-                >
-                  <ExternalLink className="size-3.5" />
-                  <span className="hidden sm:inline">{t("viewStore")}</span>
-                </Link>
               </div>
             </div>
           </div>

@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
   Pencil,
   Plus,
   Save,
@@ -28,7 +27,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
@@ -38,7 +36,6 @@ import type {
   ProductDetail,
   ProductVariant,
 } from "@/features/catalog/contracts/responses";
-import type {PaymentSummary} from "@/features/orders/contracts/responses";
 import type {
   DiscountDetail,
   EmployeeDetail,
@@ -55,12 +52,12 @@ import {
   DiscountStatus,
   DiscountType,
   OrderStatus,
-  PaymentStatus,
-  ORDER_STATUS_TRANSITIONS,
 } from "@/lib/domain/commerce-enums";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
 import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import { AdminPagination } from "./admin-pagination";
+import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
+import { useAdminOrder, usePaymentMethods, useShippingMethods } from "@/features/orders/queries";
 import { ConfirmAction } from "./confirm-action";
 import { FileUploadField, type UploadedFile } from "./file-upload";
 import {
@@ -81,9 +78,6 @@ import {
   useAdminDiscount,
   useAdminEmployee,
   useAdminEmployeeStatus,
-  useAdminOrder,
-  useAdminOrderStatus,
-  useAdminPaymentStatus,
   useAdminProduct,
   useAdminProductStatus,
   useAdminSupplier,
@@ -94,7 +88,6 @@ import {
   useDeleteAdminSupplier,
   useDeleteAdminVariant,
   useInvoices,
-  useOrderInvoice,
   useRoles,
   useUpdateAdminDiscount,
   useUpdateAdminEmployee,
@@ -225,9 +218,6 @@ function toDateTimeInput(value?: string) {
 function toIso(value: string) {
   return value ? new Date(value).toISOString() : new Date().toISOString();
 }
-function orderStatusOptions(current?: string) {
-  return ORDER_STATUS_TRANSITIONS[current as OrderStatus] ?? Object.values(OrderStatus);
-}
 
 export function AdminProductDetailPage({ productId }: { productId: string }) {
   const t = useTranslations("admin");
@@ -255,17 +245,6 @@ export function AdminProductDetailPage({ productId }: { productId: string }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={product.data.status} />
-          {product.data.seoName ? (
-            <Link
-              href={`/products/${product.data.seoName}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-            >
-              <ExternalLink className="size-3.5" />
-              {t("previewStorefront")}
-            </Link>
-          ) : null}
           <ConfirmAction
             title={t("confirmDelete")}
             confirmLabel={t("delete")}
@@ -1408,11 +1387,8 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
   const t = useTranslations("admin");
   const locale = useLocale();
   const order = useAdminOrder(orderId);
-  const update = useAdminOrderStatus();
-  const paymentStatus = useAdminPaymentStatus();
-  const invoice = useOrderInvoice(orderId, order.data?.status === OrderStatus.Completed);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
+  const paymentMethods = usePaymentMethods();
+  const shippingMethods = useShippingMethods();
   if (order.isPending) return <Loading />;
   if (order.isError || !order.data)
     return (
@@ -1422,55 +1398,37 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
       </>
     );
   const item = order.data;
-  const changeStatus = (nextStatus: string) => {
-    if (!nextStatus || nextStatus === item.status) return;
-    if (nextStatus === OrderStatus.Cancelled) {
-      setCancelReason("");
-      setShowCancelDialog(true);
-      return;
-    }
-    void update.mutateAsync({
-      id: orderId,
-      status: nextStatus,
-    });
-  };
-  async function confirmCancel() {
-    await update.mutateAsync({
-      id: orderId,
-      status: OrderStatus.Cancelled,
-      reason: cancelReason.trim() || undefined,
-    });
-    setShowCancelDialog(false);
-  }
+  const dateTime = (value?: string) =>
+    value ? new Date(value).toLocaleString(locale === "vi" ? "vi-VN" : "en-US") : "—";
+  const statusLabel = (status: string) =>
+    t.has(`statusValues.${status}`) ? t(`statusValues.${status}`) : status;
+  const cancellation = item.status === OrderStatus.Cancelled
+    ? item.statusHistory.findLast((change) => change.toStatus === OrderStatus.Cancelled)
+    : undefined;
+  const shippingMethod = shippingMethods.data?.find((method) => method.id === item.shippingMethodId);
   return (
     <div>
       <BackLink href="/admin/orders">{t("back")}</BackLink>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{t("orderDetail")}</p>
-          <h1 className="mt-2 text-3xl font-semibold">{item.id}</h1>
+          <h1 className="mt-2 text-3xl font-semibold">{item.invoiceNumber}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {item.customerName ?? item.customerEmail ?? "—"}
+            {dateTime(item.createdAt)}
+            {item.customerId ? ` · ${t("customerId")}: ${item.customerId}` : ""}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={item.status} />
-          <Select
-            className="w-52"
-            value={item.status ?? ""}
-            onChange={(event) => changeStatus(event.target.value)}
-            disabled={update.isPending}
-          >
-            {orderStatusOptions(item.status).map((status) => (
-              <option key={status} value={status}>
-                {t.has(`statusValues.${status}`)
-                  ? t(`statusValues.${status}`)
-                  : status}
-              </option>
-            ))}
-          </Select>
+          <AdminOrderStatusControl orderId={orderId} status={item.status} className="w-52" />
         </div>
       </div>
+      {cancellation ? (
+        <p className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
+          <span className="font-medium">{t("cancellationReason")}:</span>{" "}
+          {cancellation.reason ?? "—"}
+        </p>
+      ) : null}
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-6">
           <Card>
@@ -1478,34 +1436,32 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
               <CardTitle>{t("items")}</CardTitle>
             </CardHeader>
             <CardContent className="divide-y">
-              {item.items?.length ? (
-                item.items.map((line, index) => (
+              {item.items.length ? (
+                item.items.map((line) => (
                   <div
-                    key={line.id ?? index}
+                    key={line.id}
                     className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
                   >
                     <div className="min-w-0">
-                      <p className="font-medium">
-                        {line.productName ?? line.sku ?? "—"}
-                      </p>
+                      <p className="font-medium">{line.productName}</p>
+                      {line.variantLabel ? (
+                        <p className="text-sm text-muted-foreground">{line.variantLabel}</p>
+                      ) : null}
                       <p className="text-sm text-muted-foreground">
+                        {line.sku ? `${line.sku} · ` : ""}
                         {line.quantity} × {formatMoney(line.unitPrice, locale)}
                       </p>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                        <span>
-                          {t("itemGross")}: {formatMoney(line.itemGross, locale)}
-                        </span>
-                        <span>
-                          {t("itemDiscount")}: −{" "}
-                          {formatMoney(line.itemDiscount, locale)}
-                        </span>
-                      </div>
+                      {line.discountAmount > 0 ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t("itemDiscount")}: − {formatMoney(line.discountAmount, locale)}
+                        </p>
+                      ) : null}
                     </div>
                     <span className="shrink-0 text-right font-semibold">
                       <span className="block text-xs font-normal text-muted-foreground">
                         {t("itemNet")}
                       </span>
-                      {formatMoney(line.totalAmount, locale)}
+                      {formatMoney(line.lineTotal, locale)}
                     </span>
                   </div>
                 ))
@@ -1519,75 +1475,55 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
               <CardTitle>{t("paymentAttempts")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {item.payments?.length ? (
-                item.payments.map((payment, index) => (
-                    <AdminOrderPaymentRow
-                      key={payment.id ?? index}
-                      payment={payment}
-                      locale={locale}
-                      mutation={paymentStatus}
-                    />
+              {item.payments.length ? (
+                item.payments.map((payment) => (
+                  <div
+                    key={payment.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/10 p-3 text-sm"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-medium">
+                        {paymentMethods.data?.find((method) => method.id === payment.paymentMethodId)?.name ?? "—"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {payment.paidAt ? `${t("paidAt")}: ${dateTime(payment.paidAt)}` : dateTime(payment.createdAt)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold">{formatMoney(payment.amount, locale)}</span>
+                      <StatusBadge status={payment.status} />
+                    </div>
+                  </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("noPayments")}
-                </p>
+                <p className="text-sm text-muted-foreground">{t("noPayments")}</p>
               )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>{t("invoice")}</CardTitle>
+              <CardTitle>{t("statusHistory")}</CardTitle>
             </CardHeader>
             <CardContent>
-              {item.status !== OrderStatus.Completed ? (
-                <p className="text-sm text-muted-foreground">
-                  {t("invoiceUnavailable")}
-                </p>
-              ) : invoice.isPending ? (
-                <Skeleton className="h-12 rounded-lg" />
-              ) : invoice.isError ? (
-                <Failure error={invoice.error} />
-              ) : invoice.data ? (
-                <div className="space-y-2 text-sm">
-                  <p>
-                    <strong>{t("invoiceCode")}:</strong>{" "}
-                    {invoice.data.invoiceId ?? "—"}
-                  </p>
-                  <p>
-                    <strong>{t("paymentStatus")}:</strong>{" "}
-                    {invoice.data.paymentStatus ?? "—"}
-                  </p>
-                  <p>
-                    {invoice.data.recipientName} · {invoice.data.recipientPhone}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {invoice.data.deliveryAddress}
-                  </p>
-                  <SummaryLine
-                    label={t("subtotal")}
-                    value={formatMoney(invoice.data.subtotalAmount, locale)}
-                  />
-                  <SummaryLine
-                    label={t("discount")}
-                    value={`− ${formatMoney(invoice.data.discountAmount, locale)}`}
-                  />
-                  <SummaryLine
-                    label={t("shippingFee")}
-                    value={formatMoney(invoice.data.shippingFee, locale)}
-                  />
-                  <div className="border-t pt-2">
-                    <SummaryLine
-                      label={t("total")}
-                      value={formatMoney(invoice.data.totalAmount, locale)}
-                      strong
-                    />
-                  </div>
-                </div>
+              {item.statusHistory.length ? (
+                <ol className="space-y-4 border-l pl-4">
+                  {[...item.statusHistory].reverse().map((change, index) => (
+                    <li key={`${change.toStatus}-${change.createdAt}-${index}`} className="text-sm">
+                      <p className="font-medium">
+                        {change.fromStatus ? `${statusLabel(change.fromStatus)} → ` : ""}
+                        {statusLabel(change.toStatus)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {dateTime(change.createdAt)} · {change.changedBy ? t("changedByStaff") : t("changedBySystem")}
+                      </p>
+                      {change.reason ? (
+                        <p className="mt-1 text-muted-foreground">{t("reason")}: {change.reason}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ol>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("invoiceUnavailable")}
-                </p>
+                <p className="text-sm text-muted-foreground">{t("noStatusHistory")}</p>
               )}
             </CardContent>
           </Card>
@@ -1605,7 +1541,7 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
               </p>
               <div className="border-t pt-3 text-sm text-muted-foreground">
                 <p>
-                  {t("shippingMethod")}: {item.shippingMethodCode ?? "—"}
+                  {t("shippingMethod")}: {shippingMethod?.name ?? "—"}
                 </p>
                 <p className="mt-1">
                   {t("shippingFee")}: {formatMoney(item.shippingFee, locale)}
@@ -1645,136 +1581,15 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
                   strong
                 />
               </div>
+              {item.deliveredAt ? (
+                <p className="border-t pt-3 text-xs text-muted-foreground">
+                  {t("deliveredAt")}: {dateTime(item.deliveredAt)}
+                </p>
+              ) : null}
             </CardContent>
           </Card>
         </div>
       </div>
-      <FormError error={update.error ?? paymentStatus.error} />
-      {showCancelDialog ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
-          <form
-            className="w-full max-w-md space-y-5 rounded-2xl border bg-card p-6 shadow-2xl"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void confirmCancel();
-            }}
-          >
-            <div>
-              <p className="eyebrow">{t("orderDetail")}</p>
-              <h2 className="mt-2 text-xl font-semibold">
-                {t("cancelOrder")}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {t("cancelReasonPrompt")}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="admin-cancel-reason">{t("reason")}</Label>
-              <Textarea
-                id="admin-cancel-reason"
-                value={cancelReason}
-                onChange={(event) => setCancelReason(event.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowCancelDialog(false)}
-                disabled={update.isPending}
-              >
-                {t("back")}
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={update.isPending}
-              >
-                <Trash2 className="size-4" />
-                {t("cancel")}
-              </Button>
-            </div>
-          </form>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function AdminOrderPaymentRow({
-  payment,
-  locale,
-  mutation,
-}: {
-  payment: PaymentSummary;
-  locale: string;
-  mutation: ReturnType<typeof useAdminPaymentStatus>;
-}) {
-  const t = useTranslations("admin");
-  const [providerCode, setProviderCode] = useState(
-    payment.providerTransactionCode ?? "",
-  );
-  const isPending = payment.status === PaymentStatus.Pending;
-  const update = (status: string) => {
-    if (!payment.id || status === payment.status) return;
-    void mutation.mutateAsync({
-      id: payment.id,
-      status,
-      providerTransactionCode: providerCode.trim() || undefined,
-    });
-  };
-  return (
-    <div className="rounded-xl border bg-muted/10 p-3 text-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="font-medium">{payment.paymentMethodCode ?? "—"}</p>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {payment.providerTransactionCode ?? t("noTransactionCode")}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="font-semibold">
-            {formatMoney(payment.amount, locale)}
-          </span>
-          <StatusBadge status={payment.status} />
-          <Select
-            className="h-9 w-36"
-            value={payment.status ?? PaymentStatus.Pending}
-            onChange={(event) => update(event.target.value)}
-            disabled={!payment.id || !isPending || mutation.isPending}
-            aria-label={t("paymentStatus")}
-          >
-            {isPending ? (
-              <>
-                <option value={PaymentStatus.Pending}>{t("statusValues.PENDING")}</option>
-                <option value={PaymentStatus.Paid}>{t("statusValues.PAID")}</option>
-                <option value={PaymentStatus.Failed}>{t("statusValues.FAILED")}</option>
-              </>
-            ) : (
-              <option value={payment.status ?? PaymentStatus.Pending}>
-                {t.has(`statusValues.${payment.status}`)
-                  ? t(`statusValues.${payment.status}`)
-                  : payment.status ?? "—"}
-              </option>
-            )}
-          </Select>
-        </div>
-      </div>
-      {isPending ? (
-        <div className="mt-3 border-t pt-3">
-          <label className="block space-y-1.5 text-xs">
-            <span className="font-medium text-muted-foreground">
-              {t("providerTransactionCode")}
-            </span>
-            <Input
-              value={providerCode}
-              onChange={(event) => setProviderCode(event.target.value)}
-              placeholder={t("transactionCodePlaceholder")}
-            />
-          </label>
-        </div>
-      ) : null}
     </div>
   );
 }

@@ -1,14 +1,19 @@
 import {backendFetch} from "@/lib/api/client";
 import type {
+  AdminOrderDetailDto,
+  AdminOrderPageDto,
   CheckoutPaymentMethodDto,
   CheckoutShippingMethodDto,
   DiscountPreviewDto,
   OrderDetailDto,
+  OrderStatusDto,
   OrderSummaryPageDto,
   VnpayResultDto,
   VnpayUrlDto,
 } from "@/features/orders/contracts/dto";
 import {
+  mapAdminOrderDetail,
+  mapAdminOrderPage,
   mapCheckoutPaymentMethod,
   mapCheckoutShippingMethod,
   mapDiscountPreview,
@@ -17,6 +22,8 @@ import {
 } from "@/features/orders/mappers";
 import type {CreateOrderRequest, DiscountPreviewRequest} from "@/features/orders/contracts/requests";
 import {
+  adminCancelOrderRequestSchema,
+  advanceOrderRequestSchema,
   cancelOrderRequestSchema,
   createOrderRequestSchema,
   discountPreviewRequestSchema,
@@ -60,6 +67,47 @@ export async function getOrder(orderId: string) {
 export async function cancelOrder(orderId: string, reason?: string) {
   const payload = parseRequest(cancelOrderRequestSchema, reason ? {reason} : {});
   await backendFetch<OrderDetailDto>(`${ORDER}/orders/${encodeURIComponent(orderId)}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export type AdminOrderFilters = {
+  page?: number;
+  size?: number;
+  keyword?: string;
+  status?: string;
+  createdFrom?: string;
+  createdTo?: string;
+};
+
+/** Every customer's orders, for the shop. */
+export async function getAdminOrders(filters: AdminOrderFilters = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters))
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  return mapAdminOrderPage(await backendFetch<AdminOrderPageDto>(
+    `${ORDER}/orders/admin${params.size ? `?${params.toString()}` : ""}`,
+  ));
+}
+
+export async function getAdminOrder(orderId: string) {
+  return mapAdminOrderDetail(await backendFetch<AdminOrderDetailDto>(`${ORDER}/orders/admin/${encodeURIComponent(orderId)}`));
+}
+
+/** Moves the order on to its next status (confirm, ship, complete); the backend refuses any other step. */
+export async function advanceOrder(orderId: string, status: string) {
+  const payload = parseRequest(advanceOrderRequestSchema, {status});
+  await backendFetch<OrderStatusDto>(`${ORDER}/orders/admin/${encodeURIComponent(orderId)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** The shop cancels an order for a problem with it; the reason is required and stays in the status history. */
+export async function cancelOrderAsAdmin(orderId: string, reason: string) {
+  const payload = parseRequest(adminCancelOrderRequestSchema, {reason});
+  await backendFetch<OrderStatusDto>(`${ORDER}/orders/admin/${encodeURIComponent(orderId)}/cancel`, {
     method: "POST",
     body: JSON.stringify(payload),
   });

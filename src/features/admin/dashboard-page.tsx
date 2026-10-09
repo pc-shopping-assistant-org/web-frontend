@@ -140,13 +140,6 @@ export function AdminDashboardPage({
             {t(isStatistics ? "statisticsDescription" : "dashboardDescription")}
           </p>
         </div>
-        <Link
-          href="/"
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl border bg-card px-4 py-2.5 text-sm font-medium shadow-sm transition hover:border-primary/40 hover:bg-primary/5"
-        >
-          {t("viewStore")}
-          <ArrowUpRight className="size-4" />
-        </Link>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

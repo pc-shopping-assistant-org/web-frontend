@@ -5,15 +5,20 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import {cartKeys} from "@/features/cart/queries";
 
 import {
+  advanceOrder,
   cancelOrder,
+  cancelOrderAsAdmin,
   createOrder,
   createVnpayUrl,
+  getAdminOrder,
+  getAdminOrders,
   getOrder,
   getOrders,
   getPaymentMethods,
   getVnpayResult,
   getShippingMethods,
   previewDiscounts,
+  type AdminOrderFilters,
   type OrderFilters,
 } from "./api";
 import type {DiscountPreviewRequest} from "./contracts/requests";
@@ -79,6 +84,39 @@ export function useCancelOrder() {
     // also after a refusal: the order has usually changed under the customer
     onSettled: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
   });
+}
+export function useAdminOrders(filters: AdminOrderFilters = {}) {
+  return useQuery({
+    queryKey: ["orders", "admin", "list", filters],
+    queryFn: () => getAdminOrders(filters),
+    retry: false,
+    placeholderData: keepPreviousData,
+  });
+}
+export function useAdminOrder(orderId: string) {
+  return useQuery({
+    queryKey: ["orders", "admin", "detail", orderId],
+    queryFn: () => getAdminOrder(orderId),
+    enabled: Boolean(orderId),
+    retry: false,
+  });
+}
+/** A status change also moves the dashboards, and after a refusal the order has usually changed under the employee. */
+function useAdminOrderMutation<TVariables>(mutationFn: (variables: TVariables) => Promise<void>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn,
+    onSettled: () => Promise.all([
+      qc.invalidateQueries({ queryKey: orderKeys.all }),
+      qc.invalidateQueries({ queryKey: ["admin"] }),
+    ]),
+  });
+}
+export function useAdvanceOrder() {
+  return useAdminOrderMutation(({ orderId, status }: { orderId: string; status: string }) => advanceOrder(orderId, status));
+}
+export function useCancelOrderAsAdmin() {
+  return useAdminOrderMutation(({ orderId, reason }: { orderId: string; reason: string }) => cancelOrderAsAdmin(orderId, reason));
 }
 /** Asks for the VNPAY pay URL of a payment; the caller sends the browser there. */
 export function useCreateVnpayUrl() {

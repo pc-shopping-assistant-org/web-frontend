@@ -1,5 +1,7 @@
 import {z} from "zod";
 
+import {ORDER_STATUS_VALUES} from "@/lib/domain/commerce-enums";
+
 import {
   money,
   nonEmptyText,
@@ -32,6 +34,15 @@ export const createOrderRequestSchema = z.object({
 
 export const cancelOrderRequestSchema = z.object({
   reason: optionalText,
+}).strict();
+
+/** The shop moves an order on to its next status; cancelling is its own request, with a reason. */
+export const advanceOrderRequestSchema = z.object({
+  status: z.enum(ORDER_STATUS_VALUES),
+}).strict();
+
+export const adminCancelOrderRequestSchema = z.object({
+  reason: nonEmptyText.max(500),
 }).strict();
 
 /** What the promotion-service needs to price a cart: the lines with their category, and an optional voucher. */

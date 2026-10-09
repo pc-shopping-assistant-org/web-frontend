@@ -180,6 +180,36 @@ export type OrderSummaryPage = {
   size: number;
 };
 
+export type OrderStatusChange = {
+  fromStatus?: string;
+  toStatus: string;
+  /** The employee who made the change; absent when the customer or the system did. */
+  changedBy?: string;
+  reason?: string;
+  createdAt?: string;
+};
+
+export type AdminOrderSummary = OrderSummary & {
+  customerId?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+};
+
+/** The shop's order list is paged by page number. */
+export type AdminOrderPage = {
+  items: AdminOrderSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+};
+
+export type AdminOrderDetail = OrderDetail & {
+  customerId?: string;
+  statusHistory: OrderStatusChange[];
+};
+
 export type VnpayResult = {paymentId: string; orderId: string; result: "PAID" | "FAILED" | "CANCELLED" | "PENDING"; amount: number};
 
 export type DiscountPreview = {

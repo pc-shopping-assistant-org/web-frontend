@@ -11,15 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ErrorMessage } from "@/components/ui/error-message";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Link } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/format";
 import {AccountStatus} from "@/lib/domain/account-enums";
-import {DiscountStatus, DiscountState, DiscountType, OrderStatus, PaymentStatus, ORDER_STATUS_TRANSITIONS} from "@/lib/domain/commerce-enums";
+import {DiscountStatus, DiscountState, DiscountType, OrderStatus, PaymentStatus} from "@/lib/domain/commerce-enums";
 import {ResourceStatus, ReviewStatus} from "@/lib/domain/catalog-enums";
 import type {CategoryTree, Review} from "@/features/catalog/contracts/responses";
 import type {PaymentDetail} from "@/features/admin/contracts/responses";
@@ -41,8 +39,6 @@ import {
   useAdminDiscounts,
   useAdminEmployeeStatus,
   useAdminEmployees,
-  useAdminOrderStatus,
-  useAdminOrders,
   useAdminPaymentMethods,
   useAdminPaymentStatus,
   useAdminPayments,
@@ -55,6 +51,8 @@ import {
   useRoles,
 } from "./queries";
 import { AdminPagination } from "./admin-pagination";
+import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
+import { useAdminOrders } from "@/features/orders/queries";
 
 export type AdminResource =
   | "products"
@@ -337,10 +335,6 @@ function StatusOptions({
 }
 
 const ORDER_STATUSES = Object.values(OrderStatus);
-
-function orderStatusOptions(current?: string) {
-  return ORDER_STATUS_TRANSITIONS[current as OrderStatus] ?? [...ORDER_STATUSES];
-}
 
 function paymentStatusOptions(current?: string) {
   return current === PaymentStatus.Pending
@@ -634,25 +628,28 @@ function Orders() {
     fromDate: "",
     toDate: "",
   }));
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
+  const [applied, setApplied] = useState(draft);
+  const [pageNumber, setPageNumber] = useState(0);
+  const [actionError, setActionError] = useState<unknown>(null);
   const query = useAdminOrders({
-    limit: 20,
-    cursor: applied.cursor,
+    page: pageNumber,
+    size: 20,
     keyword: applied.keyword || undefined,
     status: applied.status || undefined,
-    fromDate: dateParam(applied.fromDate, false),
-    toDate: dateParam(applied.toDate, true),
+    createdFrom: dateParam(applied.fromDate, false),
+    createdTo: dateParam(applied.toDate, true),
   });
-  const mutation = useAdminOrderStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
+  const apply = () => {
+    setApplied({ ...draft, keyword: draft.keyword.trim() });
+    setPageNumber(0);
+    setActionError(null);
+  };
   const reset = () => {
     const empty = { keyword: "", status: "", fromDate: "", toDate: "" };
     setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
+    setApplied(empty);
+    setPageNumber(0);
+    setActionError(null);
   };
   const page = query.data;
   return (
@@ -696,6 +693,7 @@ function Orders() {
           }
         />
       </FilterBar>
+      {actionError ? <div className="mb-4"><Failure error={actionError} /></div> : null}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -706,196 +704,77 @@ function Orders() {
             <EmptyState />
           ) : (
             <div className="space-y-3">
-              {(page?.items ?? []).map((order, index) => (
+              {(page?.items ?? []).map((order) => (
                 <Card
-                  key={order.id ?? index}
+                  key={order.id}
                   className="transition hover:border-primary/30 hover:shadow-md"
                 >
                   <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        {order.id ? (
-                          <Link
-                            href={`/admin/orders/${order.id}`}
-                            className="font-semibold hover:text-primary hover:underline"
-                          >
-                            {shortId(order.id)}
-                          </Link>
-                        ) : (
-                          <span className="font-semibold">—</span>
-                        )}
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="font-semibold hover:text-primary hover:underline"
+                        >
+                          {order.invoiceNumber}
+                        </Link>
                         <StatusBadge status={order.status} />
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {order.customerName ??
-                          order.customerEmail ??
-                          t("guestCustomer")}{" "}
-                        ·{" "}
-                        {order.orderTime
-                          ? new Date(order.orderTime).toLocaleString(
+                        {order.recipientName ?? t("guestCustomer")}
+                        {order.recipientPhone ? ` · ${order.recipientPhone}` : ""}
+                        {" · "}
+                        {order.createdAt
+                          ? new Date(order.createdAt).toLocaleString(
                               locale === "vi" ? "vi-VN" : "en-US",
                             )
                           : "—"}
+                      </p>
+                      <p className="mt-1 truncate text-sm text-muted-foreground">
+                        {order.firstProductName ?? "—"}
+                        {order.itemCount > 1 ? ` ${t("moreItems", { count: order.itemCount - 1 })}` : ""}
                       </p>
                       <p className="mt-1 font-semibold">
                         {formatMoney(order.totalAmount, locale)}
                       </p>
                     </div>
-                    {order.id ? (
-                      <OrderStatusControl
-                        orderId={order.id}
-                        currentStatus={order.status}
-                        mutation={mutation}
-                      />
-                    ) : null}
-                    {order.id ? (
-                      <Link
-                        href={`/admin/orders/${order.id}`}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-                      >
-                        <Eye className="size-3.5" />
-                        <span className="hidden sm:inline">{t("view")}</span>
-                      </Link>
-                    ) : null}
+                    <AdminOrderStatusControl orderId={order.id} status={order.status} onError={setActionError} />
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
+                    >
+                      <Eye className="size-3.5" />
+                      <span className="hidden sm:inline">{t("view")}</span>
+                    </Link>
                   </CardContent>
                 </Card>
               ))}
             </div>
           )}
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
-  </Shell>
-  );
-}
-
-function OrderStatusControl({
-  orderId,
-  currentStatus,
-  mutation,
-}: {
-  orderId: string;
-  currentStatus?: string;
-  mutation: ReturnType<typeof useAdminOrderStatus>;
-}) {
-  const t = useTranslations("admin");
-  const [showCancel, setShowCancel] = useState(false);
-  const [reason, setReason] = useState("");
-
-  function changeStatus(nextStatus: string) {
-    if (!nextStatus || nextStatus === currentStatus) return;
-    if (nextStatus === OrderStatus.Cancelled) {
-      setReason("");
-      setShowCancel(true);
-      return;
-    }
-    void mutation.mutateAsync({ id: orderId, status: nextStatus });
-  }
-
-  async function confirmCancel() {
-    await mutation.mutateAsync({
-      id: orderId,
-      status: OrderStatus.Cancelled,
-      reason: reason.trim() || undefined,
-    });
-    setShowCancel(false);
-  }
-
-  return (
-    <>
-      <Select
-        className="h-9 w-52"
-        value={currentStatus ?? ""}
-        onChange={(event) => changeStatus(event.target.value)}
-        disabled={mutation.isPending}
-        aria-label={t("orderStatus")}
-      >
-        {orderStatusOptions(currentStatus).map((status) => (
-          <option key={status} value={status}>
-            {t.has(`statusValues.${status}`)
-              ? t(`statusValues.${status}`)
-              : status}
-          </option>
-        ))}
-      </Select>
-      {showCancel ? (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget && !mutation.isPending)
-              setShowCancel(false);
-          }}
-        >
-          <form
-            className="w-full max-w-md space-y-5 rounded-2xl border bg-card p-6 shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void confirmCancel();
-            }}
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <div>
-              <p className="eyebrow">{t("orderDetail")}</p>
-              <h2 className="mt-2 text-xl font-semibold">
-                {t("cancelOrder")}
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {t("cancelReasonPrompt")}
+          {page && page.totalPages > 1 ? (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
+                {" · "}
+                {t("totalOrders", { count: page.totalElements })}
               </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor={`cancel-reason-${orderId}`}>{t("reason")}</Label>
-              <Textarea
-                id={`cancel-reason-${orderId}`}
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                autoFocus
+              <AdminPagination
+                hasPrev={page.page > 0}
+                hasNext={!page.last}
+                onPrev={() => {
+                  setPageNumber((current) => Math.max(0, current - 1));
+                  setActionError(null);
+                }}
+                onNext={() => {
+                  setPageNumber((current) => current + 1);
+                  setActionError(null);
+                }}
               />
             </div>
-            {mutation.isError ? <ErrorMessage error={mutation.error} /> : null}
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowCancel(false)}
-                disabled={mutation.isPending}
-              >
-                {t("back")}
-              </Button>
-              <Button
-                type="submit"
-                variant="destructive"
-                disabled={mutation.isPending}
-              >
-                {t("cancel")}
-              </Button>
-            </div>
-          </form>
-        </div>
-      ) : null}
-    </>
+          ) : null}
+        </>
+      )}
+    </Shell>
   );
 }
 

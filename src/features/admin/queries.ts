@@ -27,13 +27,11 @@ import {
   getAdminCustomerOrders,
   getAdminDiscount,
   getAdminEmployee,
-  getAdminOrder,
   getAdminPaymentMethods,
   getAdminPayments,
   getAdminProducts,
   getAdminReviews,
   getAdminSupplier,
-  getAdminOrders,
   getAttributes,
   getAdminBrands,
   getAdminCategories,
@@ -64,7 +62,6 @@ import {
   updateCustomerStatus,
   updateDiscountStatus,
   updateEmployeeStatus,
-  updateOrderStatus,
   updatePaymentStatus,
   updateProductStatus,
   updateReviewStatus,
@@ -156,16 +153,6 @@ export function useAdminDiscounts(
     placeholderData: keepPreviousData,
   });
 }
-export function useAdminOrders(
-  filter: Parameters<typeof getAdminOrders>[0] = {},
-) {
-  return useQuery({
-    queryKey: ["admin", "orders", filter],
-    queryFn: () => getAdminOrders(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
-  });
-}
 export function useAdminPayments(
   filter: Parameters<typeof getAdminPayments>[0] = {},
 ) {
@@ -221,14 +208,6 @@ export function useAdminDiscount(id: string) {
   return useQuery({
     queryKey: ["admin", "discount", id],
     queryFn: () => getAdminDiscount(id),
-    enabled: Boolean(id),
-    retry: false,
-  });
-}
-export function useAdminOrder(id: string) {
-  return useQuery({
-    queryKey: ["admin", "order", id],
-    queryFn: () => getAdminOrder(id),
     enabled: Boolean(id),
     retry: false,
   });
@@ -309,12 +288,6 @@ function useStatusMutation<TVariables, TData>(
     mutationFn,
     onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
   });
-}
-export function useAdminOrderStatus() {
-  return useStatusMutation(
-    ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
-      updateOrderStatus(id, status, reason),
-  );
 }
 export function useAdminPaymentStatus() {
   return useStatusMutation(

@@ -21,7 +21,6 @@ import type {
   DiscountFilter,
   EmployeeFilter,
   InvoiceFilter,
-  OrderFilter,
   PaymentFilter,
   ReviewFilter,
   SupplierFilter,
@@ -77,15 +76,11 @@ import {
 import type {
   InvoiceDto,
   InvoicesPageDto,
-  OrderDto,
-  OrdersPageDto,
   PaymentMethodDto,
 } from "@/features/orders/contracts/dto";
 import {
   mapInvoice,
   mapInvoicesPage,
-  mapOrder,
-  mapOrdersPage,
   mapPaymentMethod,
 } from "@/features/orders/mappers";
 import {
@@ -109,7 +104,6 @@ import {
   updateDiscountRequestSchema,
   updateDiscountStatusRequestSchema,
   updateEmployeeRequestSchema,
-  updateOrderStatusRequestSchema,
   updateOptionRequestSchema,
   updatePaymentStatusRequestSchema,
   updateProductRequestSchema,
@@ -210,11 +204,6 @@ export function getDiscounts(
     `${PROMOTION}/discounts${queryString(filter)}`,
   ).then(mapDiscountsPage);
 }
-export function getAdminOrders(
-  filter: OrderFilter = {},
-) {
-  return backendFetch<OrdersPageDto>(`/admin/orders${queryString(filter)}`).then(mapOrdersPage);
-}
 export function getAdminPayments(
   filter: PaymentFilter = {},
 ) {
@@ -249,11 +238,6 @@ export function getAdminDiscount(id: string) {
   return backendFetch<DiscountDto>(
     `${PROMOTION}/discounts/${encodeURIComponent(id)}`,
   ).then(mapDiscountDetail);
-}
-export function getAdminOrder(id: string) {
-  return backendFetch<OrderDto>(
-    `/admin/orders/${encodeURIComponent(id)}`,
-  ).then(mapOrder);
 }
 export function getOrderInvoice(id: string) {
   return backendFetch<InvoiceDto>(
@@ -319,17 +303,6 @@ export function uploadAdminFile(file: globalThis.File) {
   }));
 }
 
-export function updateOrderStatus(
-  orderId: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateOrderStatusRequestSchema, {status, reason});
-  return backendFetch<OrderDto>(
-    `/admin/orders/${encodeURIComponent(orderId)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  ).then(mapOrder);
-}
 export function updatePaymentStatus(
   paymentId: string,
   status: string,

@@ -167,12 +167,23 @@ export function mapInvoicesPage(dto: InvoicesPageDto): InvoicesPage {
 import type {
   CheckoutPaymentMethodDto,
   CheckoutShippingMethodDto,
+  AdminOrderDetailDto,
+  AdminOrderPageDto,
+  AdminOrderSummaryDto,
   DiscountPreviewDto,
   OrderDetailDto,
   OrderSummaryDto,
   OrderSummaryPageDto,
 } from "@/features/orders/contracts/dto";
-import type {DiscountPreview, OrderDetail, OrderSummary, OrderSummaryPage} from "@/features/orders/models";
+import type {
+  AdminOrderDetail,
+  AdminOrderPage,
+  AdminOrderSummary,
+  DiscountPreview,
+  OrderDetail,
+  OrderSummary,
+  OrderSummaryPage,
+} from "@/features/orders/models";
 
 export function mapOrderDetail(dto: OrderDetailDto): OrderDetail {
   return {
@@ -232,6 +243,40 @@ export function mapOrderSummaryPage(dto: OrderSummaryPageDto): OrderSummaryPage 
     nextCursor: dto.nextCursor ?? undefined,
     hasNext: dto.hasNext ?? false,
     size: number(dto.size),
+  };
+}
+
+export function mapAdminOrderDetail(dto: AdminOrderDetailDto): AdminOrderDetail {
+  return {
+    ...mapOrderDetail(dto),
+    customerId: dto.customerId ?? undefined,
+    statusHistory: (dto.statusHistory ?? []).map((change) => ({
+      fromStatus: change.fromStatus ?? undefined,
+      toStatus: change.toStatus,
+      changedBy: change.changedBy ?? undefined,
+      reason: change.reason ?? undefined,
+      createdAt: change.createdAt ?? undefined,
+    })),
+  };
+}
+
+function mapAdminOrderSummary(dto: AdminOrderSummaryDto): AdminOrderSummary {
+  return {
+    ...mapOrderSummary(dto),
+    customerId: dto.customerId ?? undefined,
+    recipientName: dto.recipientName ?? undefined,
+    recipientPhone: dto.recipientPhone ?? undefined,
+  };
+}
+
+export function mapAdminOrderPage(dto: AdminOrderPageDto): AdminOrderPage {
+  return {
+    items: (dto.content ?? []).map(mapAdminOrderSummary),
+    page: number(dto.page),
+    size: number(dto.size),
+    totalElements: number(dto.totalElements),
+    totalPages: number(dto.totalPages),
+    last: dto.last ?? true,
   };
 }
 
