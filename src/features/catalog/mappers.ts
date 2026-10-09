@@ -8,7 +8,8 @@ import type {
   ProductImageDto,
   ProductOptionDto,
   ProductPageDto,
-  ProductRatingSummaryDto,
+  ProductReviewDto,
+  ProductReviewPageDto,
   ProductSummaryDto,
   ProductVariantDto,
   ReviewDto,
@@ -23,7 +24,8 @@ import type {
   ProductImage,
   ProductOption,
   ProductPage,
-  ProductRatingSummary,
+  ProductReview,
+  ProductReviewPage,
   ProductSummary,
   ProductVariant,
   Review,
@@ -191,6 +193,29 @@ export function mapProductPage(dto: ProductPageDto): ProductPage {
   };
 }
 
+export function mapProductReview(dto: ProductReviewDto): ProductReview {
+  return {
+    id: dto.id,
+    productId: dto.productId,
+    reviewerName: dto.reviewerName ?? undefined,
+    rating: number(dto.rating),
+    comment: dto.comment ?? undefined,
+    createdAt: dto.createdAt,
+    editedAt: dto.editedAt ?? undefined,
+  };
+}
+
+export function mapProductReviewPage(dto: ProductReviewPageDto): ProductReviewPage {
+  return {
+    items: (dto.content ?? []).map(mapProductReview),
+    page: number(dto.page),
+    size: number(dto.size),
+    totalElements: number(dto.totalElements),
+    totalPages: number(dto.totalPages),
+    last: dto.last ?? true,
+  };
+}
+
 export function mapReview(dto: ReviewDto): Review {
   return {
     id: text(dto.id),
@@ -217,11 +242,3 @@ export function mapReviewsPage(dto: ReviewsPageDto): ReviewsPage {
   };
 }
 
-export function mapProductRatingSummary(dto: ProductRatingSummaryDto): ProductRatingSummary {
-  return {
-    productId: text(dto.productId),
-    averageRating: number(dto.averageRating),
-    totalReviews: number(dto.totalReviews),
-    ratingDistribution: dto.ratingDistribution ?? {},
-  };
-}

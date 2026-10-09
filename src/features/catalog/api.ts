@@ -4,25 +4,27 @@ import type {
   CategoryTreeDto,
   ProductDetailDto,
   ProductPageDto,
-  ProductRatingSummaryDto,
-  ReviewDto,
-  ReviewsPageDto,
+  OrderLineProductDto,
+  ProductReviewDto,
+  ReviewedOrderItemDto,
+  ProductReviewPageDto,
+  ProductVariantLookupDto,
 } from "@/features/catalog/contracts/dto";
 import {
   mapBrandResponse,
   mapCategoryTree,
   mapProductDetail,
   mapProductPage,
-  mapProductRatingSummary,
-  mapReview,
-  mapReviewsPage,
+  mapProductReview,
+  mapProductReviewPage,
 } from "@/features/catalog/mappers";
 import {
   createReviewRequestSchema,
+  editReviewRequestSchema,
   type CreateReviewRequest,
+  type EditReviewRequest,
 } from "@/features/catalog/contracts/requests";
 import {parseRequest} from "@/lib/api/parse-request";
-import {ReviewStatus} from "@/lib/domain/catalog-enums";
 
 export type ProductFilters = {
   cursor?: string;
@@ -79,27 +81,47 @@ export async function getBrands() {
   return response.map(mapBrandResponse);
 }
 
-export async function getProductReviews(productId: string, cursor?: string) {
-  const params = new URLSearchParams({status: ReviewStatus.Active, limit: "10"});
-  if (cursor) params.set("cursor", cursor);
-  const response = await backendFetch<ReviewsPageDto>(
-    `/catalog-service/products/${encodeURIComponent(productId)}/reviews?${params.toString()}`,
-  );
-  return mapReviewsPage(response);
+const CATALOG = "/catalog-service";
+
+export async function getProductReviews(productId: string, page = 0, size = 10) {
+  const params = new URLSearchParams({page: String(page), size: String(size)});
+  return mapProductReviewPage(await backendFetch<ProductReviewPageDto>(
+    `${CATALOG}/products/${encodeURIComponent(productId)}/reviews?${params.toString()}`,
+  ));
 }
 
-export async function getProductRatingSummary(productId: string) {
-  const response = await backendFetch<ProductRatingSummaryDto>(
-    `/catalog-service/products/${encodeURIComponent(productId)}/reviews/summary`,
-  );
-  return mapProductRatingSummary(response);
+/** The reviews of the signed-in customer for this product, newest first: pinned above the public list. */
+export async function getMyProductReviews(productId: string) {
+  return (await backendFetch<ProductReviewDto[]>(`${CATALOG}/products/${encodeURIComponent(productId)}/reviews/mine`)).map(mapProductReview);
 }
 
 export async function createProductReview(productId: string, request: CreateReviewRequest) {
   const payload = parseRequest(createReviewRequestSchema, request);
-  const response = await backendFetch<ReviewDto>(`/catalog-service/products/${encodeURIComponent(productId)}/reviews`, {
+  return mapProductReview(await backendFetch<ProductReviewDto>(`${CATALOG}/products/${encodeURIComponent(productId)}/reviews`, {
     method: "POST",
     body: JSON.stringify(payload),
-  });
-  return mapReview(response);
+  }));
+}
+
+/** Spends the single edit of the review; the backend refuses a second edit, one after 30 days, and one on a product no longer on sale. */
+export async function updateProductReview(productId: string, reviewId: string, request: EditReviewRequest) {
+  const payload = parseRequest(editReviewRequestSchema, request);
+  return mapProductReview(await backendFetch<ProductReviewDto>(
+    `${CATALOG}/products/${encodeURIComponent(productId)}/reviews/${encodeURIComponent(reviewId)}`,
+    {method: "PATCH", body: JSON.stringify(payload)},
+  ));
+}
+
+/** Which of the given order lines the customer has reviewed. */
+export async function getReviewedOrderItems(orderItemIds: string[]) {
+  if (orderItemIds.length === 0) return [];
+  const params = new URLSearchParams({orderItemIds: orderItemIds.join(",")});
+  return backendFetch<ReviewedOrderItemDto[]>(`${CATALOG}/reviews/mine?${params.toString()}`);
+}
+
+/** An order line only knows its variant, so the product (for the review URL and the link to its page) is looked up through it. */
+export async function getOrderLineProduct(variantId: string) {
+  const variant = await backendFetch<ProductVariantLookupDto>(`${CATALOG}/product-variants/${encodeURIComponent(variantId)}`);
+  const product = await backendFetch<OrderLineProductDto>(`${CATALOG}/products/${encodeURIComponent(variant.productId)}`);
+  return {id: product.id, name: product.name, seoName: product.seoName};
 }

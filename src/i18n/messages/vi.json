@@ -225,7 +225,18 @@
     "relatedProducts": "Cùng danh mục",
     "viewCategory": "Xem danh mục",
     "viewCart": "Xem giỏ hàng",
-    "warrantyMonths": "{count} tháng"
+    "warrantyMonths": "{count} tháng",
+    "reviewsCount": "{count} đánh giá",
+    "yourReview": "Đánh giá của bạn",
+    "editedBadge": "Đã chỉnh sửa",
+    "editReview": "Chỉnh sửa",
+    "saveReview": "Lưu thay đổi",
+    "cancelReview": "Hủy",
+    "ratingLabel": "Số sao",
+    "starsOption": "{count} sao",
+    "commentLabel": "Nhận xét",
+    "commentPlaceholder": "Chia sẻ trải nghiệm của bạn",
+    "editOnceHint": "Bạn chỉ được sửa đánh giá một lần, trong 30 ngày kể từ khi đăng."
   },
   "cart": {
     "title": "Giỏ hàng",
@@ -485,7 +496,9 @@
     "note": "Ghi chú",
     "cancellationReason": "Lý do hủy",
     "payWithVnpay": "Thanh toán qua VNPAY",
-    "vnpayHint": "Đơn đang chờ thanh toán. Thanh toán qua VNPAY để cửa hàng xác nhận đơn."
+    "vnpayHint": "Đơn đang chờ thanh toán. Thanh toán qua VNPAY để cửa hàng xác nhận đơn.",
+    "viewYourReview": "Xem đánh giá của bạn",
+    "alreadyReviewed": "Dòng hàng này đã được đánh giá."
   },
   "assistant": {
     "eyebrow": "AI bám theo catalog",

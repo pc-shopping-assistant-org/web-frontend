@@ -92,6 +92,35 @@ export type BrandDto = {
   createdAt?: string;
 };
 export type SupplierDto = BackendSchema["SupplierResponse"];
+/** A review of a product; {@code reviewerName} is only filled in the public list, the author's own copies leave it empty. */
+export type ProductReviewDto = {
+  id: string;
+  productId: string;
+  reviewerName?: string | null;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+  editedAt?: string | null;
+};
+
+/** catalog-service page of the reviews: by page number, with totals. */
+export type ProductReviewPageDto = {
+  content: ProductReviewDto[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+};
+
+/** What the lookup of a variant answers; only its product matters here. */
+export type ProductVariantLookupDto = {id: string; productId: string};
+
+/** An order line the customer has already reviewed. */
+export type ReviewedOrderItemDto = {orderItemId: string; productId: string; reviewId: string};
+
+/** The product an order line belongs to, as the storefront needs it to review that line. */
+export type OrderLineProductDto = {id: string; name: string; seoName: string};
+
 export type ReviewDto = BackendSchema["ReviewResponse"];
 export type ReviewsPageDto = BackendSchema["CursorPageResponseReviewResponse"];
-export type ProductRatingSummaryDto = BackendSchema["ProductRatingSummaryResponse"];

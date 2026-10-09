@@ -1,26 +1,26 @@
 "use client";
 
-import {ArrowLeft, ArrowLeftRight, ChevronLeft, ChevronRight, Info, Minus, PackageCheck, Plus, ShoppingCart, ShieldCheck, Sparkles, Star, type LucideIcon} from "lucide-react";
+import {ArrowLeft, ArrowLeftRight, ChevronRight, Info, Minus, PackageCheck, Plus, ShoppingCart, ShieldCheck, Sparkles, Star, type LucideIcon} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import {useEffect, useMemo, useRef, useState} from "react";
 
 import {Badge} from "@/components/ui/badge";
+import {ProductReviews} from "./product-reviews";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {ProductDetailPageSkeleton} from "@/components/ui/loading-skeletons";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
-import {Skeleton} from "@/components/ui/skeleton";
 import {Link, usePathname, useRouter} from "@/i18n/navigation";
 import {MAX_CART_LINE_QUANTITY} from "@/lib/api/contracts/primitives";
 import {ApiClientError} from "@/lib/api/envelope";
-import {formatMoney, formatRating} from "@/lib/format";
+import {formatMoney} from "@/lib/format";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 import {useAddToCart, useCart} from "@/features/cart/queries";
-import {useCategorySpecLabels, useProductBySlug, useProductRatingSummary, useProductReviews, useProducts} from "../queries";
+import {useCategorySpecLabels, useProductBySlug, useProductReviews, useProducts} from "../queries";
 import {CatalogCategoryIcon} from "./catalog-category-icon";
 import {ProductCard} from "./product-card";
 import {ProductIllustration, productArtKind} from "./product-card";
@@ -33,7 +33,6 @@ export function ProductDetailPage({slug}: {slug: string}) {
   const product = query.data;
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [selectedImageId, setSelectedImageId] = useState<string | undefined>();
-  const [reviewCursor, setReviewCursor] = useState<string | undefined>();
   const [quantity, setQuantity] = useState(1);
   const addMutation = useAddToCart();
   const cart = useCart(false);
@@ -54,8 +53,7 @@ export function ProductDetailPage({slug}: {slug: string}) {
   );
   const selected =
     variants.find((variant) => variant.id === selectedId) ?? variants[0];
-  const reviews = useProductReviews(product?.id ?? "", reviewCursor, {enabled: belowFoldReady});
-  const ratingSummary = useProductRatingSummary(product?.id ?? "", belowFoldReady);
+  const reviews = useProductReviews(product?.id ?? "");
   const images = product?.images ?? [];
   // A variant with its own image shows it until the shopper picks a gallery image
   const activeImage = images.find((image) => image.id === selectedImageId) ?? (selected?.imageUrl ? undefined : images.find((image) => image.main) ?? images[0]);
@@ -106,7 +104,7 @@ export function ProductDetailPage({slug}: {slug: string}) {
         {images.length > 1 ? <div className="grid grid-cols-5 gap-2" aria-label={t("productGallery")}>{images.map((image, index) => <button type="button" key={image.id ?? index} className={`overflow-hidden rounded-xl border bg-muted/30 p-1 transition ${activeImage?.id === image.id ? "border-primary ring-2 ring-primary/15" : "hover:border-primary/40"}`} onClick={() => setSelectedImageId(image.id)} aria-label={`${t("viewImage")} ${index + 1}`} aria-pressed={activeImage?.id === image.id}>{image.imageUrl ? <Image src={image.imageUrl} alt={product.name ?? ""} width={128} height={64} unoptimized className="h-16 w-full object-cover" /> : <span className="flex h-16 items-center justify-center"><CatalogCategoryIcon categoryName={product.category?.name ?? product.name} className="size-7 text-primary/45" /></span>}</button>)}</div> : null}
       </div>
       <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
-        <div className="space-y-3"><div className="flex flex-wrap items-center gap-2"><p className="eyebrow">{product.brand?.name ?? "PC"}</p>{product.category?.name ? <Badge className="border-border bg-muted/70 font-normal text-muted-foreground">{product.category.name}</Badge> : null}</div><h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{product.name}</h1><div className="flex items-center gap-2 text-sm text-muted-foreground"><Star className="size-4 fill-amber-400 text-amber-400" />{formatRating(product.ratingAverage)} · {product.reviewCount ?? 0} {t("reviews")}</div></div>
+        <div className="space-y-3"><div className="flex flex-wrap items-center gap-2"><p className="eyebrow">{product.brand?.name ?? "PC"}</p>{product.category?.name ? <Badge className="border-border bg-muted/70 font-normal text-muted-foreground">{product.category.name}</Badge> : null}</div><h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{product.name}</h1><div className="flex items-center gap-2 text-sm text-muted-foreground"><Star className="size-4 fill-amber-400 text-amber-400" />{reviews.data ? t("reviewsCount", {count: reviews.data.totalElements}) : null}</div></div>
         <p className="leading-7 text-muted-foreground">{product.description ?? t("noDescription")}</p>
         {variants.length > 1 ? (
           <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
@@ -165,7 +163,7 @@ export function ProductDetailPage({slug}: {slug: string}) {
     <div ref={belowFoldRef} className="[content-visibility:auto] [contain-intrinsic-size:1400px]">
       {relatedQuery.data?.items?.filter((item) => item.id && item.id !== product.id).slice(0, 4).length ? <section className="mt-12" aria-labelledby="related-products-title"><div className="mb-5 flex flex-wrap items-end justify-between gap-3"><div><p className="eyebrow">{t("relatedProducts")}</p><h2 id="related-products-title" className="mt-2 text-2xl font-semibold">{product.category?.name}</h2></div>{categoryHref ? <Link href={categoryHref} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">{t("viewCategory")}<ChevronRight className="size-4" /></Link> : null}</div><div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">{relatedQuery.data?.items?.filter((item) => item.id && item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} />)}</div></section> : null}
       <section className="mt-12" aria-labelledby="specifications-title"><div className="mb-5"><p className="eyebrow">{t("specifications")}</p><h2 id="specifications-title" className="mt-2 text-2xl font-semibold">{t("technicalDetails")}</h2></div>{specifications.length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("specificationsEmpty")}</div> : <Card><CardContent className="grid gap-px overflow-hidden p-0 sm:grid-cols-2">{specifications.map(([key, value]) => <div key={key} className="flex min-h-14 items-start justify-between gap-5 border-b bg-muted/15 px-5 py-3.5 text-sm last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0"><span className="font-medium text-muted-foreground">{specLabels?.[key]?.label ?? formatSpecificationLabel(key)}</span><span className="max-w-[65%] text-right font-medium">{formatSpecificationValue(value)}{specLabels?.[key]?.unit ? ` ${specLabels[key].unit}` : ""}</span></div>)}</CardContent></Card>}</section>
-      <section className="mt-14"><div className="mb-5 flex items-end justify-between"><div><p className="eyebrow">{t("reviews")}</p><h2 className="mt-2 text-2xl font-semibold">{t("customerReviews")}</h2></div><span className="text-sm text-muted-foreground">{product.reviewCount ?? reviews.data?.size ?? 0}</span></div>{ratingSummary.data ? <RatingSummary summary={ratingSummary.data} /> : null}{!belowFoldReady || reviews.isPending ? <Skeleton className="h-24 rounded-2xl" /> : reviews.isError ? <ErrorMessage error={reviews.error} /> : (reviews.data?.items ?? []).length === 0 ? <div className="rounded-2xl border border-dashed p-8 text-sm text-muted-foreground">{t("noReviews")}</div> : <><div className="grid gap-4 md:grid-cols-2">{reviews.data?.items?.map((review) => <Card key={review.id}><CardContent className="space-y-2 p-5"><div className="flex items-center justify-between"><span className="font-medium">{review.customerName ?? t("verifiedBuyer")}</span><span className="flex items-center gap-1 text-sm"><Star className="size-4 fill-amber-400 text-amber-400" />{review.rating}/5</span></div><p className="text-sm leading-6 text-muted-foreground">{review.comment || "—"}</p></CardContent></Card>)}</div>{(reviews.data?.hasPrev || reviews.data?.hasNext) ? <div className="mt-6 flex justify-center gap-2"><Button variant="outline" disabled={!reviews.data?.hasPrev || !reviews.data?.prevCursor} onClick={() => setReviewCursor(reviews.data?.prevCursor)}><ChevronLeft className="size-4" />{t("previous")}</Button><Button variant="outline" disabled={!reviews.data?.hasNext || !reviews.data?.nextCursor} onClick={() => setReviewCursor(reviews.data?.nextCursor)}>{t("next")}<ChevronRight className="size-4" /></Button></div> : null}</>}</section>
+      <ProductReviews productId={product.id} enabled={belowFoldReady} />
     </div>
   </section>;
 }
@@ -194,31 +192,6 @@ function useNearViewport<T extends HTMLElement>(active = true, rootMargin = "600
   }, [active, rootMargin]);
 
   return [ref, nearViewport] as const;
-}
-
-function RatingSummary({summary}: {summary: import("@/features/catalog/contracts/responses").ProductRatingSummary}) {
-  const t = useTranslations("catalog");
-  const average = summary.averageRating ?? 0;
-  const total = summary.totalReviews ?? 0;
-  const distribution = summary.ratingDistribution ?? {};
-  return (
-    <div className="mb-6 grid gap-5 rounded-2xl border bg-card p-5 sm:grid-cols-[11rem_1fr] sm:items-center">
-      <div className="text-center sm:border-r sm:pr-5">
-        <p className="text-4xl font-semibold tracking-tight">{average.toFixed(1)}</p>
-        <div className="mt-2 flex justify-center gap-0.5" aria-label={`${average}/5`}>
-          {Array.from({length: 5}, (_, index) => <Star key={index} className={`size-4 ${index < Math.round(average) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/25"}`} />)}
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">{total} {t("totalReviews")}</p>
-      </div>
-      <div className="space-y-2.5">
-        {[5, 4, 3, 2, 1].map((rating) => {
-          const count = distribution[String(rating)] ?? distribution[rating] ?? 0;
-          const width = total > 0 ? `${Math.min(100, (count / total) * 100)}%` : "0%";
-          return <div key={rating} className="flex items-center gap-3 text-xs"><span className="w-7 shrink-0 text-right font-medium">{rating}★</span><span className="h-2 flex-1 overflow-hidden rounded-full bg-muted"><span className="block h-full rounded-full bg-amber-400 transition-[width]" style={{width}} /></span><span className="w-7 shrink-0 text-right text-muted-foreground">{count}</span></div>;
-        })}
-      </div>
-    </div>
-  );
 }
 
 function MetaItem({icon: Icon, label, value}: {icon: LucideIcon; label: string; value: string}) {

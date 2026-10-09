@@ -112,6 +112,28 @@ export type ProductPage = {
   size: number;
 };
 
+export type ProductReview = {
+  id: string;
+  productId: string;
+  reviewerName?: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  /** Set once the single edit is spent. */
+  editedAt?: string;
+};
+
+export type ProductReviewPage = {
+  items: ProductReview[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+};
+
+export type OrderLineProduct = {id: string; name: string; seoName: string};
+
 export type Review = {
   id: string;
   customerId?: string;
@@ -134,9 +156,3 @@ export type ReviewsPage = {
   size: number;
 };
 
-export type ProductRatingSummary = {
-  productId: string;
-  averageRating: number;
-  totalReviews: number;
-  ratingDistribution: Record<string, number>;
-};

@@ -59,7 +59,6 @@ export type {
   ProductImage,
   ProductOption,
   ProductPage,
-  ProductRatingSummary,
   ProductSummary,
   ProductVariant,
   Review,

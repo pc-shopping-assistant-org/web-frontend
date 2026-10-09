@@ -225,7 +225,18 @@
     "relatedProducts": "From the same category",
     "viewCategory": "View category",
     "viewCart": "View cart",
-    "warrantyMonths": "{count} months"
+    "warrantyMonths": "{count} months",
+    "reviewsCount": "{count} reviews",
+    "yourReview": "Your review",
+    "editedBadge": "Edited",
+    "editReview": "Edit",
+    "saveReview": "Save changes",
+    "cancelReview": "Cancel",
+    "ratingLabel": "Rating",
+    "starsOption": "{count} stars",
+    "commentLabel": "Comment",
+    "commentPlaceholder": "Share your experience",
+    "editOnceHint": "You can edit a review only once, within 30 days of posting."
   },
   "cart": {
     "title": "Cart",
@@ -485,7 +496,9 @@
     "note": "Note",
     "cancellationReason": "Reason for cancelling",
     "payWithVnpay": "Pay with VNPAY",
-    "vnpayHint": "The order is waiting for payment. Pay with VNPAY so the shop can confirm it."
+    "vnpayHint": "The order is waiting for payment. Pay with VNPAY so the shop can confirm it.",
+    "viewYourReview": "See your review",
+    "alreadyReviewed": "This item has been reviewed."
   },
   "assistant": {
     "eyebrow": "Catalog-grounded AI",

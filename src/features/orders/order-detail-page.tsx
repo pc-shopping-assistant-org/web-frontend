@@ -18,6 +18,8 @@ import {formatMoney} from "@/lib/format";
 import {OrderStatus, PaymentMethodCode, PaymentStatus} from "@/lib/domain/commerce-enums";
 
 import {useProfile} from "@/features/auth/queries";
+import {useReviewedOrderItems} from "@/features/catalog/queries";
+import {OrderLineReview} from "./order-line-review";
 import {VnpayPayButton} from "./vnpay-pay";
 import {useCancelOrder, useOrder, usePaymentMethods, useShippingMethods} from "./queries";
 
@@ -34,6 +36,8 @@ export function OrderDetailPage({orderId}: {orderId: string}) {
   const paymentMethods = usePaymentMethods(canLoad);
   const shippingMethods = useShippingMethods(canLoad);
   const cancel = useCancelOrder();
+  const completedItems = query.data?.status === OrderStatus.Completed ? query.data.items : [];
+  const reviewedItems = useReviewedOrderItems(completedItems.map((item) => item.id));
   const [showCancel, setShowCancel] = useState(false);
   const [reason, setReason] = useState("");
   if (profile.isPending) return <OrderDetailPageSkeleton />;
@@ -73,7 +77,7 @@ export function OrderDetailPage({orderId}: {orderId: string}) {
     {order.status === OrderStatus.Cancelled && order.cancellationReason ? <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm"><span className="font-medium">{t("cancellationReason")}:</span> {order.cancellationReason}</p> : null}
     <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_22rem]">
       <div className="space-y-6">
-        <Card><CardHeader><CardTitle>{t("items")}</CardTitle></CardHeader><CardContent className="divide-y">{order.items.length === 0 ? <p className="text-sm text-muted-foreground">{t("noItems")}</p> : order.items.map((item) => <div key={item.id} className="flex justify-between gap-4 py-4 first:pt-0 last:pb-0"><div className="min-w-0"><p className="font-medium">{item.productName}</p>{item.variantLabel ? <p className="text-sm text-foreground/80">{item.variantLabel}</p> : null}{item.sku ? <p className="text-xs text-muted-foreground">{item.sku}</p> : null}<p className="mt-1 text-sm text-muted-foreground">{item.quantity} × {formatMoney(item.unitPrice, locale)}</p></div><div className="shrink-0 text-right">{item.discountAmount > 0 ? <p className="text-xs text-muted-foreground">{t("discount")}: − {formatMoney(item.discountAmount, locale)}</p> : null}<p className="text-sm font-semibold">{formatMoney(item.lineTotal, locale)}</p></div></div>)}</CardContent></Card>
+        <Card><CardHeader><CardTitle>{t("items")}</CardTitle></CardHeader><CardContent className="divide-y">{order.items.length === 0 ? <p className="text-sm text-muted-foreground">{t("noItems")}</p> : order.items.map((item) => <div key={item.id} className="flex justify-between gap-4 py-4 first:pt-0 last:pb-0"><div className="min-w-0"><p className="font-medium">{item.productName}</p>{item.variantLabel ? <p className="text-sm text-foreground/80">{item.variantLabel}</p> : null}{item.sku ? <p className="text-xs text-muted-foreground">{item.sku}</p> : null}<p className="mt-1 text-sm text-muted-foreground">{item.quantity} × {formatMoney(item.unitPrice, locale)}</p>{order.status === OrderStatus.Completed ? <OrderLineReview orderItemId={item.id} productVariantId={item.productVariantId} reviewed={reviewedItems.isError ? false : reviewedItems.data?.some((reviewed) => reviewed.orderItemId === item.id)} /> : null}</div><div className="shrink-0 text-right">{item.discountAmount > 0 ? <p className="text-xs text-muted-foreground">{t("discount")}: − {formatMoney(item.discountAmount, locale)}</p> : null}<p className="text-sm font-semibold">{formatMoney(item.lineTotal, locale)}</p></div></div>)}</CardContent></Card>
         <Card><CardHeader><CardTitle>{t("paymentAttempts")}</CardTitle></CardHeader><CardContent className="space-y-3">{order.payments.length ? order.payments.map((payment) => <div key={payment.id} className="flex items-center justify-between rounded-lg border p-3 text-sm"><span>{paymentMethodName(payment.paymentMethodId)}</span><span className="flex items-center gap-3"><span>{formatMoney(payment.amount, locale)}</span><StatusBadge status={payment.status} /></span></div>) : <p className="text-sm text-muted-foreground">{t("noPayments")}</p>}{payablePayment ? <div className="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.035] p-4"><p className="text-sm">{t("vnpayHint")}</p><VnpayPayButton paymentId={payablePayment.id} /></div> : order.status === OrderStatus.PendingPayment ? <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">{t("awaitingPayment")}</p> : null}</CardContent></Card>
       </div>
       <div className="space-y-6">
