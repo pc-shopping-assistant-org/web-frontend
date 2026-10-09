@@ -10,6 +10,8 @@ import {
   cancelOrderAsAdmin,
   createOrder,
   createVnpayUrl,
+  getAdminInvoice,
+  getAdminInvoices,
   getAdminOrder,
   getAdminOrders,
   getOrder,
@@ -18,6 +20,7 @@ import {
   getVnpayResult,
   getShippingMethods,
   previewDiscounts,
+  type AdminInvoiceFilters,
   type AdminOrderFilters,
   type OrderFilters,
 } from "./api";
@@ -91,6 +94,22 @@ export function useAdminOrders(filters: AdminOrderFilters = {}) {
     queryFn: () => getAdminOrders(filters),
     retry: false,
     placeholderData: keepPreviousData,
+  });
+}
+export function useAdminInvoices(filters: AdminInvoiceFilters = {}) {
+  return useQuery({
+    queryKey: ["orders", "admin", "invoices", filters],
+    queryFn: () => getAdminInvoices(filters),
+    retry: false,
+    placeholderData: keepPreviousData,
+  });
+}
+export function useAdminInvoice(orderId: string) {
+  return useQuery({
+    queryKey: ["orders", "admin", "invoice", orderId],
+    queryFn: () => getAdminInvoice(orderId),
+    enabled: Boolean(orderId),
+    retry: false,
   });
 }
 export function useAdminOrder(orderId: string) {

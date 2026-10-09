@@ -677,7 +677,8 @@
       "PAID": "Đã thanh toán",
       "FAILED": "Thất bại",
       "SCHEDULED": "Sắp diễn ra",
-      "RUNNING": "Đang chạy"
+      "RUNNING": "Đang chạy",
+      "REFUNDED": "Đã hoàn tiền"
     },
     "searchProducts": "Tìm sản phẩm",
     "searchOrders": "Tìm đơn/khách hàng",
@@ -685,7 +686,7 @@
     "searchEmployees": "Tìm nhân viên",
     "searchDiscounts": "Tìm mã giảm giá",
     "searchSuppliers": "Tìm nhà cung cấp",
-    "searchPayments": "Tìm khách hàng hoặc giao dịch",
+    "searchPayments": "Tìm theo mã giao dịch",
     "searchReviews": "Tìm đánh giá",
     "forbiddenTitle": "Cần quyền quản trị",
     "forbiddenDescription": "Khu vực này dành cho quản trị viên và nhân viên cửa hàng.",
@@ -916,7 +917,7 @@
     "openInvoice": "Mở hóa đơn đơn hàng",
     "invoiceUnavailable": "Hóa đơn chưa có cho đơn này.",
     "invoices": "Hóa đơn",
-    "searchInvoices": "Tìm mã hóa đơn hoặc khách hàng",
+    "searchInvoices": "Tìm theo số hóa đơn hoặc tên khách hàng",
     "resource": {
       "products": "Sản phẩm",
       "productsDescription": "Tìm, lọc và ẩn sản phẩm catalog.",
@@ -961,7 +962,18 @@
     "customerId": "Mã khách hàng",
     "paidAt": "Thanh toán lúc",
     "deliveredAt": "Giao hàng lúc",
-    "moreItems": "và {count} sản phẩm khác"
+    "moreItems": "và {count} sản phẩm khác",
+    "customerName": "Tên khách hàng",
+    "collectCash": "Xác nhận đã thu tiền",
+    "collectCashDescription": "Xác nhận nhân viên giao hàng đã thu đủ tiền mặt. Thanh toán chuyển sang Đã thanh toán và không đổi lại được trừ khi hoàn tiền.",
+    "refundPayment": "Hoàn tiền",
+    "refundPaymentDescription": "Chỉ ghi nhận khoản thanh toán đã được hoàn lại cho khách. Việc chuyển tiền trả khách do cửa hàng tự thực hiện.",
+    "invoiceDetail": "Chi tiết hóa đơn",
+    "viewInvoice": "Xem hóa đơn",
+    "viewOrder": "Xem đơn hàng",
+    "printInvoice": "In hóa đơn",
+    "totalPayments": "{count} thanh toán",
+    "totalInvoices": "{count} hóa đơn"
   },
   "errors": {
     "CATEGORY_IN_USE": "Danh mục còn danh mục con hoặc sản phẩm nên không thể xóa.",

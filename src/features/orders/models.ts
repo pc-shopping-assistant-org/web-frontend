@@ -210,6 +210,37 @@ export type AdminOrderDetail = OrderDetail & {
   statusHistory: OrderStatusChange[];
 };
 
+export type AdminInvoiceSummary = {
+  id: string;
+  invoiceNumber: string;
+  recipientName?: string;
+  totalAmount: number;
+  invoiceDate?: string;
+};
+
+export type AdminInvoicePage = {
+  items: AdminInvoiceSummary[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+};
+
+export type AdminInvoiceDetail = {
+  id: string;
+  invoiceNumber: string;
+  invoiceDate?: string;
+  recipientName?: string;
+  recipientPhone?: string;
+  deliveryAddress?: string;
+  items: OrderLine[];
+  subtotalAmount: number;
+  discountAmount: number;
+  shippingFee: number;
+  totalAmount: number;
+};
+
 export type VnpayResult = {paymentId: string; orderId: string; result: "PAID" | "FAILED" | "CANCELLED" | "PENDING"; amount: number};
 
 export type DiscountPreview = {

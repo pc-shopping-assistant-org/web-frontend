@@ -27,8 +27,6 @@ import {
   getAdminCustomerOrders,
   getAdminDiscount,
   getAdminEmployee,
-  getAdminPaymentMethods,
-  getAdminPayments,
   getAdminProducts,
   getAdminReviews,
   getAdminSupplier,
@@ -40,9 +38,7 @@ import {
   getDashboardOverview,
   getDiscounts,
   getEmployees,
-  getInvoices,
   getOptions,
-  getOrderInvoice,
   getOrderStatusStats,
   getAdminProductById,
   getRevenueChart,
@@ -62,7 +58,6 @@ import {
   updateCustomerStatus,
   updateDiscountStatus,
   updateEmployeeStatus,
-  updatePaymentStatus,
   updateProductStatus,
   updateReviewStatus,
   uploadAdminFile,
@@ -153,16 +148,6 @@ export function useAdminDiscounts(
     placeholderData: keepPreviousData,
   });
 }
-export function useAdminPayments(
-  filter: Parameters<typeof getAdminPayments>[0] = {},
-) {
-  return useQuery({
-    queryKey: ["admin", "payments", filter],
-    queryFn: () => getAdminPayments(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
-  });
-}
 export function useAdminReviews(
   filter: Parameters<typeof getAdminReviews>[0] = {},
 ) {
@@ -171,13 +156,6 @@ export function useAdminReviews(
     queryFn: () => getAdminReviews(filter),
     retry: false,
     placeholderData: keepPreviousData,
-  });
-}
-export function useAdminPaymentMethods() {
-  return useQuery({
-    queryKey: ["admin", "payment-methods"],
-    queryFn: getAdminPaymentMethods,
-    retry: false,
   });
 }
 export function useAdminCustomer(id: string) {
@@ -210,22 +188,6 @@ export function useAdminDiscount(id: string) {
     queryFn: () => getAdminDiscount(id),
     enabled: Boolean(id),
     retry: false,
-  });
-}
-export function useOrderInvoice(id: string, enabled = true) {
-  return useQuery({
-    queryKey: ["admin", "order-invoice", id],
-    queryFn: () => getOrderInvoice(id),
-    enabled: Boolean(id) && enabled,
-    retry: false,
-  });
-}
-export function useInvoices(filter: Parameters<typeof getInvoices>[0] = {}) {
-  return useQuery({
-    queryKey: ["admin", "invoices", filter],
-    queryFn: () => getInvoices(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
   });
 }
 export function useAdminSupplier(id: string) {
@@ -288,21 +250,6 @@ function useStatusMutation<TVariables, TData>(
     mutationFn,
     onSuccess: () => qc.invalidateQueries({ queryKey: adminKeys.all }),
   });
-}
-export function useAdminPaymentStatus() {
-  return useStatusMutation(
-    ({
-      id,
-      status,
-      providerTransactionCode,
-      note,
-    }: {
-      id: string;
-      status: string;
-      providerTransactionCode?: string;
-      note?: string;
-    }) => updatePaymentStatus(id, status, providerTransactionCode, note),
-  );
 }
 export function useAdminProductStatus() {
   return useStatusMutation(

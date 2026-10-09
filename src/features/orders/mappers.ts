@@ -167,20 +167,26 @@ export function mapInvoicesPage(dto: InvoicesPageDto): InvoicesPage {
 import type {
   CheckoutPaymentMethodDto,
   CheckoutShippingMethodDto,
+  AdminInvoiceDetailDto,
+  AdminInvoicePageDto,
   AdminOrderDetailDto,
   AdminOrderPageDto,
   AdminOrderSummaryDto,
   DiscountPreviewDto,
   OrderDetailDto,
+  OrderLineDto,
   OrderSummaryDto,
   OrderSummaryPageDto,
 } from "@/features/orders/contracts/dto";
 import type {
+  AdminInvoiceDetail,
+  AdminInvoicePage,
   AdminOrderDetail,
   AdminOrderPage,
   AdminOrderSummary,
   DiscountPreview,
   OrderDetail,
+  OrderLine,
   OrderSummary,
   OrderSummaryPage,
 } from "@/features/orders/models";
@@ -197,17 +203,7 @@ export function mapOrderDetail(dto: OrderDetailDto): OrderDetail {
     note: dto.note ?? undefined,
     shippingMethodId: dto.shippingMethodId ?? undefined,
     paymentMethodId: dto.paymentMethodId ?? undefined,
-    items: (dto.items ?? []).map((line) => ({
-      id: line.id,
-      productVariantId: line.productVariantId ?? undefined,
-      productName: text(line.productName ?? undefined),
-      sku: line.sku ?? undefined,
-      variantLabel: line.variantLabel ?? undefined,
-      quantity: number(line.quantity),
-      unitPrice: number(line.unitPrice),
-      discountAmount: number(line.discountAmount),
-      lineTotal: number(line.lineTotal),
-    })),
+    items: (dto.items ?? []).map(mapOrderLine),
     subtotalAmount: number(dto.subtotalAmount),
     discountAmount: number(dto.discountAmount),
     shippingFee: number(dto.shippingFee),
@@ -266,6 +262,53 @@ function mapAdminOrderSummary(dto: AdminOrderSummaryDto): AdminOrderSummary {
     customerId: dto.customerId ?? undefined,
     recipientName: dto.recipientName ?? undefined,
     recipientPhone: dto.recipientPhone ?? undefined,
+  };
+}
+
+function mapOrderLine(line: OrderLineDto): OrderLine {
+  return {
+    id: line.id,
+    productVariantId: line.productVariantId ?? undefined,
+    productName: text(line.productName ?? undefined),
+    sku: line.sku ?? undefined,
+    variantLabel: line.variantLabel ?? undefined,
+    quantity: number(line.quantity),
+    unitPrice: number(line.unitPrice),
+    discountAmount: number(line.discountAmount),
+    lineTotal: number(line.lineTotal),
+  };
+}
+
+export function mapAdminInvoiceDetail(dto: AdminInvoiceDetailDto): AdminInvoiceDetail {
+  return {
+    id: dto.id,
+    invoiceNumber: dto.invoiceNumber,
+    invoiceDate: dto.invoiceDate ?? undefined,
+    recipientName: dto.recipientName ?? undefined,
+    recipientPhone: dto.recipientPhone ?? undefined,
+    deliveryAddress: dto.deliveryAddress ?? undefined,
+    items: (dto.items ?? []).map(mapOrderLine),
+    subtotalAmount: number(dto.subtotalAmount),
+    discountAmount: number(dto.discountAmount),
+    shippingFee: number(dto.shippingFee),
+    totalAmount: number(dto.totalAmount),
+  };
+}
+
+export function mapAdminInvoicePage(dto: AdminInvoicePageDto): AdminInvoicePage {
+  return {
+    items: (dto.content ?? []).map((invoice) => ({
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      recipientName: invoice.recipientName ?? undefined,
+      totalAmount: number(invoice.totalAmount),
+      invoiceDate: invoice.invoiceDate ?? undefined,
+    })),
+    page: number(dto.page),
+    size: number(dto.size),
+    totalElements: number(dto.totalElements),
+    totalPages: number(dto.totalPages),
+    last: dto.last ?? true,
   };
 }
 

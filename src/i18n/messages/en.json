@@ -677,7 +677,8 @@
       "PAID": "Paid",
       "FAILED": "Failed",
       "SCHEDULED": "Scheduled",
-      "RUNNING": "Running"
+      "RUNNING": "Running",
+      "REFUNDED": "Refunded"
     },
     "searchProducts": "Search products",
     "searchOrders": "Search order/customer",
@@ -685,7 +686,7 @@
     "searchEmployees": "Search employee",
     "searchDiscounts": "Search discount",
     "searchSuppliers": "Search supplier",
-    "searchPayments": "Search customer or transaction",
+    "searchPayments": "Search by transaction code",
     "searchReviews": "Search review",
     "forbiddenTitle": "Admin access required",
     "forbiddenDescription": "This area is available to store administrators and employees.",
@@ -916,7 +917,7 @@
     "openInvoice": "Open order invoice",
     "invoiceUnavailable": "Invoice is not available for this order yet.",
     "invoices": "Invoices",
-    "searchInvoices": "Search invoice or customer",
+    "searchInvoices": "Search by invoice number or customer name",
     "resource": {
       "products": "Products",
       "productsDescription": "Search, filter and hide catalog products.",
@@ -961,7 +962,18 @@
     "customerId": "Customer ID",
     "paidAt": "Paid at",
     "deliveredAt": "Delivered at",
-    "moreItems": "and {count} more"
+    "moreItems": "and {count} more",
+    "customerName": "Customer name",
+    "collectCash": "Confirm cash collected",
+    "collectCashDescription": "Confirm the courier collected the full cash amount. The payment becomes Paid and can only change again by a refund.",
+    "refundPayment": "Refund",
+    "refundPaymentDescription": "This only records that the payment was given back to the customer. The money itself is returned by the shop.",
+    "invoiceDetail": "Invoice detail",
+    "viewInvoice": "View invoice",
+    "viewOrder": "View order",
+    "printInvoice": "Print invoice",
+    "totalPayments": "{count} payments",
+    "totalInvoices": "{count} invoices"
   },
   "errors": {
     "CATEGORY_IN_USE": "The category still has sub-categories or products and cannot be deleted.",

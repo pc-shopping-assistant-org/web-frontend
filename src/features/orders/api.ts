@@ -1,5 +1,7 @@
 import {backendFetch} from "@/lib/api/client";
 import type {
+  AdminInvoiceDetailDto,
+  AdminInvoicePageDto,
   AdminOrderDetailDto,
   AdminOrderPageDto,
   CheckoutPaymentMethodDto,
@@ -12,6 +14,8 @@ import type {
   VnpayUrlDto,
 } from "@/features/orders/contracts/dto";
 import {
+  mapAdminInvoiceDetail,
+  mapAdminInvoicePage,
   mapAdminOrderDetail,
   mapAdminOrderPage,
   mapCheckoutPaymentMethod,
@@ -89,6 +93,29 @@ export async function getAdminOrders(filters: AdminOrderFilters = {}) {
   return mapAdminOrderPage(await backendFetch<AdminOrderPageDto>(
     `${ORDER}/orders/admin${params.size ? `?${params.toString()}` : ""}`,
   ));
+}
+
+export type AdminInvoiceFilters = {
+  page?: number;
+  size?: number;
+  keyword?: string;
+  invoiceFrom?: string;
+  invoiceTo?: string;
+};
+
+/** The invoices of the shop: completed orders, the latest first. */
+export async function getAdminInvoices(filters: AdminInvoiceFilters = {}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters))
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  return mapAdminInvoicePage(await backendFetch<AdminInvoicePageDto>(
+    `${ORDER}/orders/admin/invoices${params.size ? `?${params.toString()}` : ""}`,
+  ));
+}
+
+/** An invoice is the order it belongs to, so it is read by the id of that order. */
+export async function getAdminInvoice(orderId: string) {
+  return mapAdminInvoiceDetail(await backendFetch<AdminInvoiceDetailDto>(`${ORDER}/orders/admin/invoices/${encodeURIComponent(orderId)}`));
 }
 
 export async function getAdminOrder(orderId: string) {

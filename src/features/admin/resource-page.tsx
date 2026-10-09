@@ -17,10 +17,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Link } from "@/i18n/navigation";
 import { formatMoney } from "@/lib/format";
 import {AccountStatus} from "@/lib/domain/account-enums";
-import {DiscountStatus, DiscountState, DiscountType, OrderStatus, PaymentStatus} from "@/lib/domain/commerce-enums";
+import {DiscountStatus, DiscountState, DiscountType, OrderStatus, PaymentMethodCode, PaymentStatus} from "@/lib/domain/commerce-enums";
 import {ResourceStatus, ReviewStatus} from "@/lib/domain/catalog-enums";
 import type {CategoryTree, Review} from "@/features/catalog/contracts/responses";
-import type {PaymentDetail} from "@/features/admin/contracts/responses";
 
 import { useBrands, useCategories } from "@/features/catalog/queries";
 import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
@@ -39,9 +38,6 @@ import {
   useAdminDiscounts,
   useAdminEmployeeStatus,
   useAdminEmployees,
-  useAdminPaymentMethods,
-  useAdminPaymentStatus,
-  useAdminPayments,
   useAdminProductStatus,
   useAdminProducts,
   useAdminReviewStatus,
@@ -52,6 +48,12 @@ import {
 } from "./queries";
 import { AdminPagination } from "./admin-pagination";
 import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
+import type { AdminPayment, AdminPaymentMethod } from "@/features/payments/models";
+import {
+  useAdminPaymentMethods,
+  useAdminPayments,
+  useUpdateAdminPaymentStatus,
+} from "@/features/payments/queries";
 import { useAdminOrders } from "@/features/orders/queries";
 
 export type AdminResource =
@@ -335,12 +337,6 @@ function StatusOptions({
 }
 
 const ORDER_STATUSES = Object.values(OrderStatus);
-
-function paymentStatusOptions(current?: string) {
-  return current === PaymentStatus.Pending
-    ? Object.values(PaymentStatus)
-    : [current ?? PaymentStatus.Pending];
-}
 
 function Products() {
   const t = useTranslations("admin");
@@ -1214,38 +1210,45 @@ function Payments() {
   const locale = useLocale();
   const methods = useAdminPaymentMethods();
   const [draft, setDraft] = useState({
-    keyword: "",
+    transactionCode: "",
+    customerName: "",
     status: "",
-    paymentMethodCode: "",
     fromDate: "",
     toDate: "",
   });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
+  const [applied, setApplied] = useState(draft);
+  const [pageNumber, setPageNumber] = useState(0);
+  const [actionError, setActionError] = useState<unknown>(null);
   const query = useAdminPayments({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
+    page: pageNumber,
+    size: 20,
+    transactionCode: applied.transactionCode || undefined,
+    customerName: applied.customerName || undefined,
     status: applied.status || undefined,
-    paymentMethodCode: applied.paymentMethodCode || undefined,
-    fromDate: dateParam(applied.fromDate, false),
-    toDate: dateParam(applied.toDate, true),
+    createdFrom: dateParam(applied.fromDate, false),
+    createdTo: dateParam(applied.toDate, true),
   });
-  const mutation = useAdminPaymentStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
+  const apply = () => {
+    setApplied({
+      ...draft,
+      transactionCode: draft.transactionCode.trim(),
+      customerName: draft.customerName.trim(),
+    });
+    setPageNumber(0);
+    setActionError(null);
+  };
   const reset = () => {
     const empty = {
-      keyword: "",
+      transactionCode: "",
+      customerName: "",
       status: "",
-      paymentMethodCode: "",
       fromDate: "",
       toDate: "",
     };
     setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
+    setApplied(empty);
+    setPageNumber(0);
+    setActionError(null);
   };
   const page = query.data;
   return (
@@ -1254,14 +1257,28 @@ function Payments() {
       description={t("resource.paymentsDescription")}
     >
       <FilterBar
-        value={draft.keyword}
+        value={draft.transactionCode}
         onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
+          setDraft((current) => ({ ...current, transactionCode: value }))
         }
         placeholder={t("searchPayments")}
         onSubmit={apply}
         onReset={reset}
       >
+        <label className="space-y-1.5 text-sm">
+          <span className="font-medium text-muted-foreground">
+            {t("customerName")}
+          </span>
+          <Input
+            value={draft.customerName}
+            onChange={(event) =>
+              setDraft((current) => ({
+                ...current,
+                customerName: event.target.value,
+              }))
+            }
+          />
+        </label>
         <FilterSelect
           id="payment-status"
           label={t("status")}
@@ -1271,21 +1288,6 @@ function Payments() {
           }
         >
           <StatusOptions kind="payment" />
-        </FilterSelect>
-        <FilterSelect
-          id="payment-method-filter"
-          label={t("paymentMethod")}
-          value={draft.paymentMethodCode}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, paymentMethodCode: value }))
-          }
-        >
-          <option value="">{t("allPaymentMethods")}</option>
-          {(methods.data ?? []).map((method) => (
-            <option key={method.code ?? method.id} value={method.code}>
-              {method.code} · {method.name}
-            </option>
-          ))}
         </FilterSelect>
         <DateFilter
           id="payment-from"
@@ -1304,6 +1306,7 @@ function Payments() {
           }
         />
       </FilterBar>
+      {actionError ? <div className="mb-4"><Failure error={actionError} /></div> : null}
       {query.isPending ? (
         <Loading />
       ) : query.isError ? (
@@ -1314,144 +1317,137 @@ function Payments() {
             <EmptyState />
           ) : (
             <div className="space-y-3">
-              {(page?.items ?? []).map((payment, index) => (
+              {(page?.items ?? []).map((payment) => (
                 <PaymentRow
-                  key={payment.id ?? index}
+                  key={payment.id}
                   payment={payment}
                   locale={locale}
-                  mutation={mutation}
+                  onError={setActionError}
+                  method={methods.data?.find(
+                    (method) => method.id === payment.paymentMethodId,
+                  )}
                 />
               ))}
             </div>
           )}
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
+          {page && page.totalPages > 1 ? (
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
+                {" · "}
+                {t("totalPayments", { count: page.totalElements })}
+              </p>
+              <AdminPagination
+                hasPrev={page.page > 0}
+                hasNext={!page.last}
+                onPrev={() => {
+                  setPageNumber((current) => Math.max(0, current - 1));
+                  setActionError(null);
+                }}
+                onNext={() => {
+                  setPageNumber((current) => current + 1);
+                  setActionError(null);
+                }}
+              />
+            </div>
+          ) : null}
         </>
       )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
     </Shell>
   );
 }
 
+/**
+ * The two changes the shop can make: cash collected on delivery, and a paid payment given back.
+ * A refused change refreshes the row, which then loses its button and its dialog, so the refusal goes to the page.
+ */
 function PaymentRow({
   payment,
   locale,
-  mutation,
+  method,
+  onError,
 }: {
-  payment: PaymentDetail;
+  payment: AdminPayment;
   locale: string;
-  mutation: ReturnType<typeof useAdminPaymentStatus>;
+  method?: AdminPaymentMethod;
+  onError: (error: unknown) => void;
 }) {
   const t = useTranslations("admin");
-  const [expanded, setExpanded] = useState(false);
-  const [providerCode, setProviderCode] = useState(
-    payment.providerTransactionCode ?? "",
-  );
+  const mutation = useUpdateAdminPaymentStatus();
+  const change = (status: PaymentStatus) => {
+    onError(null);
+    return mutation.mutateAsync({ paymentId: payment.id, status }).catch((error: unknown) => {
+      onError(error);
+      throw error;
+    });
+  };
+  const dateTime = (value: string) =>
+    new Date(value).toLocaleString(locale === "vi" ? "vi-VN" : "en-US");
+  const canCollect =
+    payment.status === PaymentStatus.Pending &&
+    method?.code === PaymentMethodCode.Cod;
+  const canRefund = payment.status === PaymentStatus.Paid;
   return (
     <Card className="transition hover:border-primary/30 hover:shadow-md">
-      <CardContent className="space-y-3 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="min-w-0 flex-1">
+      <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             <p className="font-semibold">
               {payment.providerTransactionCode ?? shortId(payment.id)}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {payment.paymentMethodCode ?? "—"} ·{" "}
-              {payment.orderId ? (
-                <Link
-                  href={`/admin/orders/${payment.orderId}`}
-                  className="hover:text-primary hover:underline"
-                >
-                  {shortId(payment.orderId)}
-                </Link>
-              ) : (
-                "—"
-              )}
-            </p>
-            <p className="mt-1 font-medium">
-              {formatMoney(payment.amount, locale)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
             <StatusBadge status={payment.status} />
-            <Select
-              className="h-9 w-32"
-              value={payment.status ?? ""}
-              onChange={(event) =>
-                void mutation.mutateAsync({
-                  id: payment.id ?? "",
-                  status: event.target.value,
-                  providerTransactionCode: providerCode.trim() || undefined,
-                })
-              }
-              disabled={
-                !payment.id ||
-                mutation.isPending ||
-                payment.status !== PaymentStatus.Pending
-              }
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {method?.name ?? "—"} ·{" "}
+            <Link
+              href={`/admin/orders/${payment.orderId}`}
+              className="hover:text-primary hover:underline"
             >
-              {paymentStatusOptions(payment.status).map((status) => (
-                <option key={status} value={status}>
-                  {t.has(`statusValues.${status}`)
-                    ? t(`statusValues.${status}`)
-                    : status}
-                </option>
-              ))}
-            </Select>
-            <Button
-              type="button"
+              {shortId(payment.orderId)}
+            </Link>
+            {payment.customerId ? ` · ${shortId(payment.customerId)}` : ""}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {payment.paidAt
+              ? `${t("paidAt")}: ${dateTime(payment.paidAt)}`
+              : payment.createdAt
+                ? dateTime(payment.createdAt)
+                : "—"}
+            {payment.updatedBy ? ` · ${t("changedByStaff")}` : ""}
+          </p>
+          <p className="mt-1 font-medium">
+            {formatMoney(payment.amount, locale)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {canCollect ? (
+            <ConfirmAction
+              title={t("collectCash")}
+              description={t("collectCashDescription")}
+              confirmLabel={t("collectCash")}
+              cancelLabel={t("cancel")}
+              onConfirm={() => change(PaymentStatus.Paid)}
               size="sm"
               variant="outline"
-              onClick={() => setExpanded((value) => !value)}
+              confirmVariant="default"
             >
-              {expanded ? t("close") : t("edit")}
-            </Button>
-          </div>
-        </div>
-        {expanded ? (
-          <div className="flex flex-wrap items-end gap-3 border-t pt-3">
-            <label className="block w-full max-w-md space-y-1.5 text-sm">
-              <span className="font-medium text-muted-foreground">
-                {t("providerTransactionCode")}
-              </span>
-              <Input
-                value={providerCode}
-                onChange={(event) => setProviderCode(event.target.value)}
-              />
-            </label>
-            <Button
-              type="button"
+              {t("collectCash")}
+            </ConfirmAction>
+          ) : null}
+          {canRefund ? (
+            <ConfirmAction
+              title={t("refundPayment")}
+              description={t("refundPaymentDescription")}
+              confirmLabel={t("refundPayment")}
+              cancelLabel={t("cancel")}
+              onConfirm={() => change(PaymentStatus.Refunded)}
               size="sm"
-              onClick={() =>
-                void mutation.mutateAsync({
-                  id: payment.id ?? "",
-                  status: payment.status ?? PaymentStatus.Pending,
-                  providerTransactionCode: providerCode.trim() || undefined,
-                })
-              }
-              disabled={!payment.id || mutation.isPending}
+              variant="outline"
             >
-              {t("save")}
-            </Button>
-          </div>
-        ) : null}
+              {t("refundPayment")}
+            </ConfirmAction>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );

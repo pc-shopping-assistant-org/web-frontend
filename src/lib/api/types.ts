@@ -125,7 +125,6 @@ export type {
   UpdateEmployeeRequest,
   UpdateOptionRequest,
   UpdateOrderStatusRequest,
-  UpdatePaymentStatusRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
   UpdateResourceStatusRequest,

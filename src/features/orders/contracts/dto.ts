@@ -113,6 +113,39 @@ export type AdminOrderDetailDto = OrderDetailDto & {
   statusHistory?: OrderStatusChangeDto[] | null;
 };
 
+/** One row of the invoice list of the shop: a completed order. */
+export type AdminInvoiceSummaryDto = {
+  id: string;
+  invoiceNumber: string;
+  recipientName?: string | null;
+  totalAmount: number;
+  invoiceDate?: string | null;
+};
+
+export type AdminInvoicePageDto = {
+  content: AdminInvoiceSummaryDto[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+};
+
+/** An invoice, read from the snapshot of its completed order. */
+export type AdminInvoiceDetailDto = {
+  id: string;
+  invoiceNumber: string;
+  invoiceDate?: string | null;
+  recipientName?: string | null;
+  recipientPhone?: string | null;
+  deliveryAddress?: string | null;
+  items: OrderLineDto[];
+  subtotalAmount: number;
+  discountAmount: number;
+  shippingFee: number;
+  totalAmount: number;
+};
+
 export type OrderStatusDto = {
   id: string;
   invoiceNumber: string;

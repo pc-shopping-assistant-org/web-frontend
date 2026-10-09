@@ -11,7 +11,6 @@ import type {
   EmployeeDetailDto,
   OptionDto,
   OrderStatusStatDto,
-  PaymentDetailDto,
   RoleDto,
   SupplierDto,
 } from "@/features/admin/contracts/dto";
@@ -20,8 +19,6 @@ import type {
   CustomerFilter,
   DiscountFilter,
   EmployeeFilter,
-  InvoiceFilter,
-  PaymentFilter,
   ReviewFilter,
   SupplierFilter,
 } from "@/features/admin/contracts/filters";
@@ -37,7 +34,6 @@ import {
   mapEmployeeDetail,
   mapOption,
   mapOrderStatusStat,
-  mapPaymentDetail,
   mapRole,
   mapRevenueChartData,
   mapSupplier,
@@ -45,14 +41,12 @@ import {
   mapCustomersPage,
   mapDiscountsPage,
   mapEmployeesPage,
-  mapPaymentsPage,
   mapSuppliersPage,
 } from "@/features/admin/mappers";
 import type {
   CustomersPageDto,
   DiscountsPageDto,
   EmployeesPageDto,
-  PaymentsPageDto,
   RevenueChartDataDto,
   TopSellingProductDto,
   SuppliersPageDto,
@@ -74,14 +68,8 @@ import {
   mapReviewsPage,
 } from "@/features/catalog/mappers";
 import type {
-  InvoiceDto,
-  InvoicesPageDto,
-  PaymentMethodDto,
 } from "@/features/orders/contracts/dto";
 import {
-  mapInvoice,
-  mapInvoicesPage,
-  mapPaymentMethod,
 } from "@/features/orders/mappers";
 import {
   analyticsDateRangeRequestSchema,
@@ -105,7 +93,6 @@ import {
   updateDiscountStatusRequestSchema,
   updateEmployeeRequestSchema,
   updateOptionRequestSchema,
-  updatePaymentStatusRequestSchema,
   updateProductRequestSchema,
   updateProductVariantRequestSchema,
   updateResourceStatusRequestSchema,
@@ -204,20 +191,10 @@ export function getDiscounts(
     `${PROMOTION}/discounts${queryString(filter)}`,
   ).then(mapDiscountsPage);
 }
-export function getAdminPayments(
-  filter: PaymentFilter = {},
-) {
-  return backendFetch<PaymentsPageDto>(
-    `/admin/payments${queryString(filter)}`,
-  ).then(mapPaymentsPage);
-}
 export function getAdminReviews(
   filter: ReviewFilter = {},
 ) {
   return backendFetch<ReviewsPageDto>(`/admin/reviews${queryString(filter)}`).then(mapReviewsPage);
-}
-export function getAdminPaymentMethods() {
-  return backendFetch<PaymentMethodDto[]>("/admin/payment-methods").then((methods) => methods.map(mapPaymentMethod));
 }
 export function getAdminCustomer(id: string) {
   return backendFetch<CustomerDetailDto>(
@@ -238,16 +215,6 @@ export function getAdminDiscount(id: string) {
   return backendFetch<DiscountDto>(
     `${PROMOTION}/discounts/${encodeURIComponent(id)}`,
   ).then(mapDiscountDetail);
-}
-export function getOrderInvoice(id: string) {
-  return backendFetch<InvoiceDto>(
-    `/admin/orders/${encodeURIComponent(id)}/invoice`,
-  ).then(mapInvoice);
-}
-export function getInvoices(
-  filter: InvoiceFilter = {},
-) {
-  return backendFetch<InvoicesPageDto>(`/admin/invoices${queryString(filter)}`).then(mapInvoicesPage);
 }
 export function getAdminSupplier(id: string) {
   return backendFetch<SupplierDto>(
@@ -303,25 +270,6 @@ export function uploadAdminFile(file: globalThis.File) {
   }));
 }
 
-export function updatePaymentStatus(
-  paymentId: string,
-  status: string,
-  providerTransactionCode?: string,
-  note?: string,
-) {
-  const payload = parseRequest(updatePaymentStatusRequestSchema, {
-    status,
-    providerTransactionCode,
-    note,
-  });
-  return backendFetch<PaymentDetailDto>(
-    `/admin/payments/${encodeURIComponent(paymentId)}/status`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    },
-  ).then(mapPaymentDetail);
-}
 export function updateProductStatus(productId: string, status: string) {
   const payload = parseRequest(updateResourceStatusRequestSchema, {status});
   return backendFetch<ProductDetailDto>(

@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 
-import {cancelOrder, createOrder, getOrder, getOrders, advanceOrder, cancelOrderAsAdmin, createVnpayUrl, getAdminOrder, getAdminOrders, getShippingMethods, getVnpayResult, previewDiscounts} from "./api";
+import {cancelOrder, createOrder, getOrder, getOrders, advanceOrder, cancelOrderAsAdmin, createVnpayUrl, getAdminInvoice, getAdminInvoices, getAdminOrder, getAdminOrders, getShippingMethods, getVnpayResult, previewDiscounts} from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -109,5 +109,18 @@ describe("order api", () => {
     await expect(cancelOrderAsAdmin(ID, "   ")).rejects.toThrow();
     await expect(advanceOrder(ID, "BOGUS")).rejects.toThrow();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("lists the invoices of the shop by page and reads one by the id of its order", async () => {
+    const list = stubFetch({content: [{id: ID, invoiceNumber: "INV-ABCDEFGHJK", recipientName: "A", totalAmount: 31900, invoiceDate: "2026-10-08T00:00:00Z"}], page: 0, size: 20, totalElements: 1, totalPages: 1, last: true});
+    const page = await getAdminInvoices({page: 0, size: 20, keyword: "INV", invoiceFrom: "2026-10-01T00:00:00Z", invoiceTo: ""});
+    expect(list.mock.calls[0][0]).toBe("/api/backend/order-service/orders/admin/invoices?page=0&size=20&keyword=INV&invoiceFrom=2026-10-01T00%3A00%3A00Z");
+    expect(page.items).toEqual([{id: ID, invoiceNumber: "INV-ABCDEFGHJK", recipientName: "A", totalAmount: 31900, invoiceDate: "2026-10-08T00:00:00Z"}]);
+
+    const detail = stubFetch({id: ID, invoiceNumber: "INV-ABCDEFGHJK", invoiceDate: null, recipientName: "A", recipientPhone: "0912345678", deliveryAddress: "1 Street", items: order.items, subtotalAmount: 1900, discountAmount: 0, shippingFee: 30000, totalAmount: 31900});
+    const invoice = await getAdminInvoice(ID);
+    expect(detail.mock.calls[0][0]).toBe(`/api/backend/order-service/orders/admin/invoices/${ID}`);
+    expect(invoice).toMatchObject({invoiceNumber: "INV-ABCDEFGHJK", invoiceDate: undefined, totalAmount: 31900});
+    expect(invoice.items[0]).toMatchObject({productName: "Card", variantLabel: "Color: Blue", lineTotal: 1900});
   });
 });
