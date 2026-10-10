@@ -151,33 +151,6 @@ export type DiscountsPage = {
   last: boolean;
 };
 
-export type EmployeeDetail = {
-  id: string;
-  accountId: string;
-  fullName?: string;
-  email?: string;
-  phone?: string;
-  roleId?: string;
-  roleName?: string;
-  gender?: string;
-  salary: number;
-  address?: string;
-  avatarFileId?: string;
-  birthday?: string;
-  joinedAt?: string;
-  status?: string;
-  createdAt?: string;
-};
-
-export type EmployeesPage = {
-  hasNext: boolean;
-  hasPrev: boolean;
-  items: EmployeeDetail[];
-  nextCursor?: string;
-  prevCursor?: string;
-  size: number;
-};
-
 export type FileResponse = {
   id: string;
   originalName?: string;
@@ -209,7 +182,6 @@ export type PaymentsPage = {
   size: number;
 };
 
-export type Role = {id: string; name: string; status?: string};
 export type Option = {
   id: string;
   name: string;

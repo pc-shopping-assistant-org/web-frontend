@@ -33,8 +33,12 @@ const AdminCustomerDetailPage = dynamic(
   () => import("@/features/admin/detail-pages").then((module) => module.AdminCustomerDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
-const AdminEmployeeDetailPage = dynamic(
-  () => import("@/features/admin/detail-pages").then((module) => module.AdminEmployeeDetailPage),
+const EmployeesPage = dynamic(
+  () => import("@/features/employees/employees-page").then((module) => module.EmployeesPage),
+  {loading: () => <AdminPageSkeleton />},
+);
+const EmployeeDetailPage = dynamic(
+  () => import("@/features/employees/employee-detail-page").then((module) => module.EmployeeDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminDiscountDetailPage = dynamic(
@@ -86,8 +90,12 @@ export function AdminCustomerDetailRouteClient({customerId}: {customerId: string
   return <AdminCustomerDetailPage customerId={customerId} />;
 }
 
+export function EmployeesRouteClient() {
+  return <EmployeesPage />;
+}
+
 export function AdminEmployeeDetailRouteClient({employeeId}: {employeeId: string}) {
-  return <AdminEmployeeDetailPage employeeId={employeeId} />;
+  return <EmployeeDetailPage employeeId={employeeId} />;
 }
 
 export function AdminDiscountDetailRouteClient({discountId}: {discountId: string}) {

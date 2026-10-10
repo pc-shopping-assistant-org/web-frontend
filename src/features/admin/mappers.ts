@@ -10,8 +10,6 @@ import type {
   DashboardOverviewDto,
   DiscountDto,
   DiscountsPageDto,
-  EmployeeDetailDto,
-  EmployeesPageDto,
   FileResponseDto,
   GroupSchemaItemDto,
   OptionDto,
@@ -20,7 +18,6 @@ import type {
   PaymentsPageDto,
   RevenueChartDataDto,
   RevenueChartPointDto,
-  RoleDto,
   SupplierDto,
   SuppliersPageDto,
   TopSellingProductDto,
@@ -38,8 +35,6 @@ import type {
   DiscountDetail,
   DiscountSummary,
   DiscountsPage,
-  EmployeeDetail,
-  EmployeesPage,
   FileResponse,
   Option,
   OrderStatusStat,
@@ -47,7 +42,6 @@ import type {
   PaymentsPage,
   RevenueChartData,
   RevenueChartPoint,
-  Role,
   Supplier,
   SuppliersPage,
   TopSellingProduct,
@@ -244,37 +238,6 @@ export function mapDiscountsPage(dto: DiscountsPageDto): DiscountsPage {
   };
 }
 
-export function mapEmployeeDetail(dto: EmployeeDetailDto): EmployeeDetail {
-  return {
-    id: text(dto.id),
-    accountId: text(dto.accountId),
-    fullName: dto.fullName,
-    email: dto.email,
-    phone: dto.phone,
-    roleId: dto.roleId,
-    roleName: dto.roleName,
-    gender: dto.gender,
-    salary: number(dto.salary),
-    address: dto.address,
-    avatarFileId: dto.avatarFileId,
-    birthday: dto.birthday,
-    joinedAt: dto.joinedAt,
-    status: dto.status,
-    createdAt: dto.createdAt,
-  };
-}
-
-export function mapEmployeesPage(dto: EmployeesPageDto): EmployeesPage {
-  return {
-    hasNext: dto.hasNext ?? false,
-    hasPrev: dto.hasPrev ?? false,
-    items: (dto.items ?? []).map(mapEmployeeDetail),
-    nextCursor: dto.nextCursor,
-    prevCursor: dto.prevCursor,
-    size: number(dto.size),
-  };
-}
-
 export function mapFileResponse(dto: FileResponseDto): FileResponse {
   return {
     id: text(dto.id),
@@ -310,10 +273,6 @@ export function mapPaymentsPage(dto: PaymentsPageDto): PaymentsPage {
     prevCursor: dto.prevCursor,
     size: number(dto.size),
   };
-}
-
-export function mapRole(dto: RoleDto): Role {
-  return {id: text(dto.id), name: text(dto.name), status: dto.status};
 }
 
 export function mapOption(dto: OptionDto): Option {

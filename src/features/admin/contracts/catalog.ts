@@ -5,14 +5,12 @@ import {
   EDITABLE_RESOURCE_STATUS_VALUES,
   RESOURCE_STATUS_VALUES,
 } from "@/lib/domain/catalog-enums";
-import {EMPLOYEE_GENDER_VALUES} from "@/lib/domain/account-enums";
 import {
   nonEmptyText,
   optionalDate,
   optionalEnum,
   optionalText,
   optionalUuid,
-  password,
   phone,
   uuid,
   money,
@@ -95,33 +93,6 @@ export const updateSupplierRequestSchema = createSupplierRequestSchema.extend({
   status: optionalEnum(EDITABLE_RESOURCE_STATUS_VALUES),
 }).strict();
 
-export const createEmployeeRequestSchema = z.object({
-  fullName: nonEmptyText.min(2),
-  email: z.email(),
-  phone,
-  password,
-  roleId: uuid,
-  gender: z.enum(EMPLOYEE_GENDER_VALUES),
-  salary: money.optional(),
-  joinedAt: optionalDate,
-  birthday: optionalDate,
-  address: optionalText,
-  avatarFileId: optionalUuid,
-}).strict();
-
-export const updateEmployeeRequestSchema = z.object({
-  fullName: nonEmptyText.min(2),
-  roleId: uuid,
-  email: z.email().optional(),
-  phone: phone.optional(),
-  gender: optionalEnum(EMPLOYEE_GENDER_VALUES),
-  salary: money.optional(),
-  joinedAt: optionalDate,
-  birthday: optionalDate,
-  address: optionalText,
-  avatarFileId: optionalUuid,
-}).strict();
-
 export const createOptionRequestSchema = z.object({
   name: nonEmptyText,
   type: nonEmptyText,
@@ -180,8 +151,6 @@ export type CreateBrandRequest = z.infer<typeof createBrandRequestSchema>;
 export type UpdateBrandRequest = z.infer<typeof updateBrandRequestSchema>;
 export type CreateSupplierRequest = z.infer<typeof createSupplierRequestSchema>;
 export type UpdateSupplierRequest = z.infer<typeof updateSupplierRequestSchema>;
-export type CreateEmployeeRequest = z.infer<typeof createEmployeeRequestSchema>;
-export type UpdateEmployeeRequest = z.infer<typeof updateEmployeeRequestSchema>;
 export type CreateOptionRequest = z.infer<typeof createOptionRequestSchema>;
 export type UpdateOptionRequest = z.infer<typeof updateOptionRequestSchema>;
 export type CreateAttributeDefinitionRequest = z.infer<typeof createAttributeDefinitionRequestSchema>;

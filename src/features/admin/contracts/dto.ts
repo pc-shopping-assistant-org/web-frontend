@@ -58,12 +58,9 @@ export type DiscountsPageDto = {
   totalPages: number;
   last: boolean;
 };
-export type EmployeeDetailDto = BackendSchema["EmployeeDetailResponse"];
-export type EmployeesPageDto = BackendSchema["CursorPageResponseEmployeeDetailResponse"];
 export type FileResponseDto = BackendSchema["FileResponse"];
 export type PaymentDetailDto = BackendSchema["PaymentDetailResponse"];
 export type PaymentsPageDto = BackendSchema["CursorPageResponsePaymentDetailResponse"];
-export type RoleDto = BackendSchema["RoleResponse"];
 export type OptionDto = BackendSchema["OptionResponse"];
 export type RevenueChartDataDto = BackendSchema["RevenueChartDataResponse"];
 export type RevenueChartPointDto = BackendSchema["RevenueChartPointResponse"];

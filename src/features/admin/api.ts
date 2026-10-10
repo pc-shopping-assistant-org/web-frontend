@@ -8,17 +8,14 @@ import type {
   CustomerOrderSummaryDto,
   DashboardOverviewDto,
   DiscountDto,
-  EmployeeDetailDto,
   OptionDto,
   OrderStatusStatDto,
-  RoleDto,
   SupplierDto,
 } from "@/features/admin/contracts/dto";
 import type {
   AdminProductFilter,
   CustomerFilter,
   DiscountFilter,
-  EmployeeFilter,
   ReviewFilter,
   SupplierFilter,
 } from "@/features/admin/contracts/filters";
@@ -31,22 +28,18 @@ import {
   mapCustomerOrderSummary,
   mapDashboardOverview,
   mapDiscountDetail,
-  mapEmployeeDetail,
   mapOption,
   mapOrderStatusStat,
-  mapRole,
   mapRevenueChartData,
   mapSupplier,
   mapTopSellingProduct,
   mapCustomersPage,
   mapDiscountsPage,
-  mapEmployeesPage,
   mapSuppliersPage,
 } from "@/features/admin/mappers";
 import type {
   CustomersPageDto,
   DiscountsPageDto,
-  EmployeesPageDto,
   RevenueChartDataDto,
   TopSellingProductDto,
   SuppliersPageDto,
@@ -79,7 +72,6 @@ import {
   createCategoryGroupRequestSchema,
   createCategoryRequestSchema,
   createDiscountRequestSchema,
-  createEmployeeRequestSchema,
   createOptionRequestSchema,
   createProductRequestSchema,
   createProductVariantRequestSchema,
@@ -91,7 +83,6 @@ import {
   updateCategoryRequestSchema,
   updateDiscountRequestSchema,
   updateDiscountStatusRequestSchema,
-  updateEmployeeRequestSchema,
   updateOptionRequestSchema,
   updateProductRequestSchema,
   updateProductVariantRequestSchema,
@@ -108,7 +99,6 @@ import type {
   CreateCategoryGroupRequest,
   CreateCategoryRequest,
   CreateDiscountRequest,
-  CreateEmployeeRequest,
   CreateOptionRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
@@ -118,7 +108,6 @@ import type {
   UpdateCategoryGroupRequest,
   UpdateCategoryRequest,
   UpdateDiscountRequest,
-  UpdateEmployeeRequest,
   UpdateOptionRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
@@ -170,13 +159,6 @@ export function getCustomers(
     `/admin/customers${queryString(filter)}`,
   ).then(mapCustomersPage);
 }
-export function getEmployees(
-  filter: EmployeeFilter = {},
-) {
-  return backendFetch<EmployeesPageDto>(
-    `/admin/employees${queryString(filter)}`,
-  ).then(mapEmployeesPage);
-}
 export function getSuppliers(
   filter: SupplierFilter = {},
 ) {
@@ -206,11 +188,6 @@ export function getAdminCustomerOrders(id: string) {
     `/admin/customers/${encodeURIComponent(id)}/orders`,
   ).then((orders) => orders.map(mapCustomerOrderSummary));
 }
-export function getAdminEmployee(id: string) {
-  return backendFetch<EmployeeDetailDto>(
-    `/admin/employees/${encodeURIComponent(id)}`,
-  ).then(mapEmployeeDetail);
-}
 export function getAdminDiscount(id: string) {
   return backendFetch<DiscountDto>(
     `${PROMOTION}/discounts/${encodeURIComponent(id)}`,
@@ -220,9 +197,6 @@ export function getAdminSupplier(id: string) {
   return backendFetch<SupplierDto>(
     `/admin/suppliers/${encodeURIComponent(id)}`,
   ).then(mapSupplier);
-}
-export function getRoles() {
-  return backendFetch<RoleDto[]>("/admin/roles").then((roles) => roles.map(mapRole));
 }
 export function getOptions(type?: string) {
   return backendFetch<OptionDto[]>(
@@ -285,17 +259,6 @@ export function updateCustomerStatus(
   const payload = parseRequest(updateAccountStatusRequestSchema, {status, reason});
   return backendFetch<string>(
     `/admin/customers/${encodeURIComponent(accountId)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
-}
-export function updateEmployeeStatus(
-  accountId: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateAccountStatusRequestSchema, {status, reason});
-  return backendFetch<string>(
-    `/admin/employees/${encodeURIComponent(accountId)}/status`,
     { method: "PATCH", body: JSON.stringify(payload) },
   );
 }
@@ -385,25 +348,6 @@ export function deleteDiscount(id: string) {
   return backendFetch<null>(`${PROMOTION}/discounts/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
-}
-export function createEmployee(
-  request: CreateEmployeeRequest,
-) {
-  const payload = parseRequest(createEmployeeRequestSchema, request);
-  return backendFetch<EmployeeDetailDto>(
-    "/admin/employees",
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapEmployeeDetail);
-}
-export function updateEmployee(
-  id: string,
-  request: UpdateEmployeeRequest,
-) {
-  const payload = parseRequest(updateEmployeeRequestSchema, request);
-  return backendFetch<EmployeeDetailDto>(
-    `/admin/employees/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapEmployeeDetail);
 }
 export function createSupplier(
   request: CreateSupplierRequest,

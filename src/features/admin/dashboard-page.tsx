@@ -37,7 +37,9 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { useProfile } from "@/features/auth/queries";
 import { Link } from "@/i18n/navigation";
+import { isAdminRole } from "@/lib/auth/roles";
 import { formatMoney } from "@/lib/format";
 import {AnalyticsPeriod} from "@/lib/domain/assistant-enums";
 import {OrderStatus} from "@/lib/domain/commerce-enums";
@@ -56,6 +58,7 @@ export function AdminDashboardPage({
 }) {
   const t = useTranslations("admin");
   const locale = useLocale();
+  const isAdmin = isAdminRole(useProfile().data?.role);
   const isStatistics = mode === "statistics";
   const [period, setPeriod] = useState(AnalyticsPeriod.Month);
   const overview = useDashboardOverview();
@@ -407,11 +410,13 @@ export function AdminDashboardPage({
             icon={SlidersHorizontal}
             title={t("manageCatalogSettings")}
           />
-          <QuickAction
-            href="/admin/employees"
-            icon={UserCog}
-            title={t("nav.employees")}
-          />
+          {isAdmin ? (
+            <QuickAction
+              href="/admin/employees"
+              icon={UserCog}
+              title={t("nav.employees")}
+            />
+          ) : null}
           <QuickAction
             href="/admin/suppliers"
             icon={Truck}

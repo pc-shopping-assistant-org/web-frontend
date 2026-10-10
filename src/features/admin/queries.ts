@@ -8,7 +8,6 @@ import {
   createCategory,
   createCategoryAttributeGroup,
   createDiscount,
-  createEmployee,
   createAttribute,
   createOption,
   createProduct,
@@ -26,7 +25,6 @@ import {
   getAdminCustomer,
   getAdminCustomerOrders,
   getAdminDiscount,
-  getAdminEmployee,
   getAdminProducts,
   getAdminReviews,
   getAdminSupplier,
@@ -37,19 +35,16 @@ import {
   getCustomers,
   getDashboardOverview,
   getDiscounts,
-  getEmployees,
   getOptions,
   getOrderStatusStats,
   getAdminProductById,
   getRevenueChart,
-  getRoles,
   getSuppliers,
   getTopSelling,
   updateBrand,
   updateCategoryAttributeGroup,
   updateCategory,
   updateDiscount,
-  updateEmployee,
   updateAttribute,
   updateOption,
   updateProduct,
@@ -57,7 +52,6 @@ import {
   updateVariant,
   updateCustomerStatus,
   updateDiscountStatus,
-  updateEmployeeStatus,
   updateProductStatus,
   updateReviewStatus,
   uploadAdminFile,
@@ -118,16 +112,6 @@ export function useAdminCustomers(
     placeholderData: keepPreviousData,
   });
 }
-export function useAdminEmployees(
-  filter: Parameters<typeof getEmployees>[0] = {},
-) {
-  return useQuery({
-    queryKey: ["admin", "employees", filter],
-    queryFn: () => getEmployees(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
-  });
-}
 export function useAdminSuppliers(
   filter: Parameters<typeof getSuppliers>[0] = {},
 ) {
@@ -174,14 +158,6 @@ export function useAdminCustomerOrders(id: string) {
     retry: false,
   });
 }
-export function useAdminEmployee(id: string) {
-  return useQuery({
-    queryKey: ["admin", "employee", id],
-    queryFn: () => getAdminEmployee(id),
-    enabled: Boolean(id),
-    retry: false,
-  });
-}
 export function useAdminDiscount(id: string) {
   return useQuery({
     queryKey: ["admin", "discount", id],
@@ -195,14 +171,6 @@ export function useAdminSupplier(id: string) {
     queryKey: ["admin", "supplier", id],
     queryFn: () => getAdminSupplier(id),
     enabled: Boolean(id),
-    retry: false,
-  });
-}
-export function useRoles() {
-  return useQuery({
-    queryKey: ["admin", "roles"],
-    queryFn: getRoles,
-    staleTime: 300_000,
     retry: false,
   });
 }
@@ -261,12 +229,6 @@ export function useAdminCustomerStatus() {
   return useStatusMutation(
     ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
       updateCustomerStatus(id, status, reason),
-  );
-}
-export function useAdminEmployeeStatus() {
-  return useStatusMutation(
-    ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
-      updateEmployeeStatus(id, status, reason),
   );
 }
 export function useAdminDiscountStatus() {
@@ -448,20 +410,6 @@ export function useUpdateAdminDiscount() {
 }
 export function useDeleteAdminDiscount() {
   return useAdminMutation(deleteDiscount);
-}
-export function useCreateAdminEmployee() {
-  return useAdminMutation(createEmployee);
-}
-export function useUpdateAdminEmployee() {
-  return useAdminMutation(
-    ({
-      id,
-      request,
-    }: {
-      id: string;
-      request: Parameters<typeof updateEmployee>[1];
-    }) => updateEmployee(id, request),
-  );
 }
 export function useCreateAdminSupplier() {
   return useAdminMutation(createSupplier);

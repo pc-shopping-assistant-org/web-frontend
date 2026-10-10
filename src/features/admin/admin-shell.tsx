@@ -35,7 +35,7 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { AdminPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useLogout, useProfile } from "@/features/auth/queries";
-import { isStaffRole } from "@/lib/auth/roles";
+import { isAdminRole, isStaffRole } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils";
 
 const navGroups = [
@@ -86,7 +86,7 @@ const navGroups = [
     label: "navGroups.management",
     items: [
       { key: "customers", href: "/admin/customers", icon: Users },
-      { key: "employees", href: "/admin/employees", icon: UserCog },
+      { key: "employees", href: "/admin/employees", icon: UserCog, adminOnly: true },
       { key: "suppliers", href: "/admin/suppliers", icon: Truck },
       { key: "reviews", href: "/admin/reviews", icon: MessageSquareQuote },
     ],
@@ -158,7 +158,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-muted/30">
       <div
         className={cn(
-          "mx-auto grid w-full max-w-[1920px] gap-0 transition-[grid-template-columns] duration-200",
+          "grid w-full gap-0 transition-[grid-template-columns] duration-200",
           sidebarCollapsed
             ? "lg:grid-cols-[5.5rem_minmax(0,1fr)]"
             : "lg:grid-cols-[18rem_minmax(0,1fr)]",
@@ -282,7 +282,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     </p>
                   ) : null}
                   <div className="space-y-1">
-                    {group.items.map(({ key, href, icon: Icon }) => {
+                    {group.items.filter((item) => !("adminOnly" in item) || isAdminRole(role)).map(({ key, href, icon: Icon }) => {
                       const active = isActive(href);
                       return (
                         <Link

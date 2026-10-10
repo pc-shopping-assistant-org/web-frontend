@@ -28,7 +28,6 @@ import { ConfirmAction } from "./confirm-action";
 import { StatusSelect } from "./status-select";
 import {
   DiscountCreateForm,
-  EmployeeCreateForm,
   SupplierCreateForm,
 } from "./management-forms";
 import {
@@ -36,15 +35,12 @@ import {
   useAdminCustomers,
   useAdminDiscountStatus,
   useAdminDiscounts,
-  useAdminEmployeeStatus,
-  useAdminEmployees,
   useAdminProductStatus,
   useAdminProducts,
   useAdminReviewStatus,
   useAdminReviews,
   useAdminSuppliers,
   useDeleteAdminProduct,
-  useRoles,
 } from "./queries";
 import { AdminPagination } from "./admin-pagination";
 import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
@@ -60,7 +56,6 @@ export type AdminResource =
   | "products"
   | "orders"
   | "customers"
-  | "employees"
   | "discounts"
   | "suppliers"
   | "payments"
@@ -75,8 +70,6 @@ export function AdminResourcePage({ resource }: { resource: AdminResource }) {
       return <Orders />;
     case "customers":
       return <Customers />;
-    case "employees":
-      return <Employees />;
     case "discounts":
       return <Discounts />;
     case "suppliers":
@@ -837,122 +830,6 @@ function Customers() {
               href:
                 (customer.accountId ?? customer.id)
                   ? `/admin/customers/${customer.accountId ?? customer.id}`
-                  : undefined,
-            }))}
-            onStatus={(id, value) =>
-              mutation.mutateAsync({ id, status: value })
-            }
-            kind="account"
-          />
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
-    </Shell>
-  );
-}
-
-function Employees() {
-  const t = useTranslations("admin");
-  const locale = useLocale();
-  const roles = useRoles();
-  const [draft, setDraft] = useState({ keyword: "", status: "", roleName: "" });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
-  const query = useAdminEmployees({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
-    status: applied.status || undefined,
-    roleName: applied.roleName || undefined,
-  });
-  const mutation = useAdminEmployeeStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
-  const reset = () => {
-    const empty = { keyword: "", status: "", roleName: "" };
-    setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
-  };
-  const page = query.data;
-  return (
-    <Shell
-      title={t("resource.employees")}
-      description={t("resource.employeesDescription")}
-    >
-      <EmployeeCreateForm />
-      <FilterBar
-        value={draft.keyword}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
-        }
-        placeholder={t("searchEmployees")}
-        onSubmit={apply}
-        onReset={reset}
-      >
-        <FilterSelect
-          id="employee-status"
-          label={t("status")}
-          value={draft.status}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, status: value }))
-          }
-        >
-          <StatusOptions kind="account" />
-        </FilterSelect>
-        <FilterSelect
-          id="employee-role-filter"
-          label={t("role")}
-          value={draft.roleName}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, roleName: value }))
-          }
-        >
-          <option value="">{t("allRoles")}</option>
-          {(roles.data ?? []).map((role) =>
-            role.name ? (
-              <option key={role.id} value={role.name}>
-                {role.name}
-              </option>
-            ) : null,
-          )}
-        </FilterSelect>
-      </FilterBar>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} />
-      ) : (
-        <>
-          <ListRows
-            rows={(page?.items ?? []).map((employee) => ({
-              id: employee.accountId ?? employee.id,
-              title: employee.fullName ?? "—",
-              meta: `${employee.roleName ?? "—"} · ${employee.email ?? "—"} · ${formatMoney(employee.salary, locale)}`,
-              status: employee.status,
-              href:
-                (employee.accountId ?? employee.id)
-                  ? `/admin/employees/${employee.accountId ?? employee.id}`
                   : undefined,
             }))}
             onStatus={(id, value) =>

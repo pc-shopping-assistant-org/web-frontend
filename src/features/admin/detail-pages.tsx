@@ -38,15 +38,12 @@ import type {
 } from "@/features/catalog/contracts/responses";
 import type {
   DiscountDetail,
-  EmployeeDetail,
-  Role,
 } from "@/features/admin/contracts/responses";
 import type {
-  UpdateEmployeeRequest,
   UpdateSupplierRequest,
 } from "@/features/admin/contracts/requests";
 import { formatMoney } from "@/lib/format";
-import {AccountStatus, Gender, type EmployeeGender} from "@/lib/domain/account-enums";
+import {AccountStatus} from "@/lib/domain/account-enums";
 import {
   DiscountScope,
   DiscountStatus,
@@ -59,7 +56,7 @@ import { AdminPagination } from "./admin-pagination";
 import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
 import { useAdminInvoice, useAdminInvoices, useAdminOrder, usePaymentMethods, useShippingMethods } from "@/features/orders/queries";
 import { ConfirmAction } from "./confirm-action";
-import { FileUploadField, type UploadedFile } from "./file-upload";
+import { FileUploadField } from "./file-upload";
 import {
   galleryFromProduct,
   galleryRequest,
@@ -76,8 +73,6 @@ import {
   useAdminCustomerOrders,
   useAdminCustomerStatus,
   useAdminDiscount,
-  useAdminEmployee,
-  useAdminEmployeeStatus,
   useAdminProduct,
   useAdminProductStatus,
   useAdminSupplier,
@@ -87,9 +82,7 @@ import {
   useDeleteAdminProduct,
   useDeleteAdminSupplier,
   useDeleteAdminVariant,
-  useRoles,
   useUpdateAdminDiscount,
-  useUpdateAdminEmployee,
   useUpdateAdminProduct,
   useUpdateAdminSupplier,
   useUpdateAdminVariant,
@@ -907,220 +900,6 @@ export function AdminCustomerDetailPage({
       </Card>
       <FormError error={status.error} />
     </div>
-  );
-}
-
-export function AdminEmployeeDetailPage({
-  employeeId,
-}: {
-  employeeId: string;
-}) {
-  const t = useTranslations("admin");
-  const employee = useAdminEmployee(employeeId);
-  const roles = useRoles();
-  const update = useUpdateAdminEmployee();
-  const status = useAdminEmployeeStatus();
-  if (employee.isPending) return <Loading />;
-  if (employee.isError || !employee.data)
-    return (
-      <>
-        <BackLink href="/admin/employees">{t("back")}</BackLink>
-        <Failure error={employee.error} />
-      </>
-    );
-  return (
-    <div>
-      <BackLink href="/admin/employees">{t("back")}</BackLink>
-      <h1 className="mb-8 text-3xl font-semibold">{t("employeeDetail")}</h1>
-      <EmployeeForm
-        employee={employee.data}
-        roles={roles.data ?? []}
-        onSubmit={(request) => update.mutateAsync({ id: employeeId, request })}
-        loading={update.isPending}
-        error={update.error}
-        status={employee.data.status}
-        onStatus={(next) =>
-          status.mutateAsync({ id: employeeId, status: next })
-        }
-      />
-    </div>
-  );
-}
-
-type EmployeeRequest = UpdateEmployeeRequest;
-function EmployeeForm({
-  employee,
-  roles,
-  onSubmit,
-  loading,
-  error,
-  status: currentStatus,
-  onStatus,
-}: {
-  employee: EmployeeDetail;
-  roles: Role[];
-  onSubmit: (request: EmployeeRequest) => Promise<unknown>;
-  loading: boolean;
-  error: unknown;
-  status?: string;
-  onStatus: (status: string) => Promise<unknown>;
-}) {
-  const t = useTranslations("admin");
-  const defaults = useMemo(
-    () => ({
-      fullName: employee.fullName ?? "",
-      email: employee.email ?? "",
-      phone: employee.phone ?? "",
-      gender: (employee.gender as EmployeeGender | undefined) ?? Gender.Male,
-      roleId: employee.roleId ?? "",
-      salary: String(employee.salary ?? 0),
-      joinedAt: employee.joinedAt ?? "",
-      birthday: employee.birthday ?? "",
-      address: employee.address ?? "",
-      avatarFile: employee.avatarFileId
-        ? ({ id: employee.avatarFileId } as UploadedFile)
-        : null,
-    }),
-    [employee],
-  );
-  const [form, setForm] = useState<typeof defaults | null>(null);
-  const value = form ?? defaults;
-  function set<K extends keyof typeof defaults>(
-    key: K,
-    next: (typeof defaults)[K],
-  ) {
-    setForm((current) => ({ ...(current ?? defaults), [key]: next }));
-  }
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    await onSubmit({
-      fullName: value.fullName.trim(),
-      roleId: value.roleId,
-      email: value.email.trim() || undefined,
-      phone: value.phone.trim() || undefined,
-      gender: value.gender || undefined,
-      salary: Number(value.salary),
-      joinedAt: value.joinedAt || undefined,
-      birthday: value.birthday || undefined,
-      address: value.address.trim() || undefined,
-      avatarFileId: value.avatarFile?.id,
-    });
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("editEmployee")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form
-          className="grid gap-4 sm:grid-cols-2"
-          onSubmit={(event) => void submit(event)}
-        >
-          <Field
-            id="employee-name"
-            label={t("fullName")}
-            value={value.fullName}
-            onChange={(next) => set("fullName", next)}
-            required
-          />
-          <Field
-            id="employee-email"
-            label={t("email")}
-            type="email"
-            value={value.email}
-            onChange={(next) => set("email", next)}
-          />
-          <Field
-            id="employee-phone"
-            label={t("phone")}
-            value={value.phone}
-            onChange={(next) => set("phone", next)}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="employee-role">{t("role")}</Label>
-            <Select
-              id="employee-role"
-              value={value.roleId}
-              onChange={(event) => set("roleId", event.target.value)}
-              required
-            >
-              <option value="">{t("chooseRole")}</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="employee-gender">{t("gender")}</Label>
-            <Select
-              id="employee-gender"
-              value={value.gender}
-              onChange={(event) => set("gender", event.target.value as EmployeeGender)}
-            >
-              <option value={Gender.Male}>{t("male")}</option>
-              <option value={Gender.Female}>{t("female")}</option>
-            </Select>
-          </div>
-          <Field
-            id="employee-salary"
-            label={t("salary")}
-            type="number"
-            value={value.salary}
-            onChange={(next) => set("salary", next)}
-          />
-          <Field
-            id="employee-joined"
-            label={t("joinedAt")}
-            type="date"
-            value={value.joinedAt}
-            onChange={(next) => set("joinedAt", next)}
-          />
-          <Field
-            id="employee-birthday"
-            label={t("birthday")}
-            type="date"
-            value={value.birthday}
-            onChange={(next) => set("birthday", next)}
-          />
-          <FileUploadField
-            id="employee-avatar"
-            label={t("avatar")}
-            currentFileId={
-              employee.avatarFileId && !value.avatarFile?.originalName
-                ? String(employee.avatarFileId)
-                : undefined
-            }
-            value={value.avatarFile?.originalName ? [value.avatarFile] : []}
-            onUploaded={(file) => set("avatarFile", file)}
-            onRemove={() => set("avatarFile", null)}
-          />
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="employee-address">{t("address")}</Label>
-            <Textarea
-              id="employee-address"
-              value={value.address}
-              onChange={(event) => set("address", event.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 sm:col-span-2">
-            <Button type="submit" disabled={loading}>
-              <Save className="size-4" />
-              {t("save")}
-            </Button>
-            <StatusSelect
-              currentStatus={currentStatus ?? AccountStatus.Active}
-              options={[AccountStatus.Active, AccountStatus.Locked, AccountStatus.Inactive]}
-              label={t("status")}
-              onStatus={onStatus}
-              className="w-32"
-            />
-          </div>
-          <FormError error={error} />
-        </form>
-      </CardContent>
-    </Card>
   );
 }
 
