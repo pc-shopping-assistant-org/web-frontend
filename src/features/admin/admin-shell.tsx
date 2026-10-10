@@ -43,7 +43,7 @@ const navGroups = [
     label: "navGroups.overview",
     items: [
       { key: "dashboard", href: "/admin", icon: LayoutDashboard },
-      { key: "statistics", href: "/admin/statistics", icon: ChartColumnBig },
+      { key: "statistics", href: "/admin/statistics", icon: ChartColumnBig, adminOnly: true },
     ],
   },
   {
@@ -53,32 +53,32 @@ const navGroups = [
   {
     label: "navGroups.orders",
     items: [
-      { key: "orders", href: "/admin/orders", icon: Boxes },
-      { key: "invoices", href: "/admin/invoices", icon: FileText },
+      { key: "orders", href: "/admin/orders", icon: Boxes, employeeOnly: true },
+      { key: "invoices", href: "/admin/invoices", icon: FileText, employeeOnly: true },
     ],
   },
   {
     label: "navGroups.catalog",
     items: [
-      { key: "products", href: "/admin/products", icon: Package },
-      { key: "categories", href: "/admin/categories", icon: FolderTree },
-      { key: "brands", href: "/admin/brands", icon: Building2 },
-      { key: "discounts", href: "/admin/discounts", icon: BadgePercent },
+      { key: "products", href: "/admin/products", icon: Package, employeeOnly: true },
+      { key: "categories", href: "/admin/categories", icon: FolderTree, employeeOnly: true },
+      { key: "brands", href: "/admin/brands", icon: Building2, employeeOnly: true },
+      { key: "discounts", href: "/admin/discounts", icon: BadgePercent, employeeOnly: true },
       {
         key: "catalogSettings",
         href: "/admin/options",
-        icon: SlidersHorizontal,
+        icon: SlidersHorizontal, employeeOnly: true,
       },
     ],
   },
   {
     label: "navGroups.payments",
     items: [
-      { key: "payments", href: "/admin/payments", icon: CreditCard },
+      { key: "payments", href: "/admin/payments", icon: CreditCard, employeeOnly: true },
       {
         key: "paymentMethods",
         href: "/admin/payment-methods",
-        icon: CircleDollarSign,
+        icon: CircleDollarSign, employeeOnly: true,
       },
     ],
   },
@@ -87,8 +87,8 @@ const navGroups = [
     items: [
       { key: "customers", href: "/admin/customers", icon: Users, employeeOnly: true },
       { key: "employees", href: "/admin/employees", icon: UserCog, adminOnly: true },
-      { key: "suppliers", href: "/admin/suppliers", icon: Truck },
-      { key: "reviews", href: "/admin/reviews", icon: MessageSquareQuote },
+      { key: "suppliers", href: "/admin/suppliers", icon: Truck, employeeOnly: true },
+      { key: "reviews", href: "/admin/reviews", icon: MessageSquareQuote, employeeOnly: true },
     ],
   },
 ] as const;
@@ -144,6 +144,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
       router.refresh();
     }
   }
+
+  const isVisible = (item: object) =>
+    (!("adminOnly" in item) || isAdminRole(role)) &&
+    (!("employeeOnly" in item) || isEmployeeRole(role));
 
   function isActive(href: string) {
     return href === "/admin" ? pathname === href : pathname.startsWith(href);
@@ -274,7 +278,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               )}
               aria-label={t("label")}
             >
-              {navGroups.map((group) => (
+              {navGroups.map((group) => ({ group, items: group.items.filter(isVisible) })).filter(({ items }) => items.length > 0).map(({ group, items }) => (
                 <div key={group.label}>
                   {!sidebarCollapsed ? (
                     <p className="px-3 pb-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -282,7 +286,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     </p>
                   ) : null}
                   <div className="space-y-1">
-                    {group.items.filter((item) => (!("adminOnly" in item) || isAdminRole(role)) && (!("employeeOnly" in item) || isEmployeeRole(role))).map(({ key, href, icon: Icon }) => {
+                    {items.map(({ key, href, icon: Icon }) => {
                       const active = isActive(href);
                       return (
                         <Link

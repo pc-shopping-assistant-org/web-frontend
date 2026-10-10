@@ -4,10 +4,8 @@ import type {
   CategoryAttributeDto,
   CategoryAttributeGroupDto,
   CategorySpecsDto,
-  DashboardOverviewDto,
   DiscountDto,
   OptionDto,
-  OrderStatusStatDto,
   SupplierDto,
 } from "@/features/admin/contracts/dto";
 import type {
@@ -21,20 +19,14 @@ import {
   mapCategoryAttribute,
   mapCategoryAttributeGroup,
   mapCategorySpecs,
-  mapDashboardOverview,
   mapDiscountDetail,
   mapOption,
-  mapOrderStatusStat,
-  mapRevenueChartData,
   mapSupplier,
-  mapTopSellingProduct,
   mapDiscountsPage,
   mapSuppliersPage,
 } from "@/features/admin/mappers";
 import type {
   DiscountsPageDto,
-  RevenueChartDataDto,
-  TopSellingProductDto,
   SuppliersPageDto,
 } from "@/features/admin/contracts/dto";
 import type {CategoryDto, BrandDto} from "@/features/catalog/contracts/dto";
@@ -58,7 +50,6 @@ import type {
 import {
 } from "@/features/orders/mappers";
 import {
-  analyticsDateRangeRequestSchema,
   assignAttributeRequestSchema,
   createAttributeDefinitionRequestSchema,
   createBrandRequestSchema,
@@ -84,7 +75,6 @@ import {
 } from "@/features/admin/contracts/requests";
 import {parseRequest} from "@/lib/api/parse-request";
 import type {
-  AnalyticsDateRangeRequest,
   AssignAttributeRequest,
   CreateAttributeDefinitionRequest,
   CreateBrandRequest,
@@ -116,29 +106,6 @@ function queryString(values: Record<string, unknown>) {
   return params.size ? `?${params.toString()}` : "";
 }
 
-export function getDashboardOverview() {
-  return backendFetch<DashboardOverviewDto>("/admin/analytics/overview").then(
-    mapDashboardOverview,
-  );
-}
-export function getOrderStatusStats() {
-  return backendFetch<OrderStatusStatDto[]>(
-    "/admin/analytics/order-status-stats",
-  ).then((stats) => stats.map(mapOrderStatusStat));
-}
-export function getRevenueChart(
-  filter: AnalyticsDateRangeRequest = {},
-) {
-  const payload = parseRequest(analyticsDateRangeRequestSchema, filter);
-  return backendFetch<RevenueChartDataDto>(
-    `/admin/analytics/revenue-chart${queryString(payload)}`,
-  ).then(mapRevenueChartData);
-}
-export function getTopSelling(limit = 5, fromDate?: string, toDate?: string) {
-  return backendFetch<TopSellingProductDto[]>(
-    `/admin/analytics/top-selling${queryString({ limit, fromDate, toDate })}`,
-  ).then((items) => items.map(mapTopSellingProduct));
-}
 export function getAdminProducts(
   filter: AdminProductFilter = {},
 ) {

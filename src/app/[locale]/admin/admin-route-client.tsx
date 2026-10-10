@@ -5,8 +5,12 @@ import dynamic from "next/dynamic";
 import {AdminPageSkeleton} from "@/components/ui/loading-skeletons";
 import type {AdminResource} from "@/features/admin/resource-page";
 
-const AdminDashboardPage = dynamic(
-  () => import("@/features/admin/dashboard-page").then((module) => module.AdminDashboardPage),
+const DashboardPage = dynamic(
+  () => import("@/features/dashboard/dashboard-page").then((module) => module.DashboardPage),
+  {loading: () => <AdminPageSkeleton />},
+);
+const StatisticsPage = dynamic(
+  () => import("@/features/dashboard/statistics-page").then((module) => module.StatisticsPage),
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminResourcePage = dynamic(
@@ -67,7 +71,7 @@ const AdminInvoicesPage = dynamic(
 );
 
 export function AdminDashboardRouteClient({mode}: {mode?: "dashboard" | "statistics"}) {
-  return <AdminDashboardPage mode={mode} />;
+  return mode === "statistics" ? <StatisticsPage /> : <DashboardPage />;
 }
 
 export function AdminResourceRouteClient({resource}: {resource: AdminResource}) {

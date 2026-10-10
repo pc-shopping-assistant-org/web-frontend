@@ -4,10 +4,7 @@ import {AdminDashboardRouteClient} from "../admin-route-client";
 
 export const metadata: Metadata = {title: "Statistics"};
 
-/**
- * The statistics use case uses the same backend read models as the dashboard,
- * but has its own stable route so operators can bookmark and share reports.
- */
+/** The sales report has its own route, so it can be bookmarked and shared. */
 export default function AdminStatisticsRoute() {
   return <AdminDashboardRouteClient mode="statistics" />;
 }

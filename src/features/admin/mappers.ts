@@ -4,20 +4,15 @@ import type {
   CategoryAttributeDto,
   CategoryAttributeGroupDto,
   CategorySpecsDto,
-  DashboardOverviewDto,
   DiscountDto,
   DiscountsPageDto,
   FileResponseDto,
   GroupSchemaItemDto,
   OptionDto,
-  OrderStatusStatDto,
   PaymentDetailDto,
   PaymentsPageDto,
-  RevenueChartDataDto,
-  RevenueChartPointDto,
   SupplierDto,
   SuppliersPageDto,
-  TopSellingProductDto,
 } from "@/features/admin/contracts/dto";
 import type {
   AttributeDefinition,
@@ -25,20 +20,15 @@ import type {
   CategoryAttribute,
   CategoryAttributeGroup,
   CategorySpecs,
-  DashboardOverview,
   DiscountDetail,
   DiscountSummary,
   DiscountsPage,
   FileResponse,
   Option,
-  OrderStatusStat,
   PaymentDetail,
   PaymentsPage,
-  RevenueChartData,
-  RevenueChartPoint,
   Supplier,
   SuppliersPage,
-  TopSellingProduct,
 } from "@/features/admin/models";
 
 const text = (value?: string) => value?.trim() ?? "";
@@ -128,26 +118,6 @@ export function mapCategorySpecs(dto: CategorySpecsDto): CategorySpecs {
   };
 }
 
-export function mapDashboardOverview(dto: DashboardOverviewDto): DashboardOverview {
-  return {
-    cancelledOrders: number(dto.cancelledOrders),
-    completedOrders: number(dto.completedOrders),
-    newCustomersThisMonth: number(dto.newCustomersThisMonth),
-    revenueGrowthRate: dto.revenueGrowthRate,
-    totalCustomers: number(dto.totalCustomers),
-    totalOrders: number(dto.totalOrders),
-    totalRevenue: number(dto.totalRevenue),
-  };
-}
-
-export function mapOrderStatusStat(dto: OrderStatusStatDto): OrderStatusStat {
-  return {
-    status: dto.status,
-    count: number(dto.count),
-    percentage: dto.percentage,
-  };
-}
-
 export function mapDiscountSummary(dto: DiscountDto): DiscountSummary {
   return {
     id: dto.id,
@@ -230,23 +200,6 @@ export function mapOption(dto: OptionDto): Option {
   };
 }
 
-export function mapRevenueChartPoint(dto: RevenueChartPointDto): RevenueChartPoint {
-  return {
-    dateLabel: dto.dateLabel,
-    orderCount: number(dto.orderCount),
-    revenue: number(dto.revenue),
-  };
-}
-
-export function mapRevenueChartData(dto: RevenueChartDataDto): RevenueChartData {
-  return {
-    dataPoints: (dto.dataPoints ?? []).map(mapRevenueChartPoint),
-    period: dto.period,
-    totalOrders: number(dto.totalOrders),
-    totalRevenue: number(dto.totalRevenue),
-  };
-}
-
 export function mapSupplier(dto: SupplierDto): Supplier {
   return {
     id: text(dto.id),
@@ -270,12 +223,3 @@ export function mapSuppliersPage(dto: SuppliersPageDto): SuppliersPage {
   };
 }
 
-export function mapTopSellingProduct(dto: TopSellingProductDto): TopSellingProduct {
-  return {
-    productId: text(dto.productId),
-    productName: dto.productName,
-    imageUrl: dto.imageUrl,
-    totalQuantitySold: number(dto.totalQuantitySold),
-    totalRevenue: number(dto.totalRevenue),
-  };
-}

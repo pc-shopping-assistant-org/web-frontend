@@ -30,14 +30,10 @@ import {
   getAdminBrands,
   getAdminCategories,
   getCategorySpecsSchema,
-  getDashboardOverview,
   getDiscounts,
   getOptions,
-  getOrderStatusStats,
   getAdminProductById,
-  getRevenueChart,
   getSuppliers,
-  getTopSelling,
   updateBrand,
   updateCategoryAttributeGroup,
   updateCategory,
@@ -57,37 +53,6 @@ export const adminKeys = {
   all: ["admin"] as const,
   dashboard: ["admin", "dashboard"] as const,
 };
-export function useDashboardOverview() {
-  return useQuery({
-    queryKey: adminKeys.dashboard,
-    queryFn: getDashboardOverview,
-    retry: false,
-  });
-}
-export function useOrderStatusStats() {
-  return useQuery({
-    queryKey: ["admin", "order-status"],
-    queryFn: getOrderStatusStats,
-    retry: false,
-  });
-}
-export function useRevenueChart(
-  filter: Parameters<typeof getRevenueChart>[0] = {},
-) {
-  return useQuery({
-    queryKey: ["admin", "revenue-chart", filter],
-    queryFn: () => getRevenueChart(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
-  });
-}
-export function useTopSelling(limit = 5, fromDate?: string, toDate?: string) {
-  return useQuery({
-    queryKey: ["admin", "top-selling", limit, fromDate, toDate],
-    queryFn: () => getTopSelling(limit, fromDate, toDate),
-    retry: false,
-  });
-}
 export function useAdminProducts(
   filter: Parameters<typeof getAdminProducts>[0] = {},
 ) {

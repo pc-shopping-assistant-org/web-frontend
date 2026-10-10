@@ -2,7 +2,7 @@ import type {
   Review,
   Supplier as CatalogSupplier,
 } from "@/features/catalog/models";
-import type {OrderStatus, PaymentStatus} from "@/lib/domain/commerce-enums";
+import type {PaymentStatus} from "@/lib/domain/commerce-enums";
 
 export type AttributeDefinition = {
   id: string;
@@ -63,22 +63,6 @@ export type CategorySpecs = {
   categoryId: string;
   categoryName: string;
   groups: GroupSchemaItem[];
-};
-
-export type DashboardOverview = {
-  cancelledOrders: number;
-  completedOrders: number;
-  newCustomersThisMonth: number;
-  revenueGrowthRate?: number;
-  totalCustomers: number;
-  totalOrders: number;
-  totalRevenue: number;
-};
-
-export type OrderStatusStat = {
-  status?: OrderStatus | string;
-  count: number;
-  percentage?: number;
 };
 
 export type DiscountSummary = {
@@ -152,19 +136,6 @@ export type Option = {
   createdAt?: string;
 };
 
-export type RevenueChartPoint = {
-  dateLabel?: string;
-  orderCount: number;
-  revenue: number;
-};
-
-export type RevenueChartData = {
-  dataPoints: RevenueChartPoint[];
-  period?: string;
-  totalOrders: number;
-  totalRevenue: number;
-};
-
 export type Supplier = CatalogSupplier;
 export type SuppliersPage = {
   hasNext: boolean;
@@ -173,14 +144,6 @@ export type SuppliersPage = {
   nextCursor?: string;
   prevCursor?: string;
   size: number;
-};
-
-export type TopSellingProduct = {
-  productId: string;
-  productName?: string;
-  imageUrl?: string;
-  totalQuantitySold: number;
-  totalRevenue: number;
 };
 
 export type AdminReviewPage = {
