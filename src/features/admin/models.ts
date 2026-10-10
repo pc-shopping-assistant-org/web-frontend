@@ -1,4 +1,3 @@
-import type {CustomerAddress} from "@/features/account/models";
 import type {
   Review,
   Supplier as CatalogSupplier,
@@ -64,44 +63,6 @@ export type CategorySpecs = {
   categoryId: string;
   categoryName: string;
   groups: GroupSchemaItem[];
-};
-
-export type CustomerDetail = {
-  id: string;
-  accountId: string;
-  fullName?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  avatarFileId?: string;
-  birthday?: string;
-  gender?: string;
-  status?: string;
-  createdAt?: string;
-  addresses: CustomerAddress[];
-  totalOrders: number;
-  totalSpent: number;
-};
-
-export type CustomerOrderSummary = {
-  orderId: string;
-  orderTime?: string;
-  recipientName?: string;
-  recipientPhone?: string;
-  deliveryAddress?: string;
-  discountAmount: number;
-  shippingFee: number;
-  totalAmount: number;
-  status?: OrderStatus | string;
-};
-
-export type CustomersPage = {
-  hasNext: boolean;
-  hasPrev: boolean;
-  items: CustomerDetail[];
-  nextCursor?: string;
-  prevCursor?: string;
-  size: number;
 };
 
 export type DashboardOverview = {

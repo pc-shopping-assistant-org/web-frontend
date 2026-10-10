@@ -4,9 +4,6 @@ import type {
   CategoryAttributeDto,
   CategoryAttributeGroupDto,
   CategorySpecsDto,
-  CustomersPageDto,
-  CustomerDetailDto,
-  CustomerOrderSummaryDto,
   DashboardOverviewDto,
   DiscountDto,
   DiscountsPageDto,
@@ -28,9 +25,6 @@ import type {
   CategoryAttribute,
   CategoryAttributeGroup,
   CategorySpecs,
-  CustomerDetail,
-  CustomerOrderSummary,
-  CustomersPage,
   DashboardOverview,
   DiscountDetail,
   DiscountSummary,
@@ -131,56 +125,6 @@ export function mapCategorySpecs(dto: CategorySpecsDto): CategorySpecs {
     categoryId: dto.categoryId,
     categoryName: "",
     groups: (dto.groups ?? []).map(mapGroupSchemaItem),
-  };
-}
-
-export function mapCustomerDetail(dto: CustomerDetailDto): CustomerDetail {
-  return {
-    id: text(dto.id),
-    accountId: text(dto.accountId),
-    fullName: dto.fullName,
-    email: dto.email,
-    phone: dto.phone,
-    address: dto.address,
-    avatarFileId: dto.avatarFileId,
-    birthday: dto.birthday,
-    gender: dto.gender,
-    status: dto.status,
-    createdAt: dto.createdAt,
-    addresses: (dto.addresses ?? []).map((address) => ({
-      id: address.id ?? "",
-      addressLine: address.addressLine ?? "",
-      default: address.default ?? false,
-      phone: address.phone ?? "",
-      recipientName: address.recipientName ?? "",
-    })),
-    totalOrders: number(dto.totalOrders),
-    totalSpent: number(dto.totalSpent),
-  };
-}
-
-export function mapCustomerOrderSummary(dto: CustomerOrderSummaryDto): CustomerOrderSummary {
-  return {
-    orderId: text(dto.orderId),
-    orderTime: dto.orderTime,
-    recipientName: dto.recipientName,
-    recipientPhone: dto.recipientPhone,
-    deliveryAddress: dto.deliveryAddress,
-    discountAmount: number(dto.discountAmount),
-    shippingFee: number(dto.shippingFee),
-    totalAmount: number(dto.totalAmount),
-    status: dto.status,
-  };
-}
-
-export function mapCustomersPage(dto: CustomersPageDto): CustomersPage {
-  return {
-    hasNext: dto.hasNext ?? false,
-    hasPrev: dto.hasPrev ?? false,
-    items: (dto.items ?? []).map(mapCustomerDetail),
-    nextCursor: dto.nextCursor,
-    prevCursor: dto.prevCursor,
-    size: number(dto.size),
   };
 }
 

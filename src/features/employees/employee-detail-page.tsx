@@ -8,12 +8,12 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {ConfirmAction} from "@/components/ui/confirm-action";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Skeleton} from "@/components/ui/skeleton";
+import {PersonAvatar} from "@/components/ui/person-avatar";
 import {StatusBadge} from "@/components/ui/status-badge";
 import {Link} from "@/i18n/navigation";
 import {AccountStatus} from "@/lib/domain/account-enums";
 
 import {AdminOnly} from "./admin-only";
-import {EmployeeAvatar} from "./components/employee-avatar";
 import {EmployeeForm} from "./components/employee-form";
 import {employeeFormValues, toUpdateRequest} from "./employee-form-values";
 import type {Employee} from "./models";
@@ -70,7 +70,7 @@ function EmployeeCard({employee}: {employee: Employee}) {
 
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center gap-4">
-      <EmployeeAvatar employee={employee} className="size-16 text-xl" />
+      <PersonAvatar person={employee} className="size-16 text-xl" />
       <div className="min-w-0 flex-1">
         <h1 className="text-3xl font-semibold">{employee.fullName}</h1>
         <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">

@@ -4,8 +4,6 @@ import type {
   CategoryAttributeDto,
   CategoryAttributeGroupDto,
   CategorySpecsDto,
-  CustomerDetailDto,
-  CustomerOrderSummaryDto,
   DashboardOverviewDto,
   DiscountDto,
   OptionDto,
@@ -14,7 +12,6 @@ import type {
 } from "@/features/admin/contracts/dto";
 import type {
   AdminProductFilter,
-  CustomerFilter,
   DiscountFilter,
   ReviewFilter,
   SupplierFilter,
@@ -24,8 +21,6 @@ import {
   mapCategoryAttribute,
   mapCategoryAttributeGroup,
   mapCategorySpecs,
-  mapCustomerDetail,
-  mapCustomerOrderSummary,
   mapDashboardOverview,
   mapDiscountDetail,
   mapOption,
@@ -33,12 +28,10 @@ import {
   mapRevenueChartData,
   mapSupplier,
   mapTopSellingProduct,
-  mapCustomersPage,
   mapDiscountsPage,
   mapSuppliersPage,
 } from "@/features/admin/mappers";
 import type {
-  CustomersPageDto,
   DiscountsPageDto,
   RevenueChartDataDto,
   TopSellingProductDto,
@@ -76,7 +69,6 @@ import {
   createProductRequestSchema,
   createProductVariantRequestSchema,
   createSupplierRequestSchema,
-  updateAccountStatusRequestSchema,
   updateAttributeDefinitionRequestSchema,
   updateBrandRequestSchema,
   updateCategoryGroupRequestSchema,
@@ -152,13 +144,6 @@ export function getAdminProducts(
 ) {
   return backendFetch<ProductPageDto>(`/catalog-service/products/admin${queryString(filter)}`).then(mapProductPage);
 }
-export function getCustomers(
-  filter: CustomerFilter = {},
-) {
-  return backendFetch<CustomersPageDto>(
-    `/admin/customers${queryString(filter)}`,
-  ).then(mapCustomersPage);
-}
 export function getSuppliers(
   filter: SupplierFilter = {},
 ) {
@@ -177,16 +162,6 @@ export function getAdminReviews(
   filter: ReviewFilter = {},
 ) {
   return backendFetch<ReviewsPageDto>(`/admin/reviews${queryString(filter)}`).then(mapReviewsPage);
-}
-export function getAdminCustomer(id: string) {
-  return backendFetch<CustomerDetailDto>(
-    `/admin/customers/${encodeURIComponent(id)}`,
-  ).then(mapCustomerDetail);
-}
-export function getAdminCustomerOrders(id: string) {
-  return backendFetch<CustomerOrderSummaryDto[]>(
-    `/admin/customers/${encodeURIComponent(id)}/orders`,
-  ).then((orders) => orders.map(mapCustomerOrderSummary));
 }
 export function getAdminDiscount(id: string) {
   return backendFetch<DiscountDto>(
@@ -250,17 +225,6 @@ export function updateProductStatus(productId: string, status: string) {
     `${CATALOG}/products/${encodeURIComponent(productId)}/status`,
     { method: "PATCH", body: JSON.stringify({status: payload.status}) },
   ).then(mapProductDetail);
-}
-export function updateCustomerStatus(
-  accountId: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateAccountStatusRequestSchema, {status, reason});
-  return backendFetch<string>(
-    `/admin/customers/${encodeURIComponent(accountId)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
 }
 export function updateDiscountStatus(id: string, status: string) {
   const payload = parseRequest(updateDiscountStatusRequestSchema, {status});

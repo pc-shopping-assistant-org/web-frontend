@@ -39,7 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useProfile } from "@/features/auth/queries";
 import { Link } from "@/i18n/navigation";
-import { isAdminRole } from "@/lib/auth/roles";
+import { isAdminRole, isEmployeeRole } from "@/lib/auth/roles";
 import { formatMoney } from "@/lib/format";
 import {AnalyticsPeriod} from "@/lib/domain/assistant-enums";
 import {OrderStatus} from "@/lib/domain/commerce-enums";
@@ -58,7 +58,9 @@ export function AdminDashboardPage({
 }) {
   const t = useTranslations("admin");
   const locale = useLocale();
-  const isAdmin = isAdminRole(useProfile().data?.role);
+  const role = useProfile().data?.role;
+  const isAdmin = isAdminRole(role);
+  const isEmployee = isEmployeeRole(role);
   const isStatistics = mode === "statistics";
   const [period, setPeriod] = useState(AnalyticsPeriod.Month);
   const overview = useDashboardOverview();
@@ -370,11 +372,13 @@ export function AdminDashboardPage({
             icon={ShoppingBag}
             title={t("manageOrders")}
           />
-          <QuickAction
-            href="/admin/customers"
-            icon={Users}
-            title={t("manageCustomers")}
-          />
+          {isEmployee ? (
+            <QuickAction
+              href="/admin/customers"
+              icon={Users}
+              title={t("manageCustomers")}
+            />
+          ) : null}
           <QuickAction
             href="/admin/invoices"
             icon={FilePlus2}

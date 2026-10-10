@@ -29,8 +29,12 @@ const AdminProductDetailPage = dynamic(
   () => import("@/features/admin/detail-pages").then((module) => module.AdminProductDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
-const AdminCustomerDetailPage = dynamic(
-  () => import("@/features/admin/detail-pages").then((module) => module.AdminCustomerDetailPage),
+const CustomersPage = dynamic(
+  () => import("@/features/customers/customers-page").then((module) => module.CustomersPage),
+  {loading: () => <AdminPageSkeleton />},
+);
+const CustomerDetailPage = dynamic(
+  () => import("@/features/customers/customer-detail-page").then((module) => module.CustomerDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
 const EmployeesPage = dynamic(
@@ -86,8 +90,12 @@ export function AdminProductDetailRouteClient({productId}: {productId: string}) 
   return <AdminProductDetailPage productId={productId} />;
 }
 
+export function CustomersRouteClient() {
+  return <CustomersPage />;
+}
+
 export function AdminCustomerDetailRouteClient({customerId}: {customerId: string}) {
-  return <AdminCustomerDetailPage customerId={customerId} />;
+  return <CustomerDetailPage customerId={customerId} />;
 }
 
 export function EmployeesRouteClient() {

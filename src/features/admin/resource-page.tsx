@@ -31,8 +31,6 @@ import {
   SupplierCreateForm,
 } from "./management-forms";
 import {
-  useAdminCustomerStatus,
-  useAdminCustomers,
   useAdminDiscountStatus,
   useAdminDiscounts,
   useAdminProductStatus,
@@ -55,7 +53,6 @@ import { useAdminOrders } from "@/features/orders/queries";
 export type AdminResource =
   | "products"
   | "orders"
-  | "customers"
   | "discounts"
   | "suppliers"
   | "payments"
@@ -68,8 +65,6 @@ export function AdminResourcePage({ resource }: { resource: AdminResource }) {
       return <Products />;
     case "orders":
       return <Orders />;
-    case "customers":
-      return <Customers />;
     case "discounts":
       return <Discounts />;
     case "suppliers":
@@ -763,102 +758,6 @@ function Orders() {
           ) : null}
         </>
       )}
-    </Shell>
-  );
-}
-
-function Customers() {
-  const t = useTranslations("admin");
-  const locale = useLocale();
-  const [draft, setDraft] = useState({ keyword: "", status: "" });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
-  const query = useAdminCustomers({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
-    status: applied.status || undefined,
-  });
-  const mutation = useAdminCustomerStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
-  const reset = () => {
-    const empty = { keyword: "", status: "" };
-    setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
-  };
-  const page = query.data;
-  return (
-    <Shell
-      title={t("resource.customers")}
-      description={t("resource.customersDescription")}
-    >
-      <FilterBar
-        value={draft.keyword}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
-        }
-        placeholder={t("searchCustomers")}
-        onSubmit={apply}
-        onReset={reset}
-      >
-        <FilterSelect
-          id="customer-status"
-          label={t("status")}
-          value={draft.status}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, status: value }))
-          }
-        >
-          <StatusOptions kind="account" />
-        </FilterSelect>
-      </FilterBar>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} />
-      ) : (
-        <>
-          <ListRows
-            rows={(page?.items ?? []).map((customer) => ({
-              id: customer.accountId ?? customer.id,
-              title: customer.fullName ?? "—",
-              meta: `${customer.email ?? "—"} · ${customer.phone ?? "—"} · ${customer.totalOrders ?? 0} ${t("ordersShort")} · ${formatMoney(customer.totalSpent, locale)}`,
-              status: customer.status,
-              href:
-                (customer.accountId ?? customer.id)
-                  ? `/admin/customers/${customer.accountId ?? customer.id}`
-                  : undefined,
-            }))}
-            onStatus={(id, value) =>
-              mutation.mutateAsync({ id, status: value })
-            }
-            kind="account"
-          />
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
     </Shell>
   );
 }

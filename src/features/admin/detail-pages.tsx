@@ -43,7 +43,6 @@ import type {
   UpdateSupplierRequest,
 } from "@/features/admin/contracts/requests";
 import { formatMoney } from "@/lib/format";
-import {AccountStatus} from "@/lib/domain/account-enums";
 import {
   DiscountScope,
   DiscountStatus,
@@ -69,9 +68,6 @@ import { StatusSelect } from "./status-select";
 
 import { useBrands, useCategories } from "@/features/catalog/queries";
 import {
-  useAdminCustomer,
-  useAdminCustomerOrders,
-  useAdminCustomerStatus,
   useAdminDiscount,
   useAdminProduct,
   useAdminProductStatus,
@@ -762,144 +758,6 @@ function VariantForm({
         <FormError error={mutation.error} formError={formError} />
       </div>
     </form>
-  );
-}
-
-export function AdminCustomerDetailPage({
-  customerId,
-}: {
-  customerId: string;
-}) {
-  const t = useTranslations("admin");
-  const customer = useAdminCustomer(customerId);
-  const orders = useAdminCustomerOrders(customerId);
-  const status = useAdminCustomerStatus();
-  if (customer.isPending) return <Loading />;
-  if (customer.isError || !customer.data)
-    return (
-      <>
-        <BackLink href="/admin/customers">{t("back")}</BackLink>
-        <Failure error={customer.error} />
-      </>
-    );
-  const item = customer.data;
-  return (
-    <div>
-      <BackLink href="/admin/customers">{t("back")}</BackLink>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">{t("customerDetail")}</p>
-          <h1 className="mt-2 text-3xl font-semibold">
-            {item.fullName ?? item.email}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {item.accountId ?? item.id}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <StatusBadge status={item.status} />
-          <StatusSelect
-            currentStatus={item.status ?? AccountStatus.Active}
-            options={[AccountStatus.Active, AccountStatus.Locked, AccountStatus.Inactive]}
-            label={t("status")}
-            onStatus={(nextStatus) =>
-              status.mutateAsync({ id: customerId, status: nextStatus })
-            }
-            className="w-32"
-            disabled={status.isPending}
-          />
-        </div>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("customerInformation")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              <strong>{t("email")}:</strong> {item.email ?? "—"}
-            </p>
-            <p>
-              <strong>{t("phone")}:</strong> {item.phone ?? "—"}
-            </p>
-            <p>
-              <strong>{t("gender")}:</strong> {item.gender ?? "—"}
-            </p>
-            <p>
-              <strong>{t("birthday")}:</strong> {item.birthday ?? "—"}
-            </p>
-            <p>
-              <strong>{t("totalOrders")}:</strong> {item.totalOrders ?? 0}
-            </p>
-            <p>
-              <strong>{t("totalSpent")}:</strong>{" "}
-              {formatMoney(item.totalSpent, "vi")}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("addresses")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {item.addresses?.length ? (
-              item.addresses.map((address, index) => (
-                <div
-                  key={address.id ?? index}
-                  className="rounded-lg border p-3 text-sm"
-                >
-                  <p className="font-medium">
-                    {address.recipientName}{" "}
-                    {address.default ? `· ${t("defaultAddress")}` : ""}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {address.phone} · {address.addressLine}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("noAddresses")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>{t("customerOrders")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {orders.isPending ? (
-            <Loading />
-          ) : orders.isError ? (
-            <Failure error={orders.error} />
-          ) : orders.data?.length ? (
-            <div className="space-y-3">
-              {orders.data.map((order, index) => (
-                <Link
-                  key={order.orderId ?? index}
-                  href={
-                    order.orderId
-                      ? `/admin/orders/${order.orderId}`
-                      : "/admin/orders"
-                  }
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm hover:bg-muted"
-                >
-                  <span>{order.orderId}</span>
-                  <span className="text-muted-foreground">
-                    {order.status} · {formatMoney(order.totalAmount, "vi")}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">{t("noOrders")}</p>
-          )}
-        </CardContent>
-      </Card>
-      <FormError error={status.error} />
-    </div>
   );
 }
 

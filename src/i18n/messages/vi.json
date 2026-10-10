@@ -1202,5 +1202,54 @@
       "INACTIVE": "Tài khoản này đang bị vô hiệu hóa. Nhân viên không đăng nhập được cho đến khi bạn kích hoạt lại.",
       "DELETED": "Tài khoản này đã bị xóa. Không thể sửa hay khôi phục."
     }
+  },
+  "customers": {
+    "eyebrow": "Quản lý cửa hàng",
+    "title": "Khách hàng",
+    "description": "Tìm khách hàng, xem hồ sơ và đơn hàng của họ, hoặc khóa tài khoản.",
+    "employeeOnlyTitle": "Chỉ dành cho nhân viên cửa hàng",
+    "employeeOnlyDescription": "Quản trị viên không quản lý khách hàng; việc này do nhân viên cửa hàng làm.",
+    "searchLabel": "Từ khóa tìm khách hàng",
+    "searchPlaceholder": "Tìm theo họ tên, email hoặc số điện thoại",
+    "search": "Tìm kiếm",
+    "clearFilters": "Xóa lọc",
+    "status": "Trạng thái",
+    "allStatuses": "Tất cả trạng thái",
+    "statuses": {
+      "ACTIVE": "Đang hoạt động",
+      "INACTIVE": "Ngưng hoạt động",
+      "LOCKED": "Đã khóa",
+      "DELETED": "Đã xóa"
+    },
+    "genders": {
+      "MALE": "Nam",
+      "FEMALE": "Nữ",
+      "OTHER": "Khác"
+    },
+    "fromDate": "Đăng ký từ ngày",
+    "toDate": "Đăng ký đến ngày",
+    "rangeError": "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.",
+    "noResults": "Không có khách hàng phù hợp.",
+    "pageOf": "Trang {page}/{total}",
+    "totalCustomers": "{count} khách hàng",
+    "back": "Quay lại danh sách",
+    "registeredAt": "Đăng ký ngày {date}",
+    "profileTitle": "Thông tin khách hàng",
+    "email": "Email",
+    "phone": "Số điện thoại",
+    "gender": "Giới tính",
+    "birthday": "Ngày sinh",
+    "addressesTitle": "Địa chỉ đã lưu",
+    "defaultAddress": "Mặc định",
+    "noAddresses": "Khách chưa lưu địa chỉ nào.",
+    "ordersTitle": "Đơn hàng",
+    "totalOrders": "{count} đơn hàng",
+    "noOrders": "Khách chưa có đơn hàng nào.",
+    "moreItems": "và {count} sản phẩm khác",
+    "cancel": "Hủy",
+    "lock": "Khóa tài khoản",
+    "lockTitle": "Khóa tài khoản khách hàng?",
+    "lockDescription": "{name} sẽ bị đăng xuất và không đăng nhập được nữa. Đơn hàng đang xử lý vẫn tiếp tục. Không có chức năng mở khóa.",
+    "lockedNotice": "Tài khoản này đã bị khóa. Khách không đăng nhập được; hồ sơ và đơn hàng vẫn giữ nguyên."
   }
 }

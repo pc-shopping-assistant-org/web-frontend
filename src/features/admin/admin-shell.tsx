@@ -35,7 +35,7 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { AdminPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useLogout, useProfile } from "@/features/auth/queries";
-import { isAdminRole, isStaffRole } from "@/lib/auth/roles";
+import { isAdminRole, isEmployeeRole, isStaffRole } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils";
 
 const navGroups = [
@@ -85,7 +85,7 @@ const navGroups = [
   {
     label: "navGroups.management",
     items: [
-      { key: "customers", href: "/admin/customers", icon: Users },
+      { key: "customers", href: "/admin/customers", icon: Users, employeeOnly: true },
       { key: "employees", href: "/admin/employees", icon: UserCog, adminOnly: true },
       { key: "suppliers", href: "/admin/suppliers", icon: Truck },
       { key: "reviews", href: "/admin/reviews", icon: MessageSquareQuote },
@@ -282,7 +282,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     </p>
                   ) : null}
                   <div className="space-y-1">
-                    {group.items.filter((item) => !("adminOnly" in item) || isAdminRole(role)).map(({ key, href, icon: Icon }) => {
+                    {group.items.filter((item) => (!("adminOnly" in item) || isAdminRole(role)) && (!("employeeOnly" in item) || isEmployeeRole(role))).map(({ key, href, icon: Icon }) => {
                       const active = isActive(href);
                       return (
                         <Link

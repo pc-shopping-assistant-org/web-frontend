@@ -26,9 +26,6 @@ export type SpecAttributeDto = {
   required: boolean;
   displayOrder: number;
 };
-export type CustomerDetailDto = BackendSchema["CustomerDetailResponse"];
-export type CustomerOrderSummaryDto = BackendSchema["CustomerOrderSummaryResponse"];
-export type CustomersPageDto = BackendSchema["CursorPageResponseCustomerDetailResponse"];
 export type DashboardOverviewDto = BackendSchema["DashboardOverviewResponse"];
 export type OrderStatusStatDto = BackendSchema["OrderStatusStatResponse"];
 /** promotion-service discount; `state` is the status combined with the validity period. */

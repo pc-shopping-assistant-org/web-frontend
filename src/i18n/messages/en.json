@@ -1202,5 +1202,54 @@
       "INACTIVE": "This account is deactivated. The employee cannot sign in until you activate it again.",
       "DELETED": "This account is deleted. It cannot be edited or restored."
     }
+  },
+  "customers": {
+    "eyebrow": "Shop management",
+    "title": "Customers",
+    "description": "Find customers, see their profile and orders, or lock an account.",
+    "employeeOnlyTitle": "Shop employees only",
+    "employeeOnlyDescription": "Administrators do not manage customers; the shop employees do.",
+    "searchLabel": "Customer search keyword",
+    "searchPlaceholder": "Search by name, email or phone number",
+    "search": "Search",
+    "clearFilters": "Clear filters",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "statuses": {
+      "ACTIVE": "Active",
+      "INACTIVE": "Inactive",
+      "LOCKED": "Locked",
+      "DELETED": "Deleted"
+    },
+    "genders": {
+      "MALE": "Male",
+      "FEMALE": "Female",
+      "OTHER": "Other"
+    },
+    "fromDate": "Registered from",
+    "toDate": "Registered to",
+    "rangeError": "The start date must not be after the end date.",
+    "noResults": "No matching customers.",
+    "pageOf": "Page {page}/{total}",
+    "totalCustomers": "{count} customers",
+    "back": "Back to the list",
+    "registeredAt": "Registered {date}",
+    "profileTitle": "Customer details",
+    "email": "Email",
+    "phone": "Phone number",
+    "gender": "Gender",
+    "birthday": "Birthday",
+    "addressesTitle": "Saved addresses",
+    "defaultAddress": "Default",
+    "noAddresses": "The customer has no saved address.",
+    "ordersTitle": "Orders",
+    "totalOrders": "{count} orders",
+    "noOrders": "The customer has no orders.",
+    "moreItems": "and {count} more",
+    "cancel": "Cancel",
+    "lock": "Lock account",
+    "lockTitle": "Lock this customer account?",
+    "lockDescription": "{name} will be signed out and can no longer sign in. Orders in progress carry on. There is no unlock.",
+    "lockedNotice": "This account is locked. The customer cannot sign in; the profile and the orders stay as they are."
   }
 }

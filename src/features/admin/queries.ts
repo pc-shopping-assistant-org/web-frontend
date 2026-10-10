@@ -22,8 +22,6 @@ import {
   deleteVariant,
   deleteAttribute,
   deleteOption,
-  getAdminCustomer,
-  getAdminCustomerOrders,
   getAdminDiscount,
   getAdminProducts,
   getAdminReviews,
@@ -32,7 +30,6 @@ import {
   getAdminBrands,
   getAdminCategories,
   getCategorySpecsSchema,
-  getCustomers,
   getDashboardOverview,
   getDiscounts,
   getOptions,
@@ -50,7 +47,6 @@ import {
   updateProduct,
   updateSupplier,
   updateVariant,
-  updateCustomerStatus,
   updateDiscountStatus,
   updateProductStatus,
   updateReviewStatus,
@@ -102,16 +98,6 @@ export function useAdminProducts(
     placeholderData: keepPreviousData,
   });
 }
-export function useAdminCustomers(
-  filter: Parameters<typeof getCustomers>[0] = {},
-) {
-  return useQuery({
-    queryKey: ["admin", "customers", filter],
-    queryFn: () => getCustomers(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
-  });
-}
 export function useAdminSuppliers(
   filter: Parameters<typeof getSuppliers>[0] = {},
 ) {
@@ -140,22 +126,6 @@ export function useAdminReviews(
     queryFn: () => getAdminReviews(filter),
     retry: false,
     placeholderData: keepPreviousData,
-  });
-}
-export function useAdminCustomer(id: string) {
-  return useQuery({
-    queryKey: ["admin", "customer", id],
-    queryFn: () => getAdminCustomer(id),
-    enabled: Boolean(id),
-    retry: false,
-  });
-}
-export function useAdminCustomerOrders(id: string) {
-  return useQuery({
-    queryKey: ["admin", "customer-orders", id],
-    queryFn: () => getAdminCustomerOrders(id),
-    enabled: Boolean(id),
-    retry: false,
   });
 }
 export function useAdminDiscount(id: string) {
@@ -223,12 +193,6 @@ export function useAdminProductStatus() {
   return useStatusMutation(
     ({ id, status }: { id: string; status: string }) =>
       updateProductStatus(id, status),
-  );
-}
-export function useAdminCustomerStatus() {
-  return useStatusMutation(
-    ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
-      updateCustomerStatus(id, status, reason),
   );
 }
 export function useAdminDiscountStatus() {

@@ -8,7 +8,6 @@ import {
   DiscountType,
   ORDER_STATUS_VALUES,
 } from "@/lib/domain/commerce-enums";
-import {USER_STATUS_VALUES} from "@/lib/domain/account-enums";
 import {REVIEW_STATUS_VALUES} from "@/lib/domain/catalog-enums";
 import {EDITABLE_RESOURCE_STATUS_VALUES} from "@/lib/domain/catalog-enums";
 import {
@@ -29,10 +28,6 @@ export const updateResourceStatusRequestSchema = z.object({
   reason: optionalText,
 }).strict();
 
-export const updateAccountStatusRequestSchema = z.object({
-  status: z.enum(USER_STATUS_VALUES),
-  reason: optionalText,
-}).strict();
 
 export const updateDiscountStatusRequestSchema = z.object({
   status: z.enum(EDITABLE_DISCOUNT_STATUS_VALUES),
@@ -85,7 +80,6 @@ export const updateReviewRequestSchema = z.object({
 
 export type UpdateOrderStatusRequest = z.infer<typeof updateOrderStatusRequestSchema>;
 export type UpdateResourceStatusRequest = z.infer<typeof updateResourceStatusRequestSchema>;
-export type UpdateAccountStatusRequest = z.infer<typeof updateAccountStatusRequestSchema>;
 export type UpdateDiscountStatusRequest = z.infer<typeof updateDiscountStatusRequestSchema>;
 export type UpdateReviewStatusRequest = z.infer<typeof updateReviewStatusRequestSchema>;
 export type CreateDiscountRequest = z.infer<typeof createDiscountRequestSchema>;

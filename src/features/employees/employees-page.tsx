@@ -11,11 +11,11 @@ import {ErrorMessage} from "@/components/ui/error-message";
 import {Input} from "@/components/ui/input";
 import {Select} from "@/components/ui/select";
 import {Skeleton} from "@/components/ui/skeleton";
+import {PersonAvatar} from "@/components/ui/person-avatar";
 import {StatusBadge} from "@/components/ui/status-badge";
 import {Link} from "@/i18n/navigation";
 import {AccountStatus} from "@/lib/domain/account-enums";
 
-import {EmployeeAvatar} from "./components/employee-avatar";
 import {EmployeeForm} from "./components/employee-form";
 import {emptyEmployeeFormValues, toCreateRequest} from "./employee-form-values";
 import {AdminOnly} from "./admin-only";
@@ -89,7 +89,7 @@ function Employees() {
           <Link href={`/admin/employees/${employee.accountId}`} className="block">
             <Card className="transition hover:border-primary/30 hover:shadow-md">
               <CardContent className="flex items-center gap-4 p-4 sm:p-5">
-                <EmployeeAvatar employee={employee} />
+                <PersonAvatar person={employee} />
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-semibold">{employee.fullName}</p>
