@@ -2,6 +2,7 @@
 
 import {
   IconChevronDown,
+  IconChevronRight,
   IconDeviceDesktop,
   IconLayoutGrid,
   IconLayoutDashboard,
@@ -24,7 +25,6 @@ import { isStaffRole } from "@/lib/auth/roles";
 import { useLogout, useProfile } from "@/features/auth/queries";
 import { useCart } from "@/features/cart/queries";
 import { useCategories } from "@/features/catalog/queries";
-import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import type {CategoryTree} from "@/features/catalog/contracts/responses";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
@@ -334,18 +334,29 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   );
 }
 
+/** Most top-level categories the menu lists; the rest are one tap away on the products page. */
+const MENU_CATEGORY_LIMIT = 24;
+
+type MenuCategory = {id: string; name: string; children: MenuCategory[]};
+
 function CatalogMenu({categories}: {categories: CategoryTree[]}) {
   const t = useTranslations("nav");
-  const items = getActiveCategories(categories).slice(0, 18);
+  const items = getActiveCategories(categories).slice(0, MENU_CATEGORY_LIMIT);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (id: string) => setExpanded((current) => {
+    const next = new Set(current);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
 
   return (
     <details className="group relative hidden shrink-0 md:block">
       <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-background px-3 text-sm font-semibold transition hover:border-primary/30 hover:bg-primary/5 [&::-webkit-details-marker]:hidden">
         <IconLayoutGrid className="size-4 text-primary" aria-hidden="true" />
         {t("catalogMenu")}
-        <span className="text-muted-foreground transition group-open:rotate-180">⌄</span>
+        <IconChevronDown className="size-4 text-muted-foreground transition group-open:rotate-180" aria-hidden="true" />
       </summary>
-      <div className="absolute left-0 top-[calc(100%+0.65rem)] z-50 w-[25rem] rounded-2xl border bg-background p-3 shadow-2xl shadow-slate-950/10">
+      <div className="absolute left-0 top-[calc(100%+0.65rem)] z-50 w-[22rem] rounded-2xl border bg-background p-3 shadow-2xl shadow-slate-950/10">
         <div className="flex items-center justify-between gap-3 border-b px-2 pb-3">
           <div>
             <p className="text-sm font-semibold">{t("catalogMenuTitle")}</p>
@@ -356,21 +367,36 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
           </Link>
         </div>
         {items.length > 0 ? (
-          <div className="mt-3 grid grid-cols-2 gap-1">
-            {items.map((category) => (
-              <Link
-                key={category.id}
-                href={`/products?categoryId=${encodeURIComponent(category.id)}`}
-                className="flex min-w-0 items-center gap-2 rounded-xl px-2.5 py-2.5 text-sm transition hover:bg-primary/5 hover:text-primary"
-                style={{paddingLeft: `${0.625 + Math.min(category.depth, 2) * 0.5}rem`}}
-              >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                  <CatalogCategoryIcon categoryName={category.name} className="size-4" strokeWidth={1.7} />
-                </span>
-                <span className="truncate">{category.name}</span>
-              </Link>
-            ))}
-          </div>
+          <ul className="mt-2 max-h-80 space-y-0.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+            {items.map((category) => {
+              const open = expanded.has(category.id);
+              return (
+                <li key={category.id}>
+                  <div className="flex items-center rounded-xl transition hover:bg-primary/5">
+                    <Link
+                      href={`/products?categoryId=${encodeURIComponent(category.id)}`}
+                      className="min-w-0 flex-1 truncate rounded-xl px-3 py-2.5 text-sm font-medium transition hover:text-primary"
+                      title={category.name}
+                    >
+                      {category.name}
+                    </Link>
+                    {category.children.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => toggle(category.id)}
+                        aria-expanded={open}
+                        aria-label={t(open ? "collapseCategory" : "expandCategory", {name: category.name})}
+                        className="mr-1 flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+                      >
+                        <IconChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
+                  {open ? <MenuBranch nodes={category.children} /> : null}
+                </li>
+              );
+            })}
+          </ul>
         ) : (
           <p className="px-2 py-5 text-sm text-muted-foreground">{t("catalogMenuEmpty")}</p>
         )}
@@ -383,10 +409,30 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
   );
 }
 
-function getActiveCategories(categories: CategoryTree[], depth = 0): {id: string; name: string; depth: number}[] {
+/** Sub-categories sit under their parent behind a guide line, so they read as its children and not as more top-level entries. */
+function MenuBranch({nodes}: {nodes: MenuCategory[]}) {
+  return (
+    <ul className="ml-4 mt-0.5 space-y-0.5 border-l border-border/80 pl-2">
+      {nodes.map((node) => (
+        <li key={node.id}>
+          <Link
+            href={`/products?categoryId=${encodeURIComponent(node.id)}`}
+            className="block truncate rounded-lg px-2 py-1.5 text-[0.82rem] text-muted-foreground transition hover:bg-primary/5 hover:text-primary"
+            title={node.name}
+          >
+            {node.name}
+          </Link>
+          {node.children.length > 0 ? <MenuBranch nodes={node.children} /> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function getActiveCategories(categories: CategoryTree[]): MenuCategory[] {
   return categories.flatMap((category) => {
     if (category.status === ResourceStatus.Inactive || category.status === ResourceStatus.Deleted) return [];
-    const current = category.id && category.name ? [{id: category.id, name: category.name, depth}] : [];
-    return [...current, ...getActiveCategories(category.children ?? [], depth + 1)];
+    const children = getActiveCategories(category.children ?? []);
+    return category.id && category.name ? [{id: category.id, name: category.name, children}] : children;
   });
 }
