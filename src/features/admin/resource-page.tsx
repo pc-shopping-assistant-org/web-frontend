@@ -1,8 +1,6 @@
 "use client";
 
-import { useCursorTrail } from "@/lib/hooks/use-cursor-trail";
-import Image from "next/image";
-import { CreditCard, Eye, Search, Star, Trash2 } from "lucide-react";
+import { CreditCard, Eye, Search, Star } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -19,11 +17,11 @@ import { formatMoney } from "@/lib/format";
 import {AccountStatus} from "@/lib/domain/account-enums";
 import {DiscountStatus, DiscountState, DiscountType, OrderStatus, PaymentMethodCode, PaymentStatus} from "@/lib/domain/commerce-enums";
 import {ResourceStatus, ReviewStatus} from "@/lib/domain/catalog-enums";
-import type {CategoryTree, Review} from "@/features/catalog/contracts/responses";
+import type {Review} from "@/features/catalog/contracts/responses";
 
-import { useBrands, useCategories } from "@/features/catalog/queries";
-import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import { ProductCreateForm } from "./catalog-management";
+import { toNumber } from "./list-helpers";
+import { ProductListPage } from "./product-list";
 import { ConfirmAction } from "./confirm-action";
 import { StatusSelect } from "./status-select";
 import {
@@ -33,12 +31,9 @@ import {
 import {
   useAdminDiscountStatus,
   useAdminDiscounts,
-  useAdminProductStatus,
-  useAdminProducts,
   useAdminReviewStatus,
   useAdminReviews,
   useAdminSuppliers,
-  useDeleteAdminProduct,
 } from "./queries";
 import { AdminPagination } from "./admin-pagination";
 import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
@@ -52,6 +47,7 @@ import { useAdminOrders } from "@/features/orders/queries";
 
 export type AdminResource =
   | "products"
+  | "product-create"
   | "orders"
   | "discounts"
   | "suppliers"
@@ -62,7 +58,9 @@ export type AdminResource =
 export function AdminResourcePage({ resource }: { resource: AdminResource }) {
   switch (resource) {
     case "products":
-      return <Products />;
+      return <ProductListPage />;
+    case "product-create":
+      return <ProductCreate />;
     case "orders":
       return <Orders />;
     case "discounts":
@@ -76,6 +74,15 @@ export function AdminResourcePage({ resource }: { resource: AdminResource }) {
     case "reviews":
       return <Reviews />;
   }
+}
+
+function ProductCreate() {
+  const t = useTranslations("admin");
+  return (
+    <Shell title={t("createProduct")} description={t("productCreateDescription")}>
+      <ProductCreateForm />
+    </Shell>
+  );
 }
 
 function Heading({
@@ -325,276 +332,6 @@ function StatusOptions({
 }
 
 const ORDER_STATUSES = Object.values(OrderStatus);
-
-function Products() {
-  const t = useTranslations("admin");
-  const locale = useLocale();
-  const categories = useCategories();
-  const brands = useBrands();
-  const [draft, setDraft] = useState({
-    keyword: "",
-    status: "",
-    categoryId: "",
-    brandId: "",
-    minPrice: "",
-    maxPrice: "",
-  });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
-  const query = useAdminProducts({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
-    status: applied.status || undefined,
-    categoryId: applied.categoryId || undefined,
-    brandId: applied.brandId || undefined,
-    minPrice: toNumber(applied.minPrice),
-    maxPrice: toNumber(applied.maxPrice),
-  });
-  const trail = useCursorTrail(JSON.stringify({ ...applied, cursor: undefined }));
-  const mutation = useAdminProductStatus();
-  const remove = useDeleteAdminProduct();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
-  const reset = () => {
-    const empty = {
-      keyword: "",
-      status: "",
-      categoryId: "",
-      brandId: "",
-      minPrice: "",
-      maxPrice: "",
-    };
-    setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
-  };
-  const page = query.data
-    ? { ...query.data, hasPrev: trail.hasPrev, prevCursor: trail.prevCursor }
-    : undefined;
-  return (
-    <Shell
-      title={t("resource.products")}
-      description={t("resource.productsDescription")}
-    >
-      <ProductCreateForm />
-      <FilterBar
-        value={draft.keyword}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
-        }
-        placeholder={t("searchProducts")}
-        onSubmit={apply}
-        onReset={reset}
-      >
-        <FilterSelect
-          id="product-status"
-          label={t("status")}
-          value={draft.status}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, status: value }))
-          }
-        >
-          <StatusOptions kind="product" />
-        </FilterSelect>
-        <FilterSelect
-          id="product-category-filter"
-          label={t("category")}
-          value={draft.categoryId}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, categoryId: value }))
-          }
-        >
-          <option value="">{t("allCategories")}</option>
-          {flattenCategories(categories.data ?? []).map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.label}
-            </option>
-          ))}
-        </FilterSelect>
-        <FilterSelect
-          id="product-brand-filter"
-          label={t("brand")}
-          value={draft.brandId}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, brandId: value }))
-          }
-        >
-          <option value="">{t("allBrands")}</option>
-          {(brands.data ?? [])
-            .filter((brand) => brand.status === ResourceStatus.Active)
-            .map((brand) => (
-              <option key={brand.id} value={brand.id}>
-                {brand.name}
-              </option>
-            ))}
-        </FilterSelect>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {t("minPrice")}
-            </span>
-            <Input
-              type="number"
-              min={0}
-              value={draft.minPrice}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  minPrice: event.target.value,
-                }))
-              }
-            />
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {t("maxPrice")}
-            </span>
-            <Input
-              type="number"
-              min={0}
-              value={draft.maxPrice}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  maxPrice: event.target.value,
-                }))
-              }
-            />
-          </label>
-        </div>
-      </FilterBar>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} />
-      ) : (
-        <>
-          {(page?.items ?? []).length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="space-y-3">
-              {(page?.items ?? []).map((product, index) => (
-                <Card
-                  key={product.id ?? index}
-                  className="transition hover:border-primary/30 hover:shadow-md"
-                >
-                  <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
-                    <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted/60">
-                      {product.imageUrl ? (
-                        <Image
-                          src={product.imageUrl}
-                          alt={product.name ?? ""}
-                          fill
-                          sizes="64px"
-                          unoptimized
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span className="flex size-full items-center justify-center text-primary/45">
-                          <CatalogCategoryIcon
-                            categoryName={product.categoryName ?? product.name}
-                            className="size-8"
-                            strokeWidth={1.45}
-                          />
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {product.id ? (
-                          <Link
-                            href={`/admin/products/${product.id}`}
-                            className="font-semibold hover:text-primary hover:underline"
-                          >
-                            {product.name}
-                          </Link>
-                        ) : (
-                          <p className="font-semibold">{product.name}</p>
-                        )}
-                        <StatusBadge status={product.status} />
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {product.brandName ?? t("noBrand")} ·{" "}
-                        {product.categoryName ?? t("uncategorized")}
-                      </p>
-                      <p className="mt-1 text-sm font-medium">
-                        {formatMoney(product.minPrice, locale)}
-                        {product.maxPrice &&
-                        product.maxPrice !== product.minPrice
-                          ? ` – ${formatMoney(product.maxPrice, locale)}`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {product.id ? (
-                        <Link
-                          href={`/admin/products/${product.id}`}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-                        >
-                          <Eye className="size-3.5" />
-                          <span className="hidden sm:inline">{t("view")}</span>
-                        </Link>
-                      ) : null}
-                      <StatusSelect
-                        currentStatus={product.status}
-                        options={[ResourceStatus.Active, ResourceStatus.Inactive]}
-                        label={t("status")}
-                        onStatus={(status) =>
-                          mutation.mutateAsync({
-                            id: product.id ?? "",
-                            status,
-                          })
-                        }
-                        className="h-9 w-32"
-                        disabled={!product.id || mutation.isPending}
-                      />
-                      {product.id ? (
-                        <ConfirmAction
-                          title={t("delete")}
-                          description={t("confirmDelete")}
-                          confirmLabel={t("delete")}
-                          cancelLabel={t("cancel")}
-                          onConfirm={() => remove.mutateAsync(product.id!)}
-                          size="icon-sm"
-                          className="text-destructive hover:text-destructive"
-                          ariaLabel={t("delete")}
-                        >
-                          <Trash2 className="size-4" />
-                        </ConfirmAction>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-          <ListFooter
-            page={page}
-            onPrev={() => {
-              const cursor = trail.prevCursor;
-              trail.pop();
-              setApplied((current) => ({ ...current, cursor }));
-            }}
-            onNext={() => {
-              trail.push(applied.cursor);
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }));
-            }}
-          />
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
-    </Shell>
-  );
-}
 
 function Orders() {
   const t = useTranslations("admin");
@@ -1561,29 +1298,6 @@ function ListFooter({
       />
     </div>
   );
-}
-
-function flattenCategories(
-  categories: CategoryTree[],
-  depth = 0,
-): { id: string; label: string }[] {
-  return categories.flatMap((category) => [
-    ...(category.id
-      ? [
-          {
-            id: category.id,
-            label: `${"— ".repeat(depth)}${category.name ?? ""}`,
-          },
-        ]
-      : []),
-    ...flattenCategories(category.children ?? [], depth + 1),
-  ]);
-}
-
-function toNumber(value: string) {
-  if (!value.trim()) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function dateParam(value: string, endOfDay: boolean) {

@@ -3,7 +3,7 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 import {createProduct, createVariant, deleteVariant, getAdminProductById, getAdminProducts, updateVariant} from "./api";
-import {galleryRequest, optionsRequest} from "./product-fields";
+import {galleryRequest} from "./product-fields";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -46,13 +46,14 @@ describe("admin product reads", () => {
   });
 
   it("lists with the filter and keeps only the forward cursor", async () => {
-    const fetchMock = stubFetch({items: [{id: "p1", name: "Card", seoName: "card", status: "ACTIVE", minPrice: 1, maxPrice: 2, mainImageUrl: "http://img/a.png"}], nextCursor: "next", hasNext: true, size: 1});
+    const fetchMock = stubFetch({items: [{id: "p1", name: "Card", seoName: "card", status: "ACTIVE", minPrice: 1, maxPrice: 2, variantCount: 3, totalQuantity: 12, mainImageUrl: "http://img/a.png"}], nextCursor: "next", hasNext: true, size: 1});
 
     const page = await getAdminProducts({keyword: "card", status: "INACTIVE", limit: 20});
 
     expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/products/admin?keyword=card&status=INACTIVE&limit=20");
     expect(page).toMatchObject({hasNext: true, nextCursor: "next"});
     expect(page.items[0].imageUrl).toBe("http://img/a.png");
+    expect(page.items[0]).toMatchObject({variantCount: 3, totalQuantity: 12});
   });
 });
 
@@ -68,10 +69,10 @@ describe("admin product writes", () => {
     expect(body).not.toHaveProperty("supplierIds");
   });
 
-  it("creates a variant with free-form options and drops empty option rows", async () => {
+  it("creates a variant with its options", async () => {
     const fetchMock = stubFetch(variant("ACTIVE"));
 
-    await createVariant("p1", {price: 1000, quantity: 3, sku: "SKU-1", warrantyMonths: 12, options: optionsRequest([{name: " Color ", value: "Blue"}, {name: "", value: ""}])});
+    await createVariant("p1", {price: 1000, quantity: 3, sku: "SKU-1", warrantyMonths: 12, options: [{name: "Color", value: "Blue"}]});
 
     expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/products/p1/variants");
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).options).toEqual([{name: "Color", value: "Blue"}]);

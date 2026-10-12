@@ -6,6 +6,7 @@ import {
   Boxes,
   Building2,
   ChartColumnBig,
+  ChevronDown,
   ChevronRight,
   CircleDollarSign,
   CreditCard,
@@ -60,7 +61,16 @@ const navGroups = [
   {
     label: "navGroups.catalog",
     items: [
-      { key: "products", href: "/admin/products", icon: Package, employeeOnly: true },
+      {
+        key: "products",
+        href: "/admin/products",
+        icon: Package,
+        employeeOnly: true,
+        children: [
+          { key: "productList", href: "/admin/products" },
+          { key: "productCreate", href: "/admin/products/new" },
+        ],
+      },
       { key: "categories", href: "/admin/categories", icon: FolderTree, employeeOnly: true },
       { key: "brands", href: "/admin/brands", icon: Building2, employeeOnly: true },
       { key: "discounts", href: "/admin/discounts", icon: BadgePercent, employeeOnly: true },
@@ -93,7 +103,8 @@ const navGroups = [
   },
 ] as const;
 
-type AdminNavItem = { key: string; href: string; icon: LucideIcon };
+type AdminNavChild = { key: string; href: string };
+type AdminNavItem = { key: string; href: string; icon: LucideIcon; children?: readonly AdminNavChild[] };
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const t = useTranslations("admin");
@@ -103,6 +114,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
   if (profile.isPending) return <AdminPageSkeleton />;
   if (profile.isError)
@@ -153,10 +165,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
     return href === "/admin" ? pathname === href : pathname.startsWith(href);
   }
 
+  /** The child whose address matches the longest, so "/admin/products/new" is not also the list. */
+  function activeChild(children: readonly AdminNavChild[]) {
+    return children
+      .filter(({ href }) => isActive(href))
+      .sort((left, right) => right.href.length - left.href.length)[0];
+  }
+
   const currentItem = (navGroups.flatMap((group) => [
     ...group.items,
   ]) as AdminNavItem[])
     .find(({ href }) => isActive(href));
+  const currentKey = currentItem?.children
+    ? (activeChild(currentItem.children)?.key ?? currentItem.key)
+    : currentItem?.key;
 
   return (
     <div className="min-h-screen bg-muted/30">
@@ -286,8 +308,51 @@ export function AdminShell({ children }: { children: ReactNode }) {
                     </p>
                   ) : null}
                   <div className="space-y-1">
-                    {items.map(({ key, href, icon: Icon }) => {
+                    {(items as readonly AdminNavItem[]).map(({ key, href, icon: Icon, children: subItems }) => {
                       const active = isActive(href);
+                      const itemClass = cn(
+                        "group flex w-full items-center rounded-xl py-2.5 text-sm text-slate-400 transition hover:bg-white/10 hover:text-white",
+                        sidebarCollapsed ? "justify-center px-2" : "gap-3 px-3",
+                      );
+                      const activeClass =
+                        "bg-blue-500/20 text-white ring-1 ring-blue-300/30 shadow-lg shadow-blue-950/30 hover:bg-blue-500/25 hover:text-white";
+                      if (subItems && !sidebarCollapsed) {
+                        const open = toggled[key] ?? active;
+                        const current = activeChild(subItems);
+                        return (
+                          <div key={key}>
+                            <button
+                              type="button"
+                              aria-expanded={open}
+                              onClick={() => setToggled((value) => ({ ...value, [key]: !open }))}
+                              className={cn(itemClass, "text-left", active && !open && activeClass)}
+                            >
+                              <Icon className="size-4 shrink-0" />
+                              <span className="min-w-0 flex-1 whitespace-nowrap">{t("nav." + key)}</span>
+                              <ChevronDown className={cn("size-3.5 shrink-0 opacity-60 transition", open && "rotate-180")} />
+                            </button>
+                            {open ? (
+                              <div className="ml-5 mt-1 space-y-1 border-l border-white/10 pl-3">
+                                {subItems.map((child) => (
+                                  <Link
+                                    key={child.key}
+                                    href={child.href}
+                                    prefetch={false}
+                                    aria-current={current?.key === child.key ? "page" : undefined}
+                                    onClick={() => setMobileOpen(false)}
+                                    className={cn(
+                                      "block rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-white/10 hover:text-white",
+                                      current?.key === child.key && "bg-blue-500/20 text-white hover:bg-blue-500/25",
+                                    )}
+                                  >
+                                    {t("nav." + child.key)}
+                                  </Link>
+                                ))}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      }
                       return (
                         <Link
                           key={key}
@@ -295,14 +360,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                           prefetch={false}
                           aria-current={active ? "page" : undefined}
                           onClick={() => setMobileOpen(false)}
-                          className={cn(
-                            "group flex items-center rounded-xl py-2.5 text-sm text-slate-400 transition hover:bg-white/10 hover:text-white",
-                            sidebarCollapsed
-                              ? "justify-center px-2"
-                              : "gap-3 px-3",
-                            active &&
-                              "bg-blue-500/20 text-white ring-1 ring-blue-300/30 shadow-lg shadow-blue-950/30 hover:bg-blue-500/25 hover:text-white",
-                          )}
+                          className={cn(itemClass, active && activeClass)}
                           title={sidebarCollapsed ? t("nav." + key) : undefined}
                         >
                           <Icon className="size-4 shrink-0" />
@@ -350,7 +408,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 </span>
                 <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/60" />
                 <span className="truncate font-medium">
-                  {currentItem ? t("nav." + currentItem.key) : t("dashboard")}
+                  {currentKey ? t("nav." + currentKey) : t("dashboard")}
                 </span>
               </div>
               <div className="flex shrink-0 items-center gap-2">

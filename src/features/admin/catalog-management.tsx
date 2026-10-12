@@ -14,7 +14,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import type {Brand, CategoryTree} from "@/features/catalog/contracts/responses";
 import type {UpdateBrandRequest, UpdateCategoryRequest} from "@/features/admin/contracts/requests";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
@@ -24,12 +24,20 @@ import { ConfirmAction } from "./confirm-action";
 import { FileUploadField, type UploadedFile } from "./file-upload";
 import { galleryRequest, ProductGalleryEditor, type GalleryItem } from "./product-fields";
 import { SpecificationsEditor } from "./specifications-editor";
+import { VariantMatrixEditor } from "./variant-matrix";
+import {
+  buildVariantRequests,
+  emptyMatrix,
+  validateMatrix,
+  type VariantProblem,
+} from "./variant-matrix-model";
 import {
   useAdminBrands,
   useAdminCategories,
   useCreateAdminBrand,
   useCreateAdminCategory,
   useCreateAdminProduct,
+  useCreateAdminVariant,
   useDeleteAdminBrand,
   useDeleteAdminCategory,
   useUpdateAdminBrand,
@@ -714,13 +722,22 @@ function BrandEditForm({
   );
 }
 
+/**
+ * The product and its variants in one go. They are separate backend calls, so the product is made first and the
+ * variants one by one; one that fails leaves the product behind and a retry makes only the variants still missing.
+ */
 export function ProductCreateForm() {
   const t = useTranslations("admin");
+  const tv = useTranslations("admin.variantMatrix");
   const router = useRouter();
   const categories = useCategories();
   const brands = useBrands();
   const create = useCreateAdminProduct();
-  const [open, setOpen] = useState(false);
+  const createVariant = useCreateAdminVariant();
+  const [matrix, setMatrix] = useState(emptyMatrix);
+  const [matrixProblem, setMatrixProblem] = useState<VariantProblem | null>(null);
+  const [created, setCreated] = useState<{ id: string; done: string[] } | null>(null);
+  const [variantError, setVariantError] = useState<unknown>(null);
   const [form, setForm] = useState({
     name: "",
     seoName: "",
@@ -749,41 +766,47 @@ export function ProductCreateForm() {
       setFormError(t("specificationsObjectRequired"));
       return;
     }
-    let created;
-    try {
-      created = await create.mutateAsync({
-        name: form.name.trim(),
-        seoName: form.seoName.trim(),
-        categoryId: form.categoryId,
-        brandId: form.brandId || undefined,
-        description: form.description.trim() || undefined,
-        specifications,
-        images: galleryRequest(form.images),
-      });
-    } catch {
-      return;
+    const problem = validateMatrix(matrix);
+    setMatrixProblem(problem);
+    if (problem) return;
+    setVariantError(null);
+    let productId = created?.id;
+    if (!productId) {
+      try {
+        const product = await create.mutateAsync({
+          name: form.name.trim(),
+          seoName: form.seoName.trim(),
+          categoryId: form.categoryId,
+          brandId: form.brandId || undefined,
+          description: form.description.trim() || undefined,
+          specifications,
+          images: galleryRequest(form.images),
+        });
+        productId = product?.id;
+      } catch {
+        return;
+      }
+      if (!productId) return;
     }
-    setForm({
-      name: "",
-      seoName: "",
-      categoryId: "",
-      brandId: "",
-      description: "",
-      specifications: "{}",
-      images: [],
-    });
-    if (created?.id) router.push(`/admin/products/${created.id}`);
+    const done = [...(created?.done ?? [])];
+    setCreated({ id: productId, done });
+    for (const { key, request } of buildVariantRequests(matrix)) {
+      if (done.includes(key)) continue;
+      try {
+        await createVariant.mutateAsync({ productId, request });
+      } catch (error) {
+        setVariantError(error);
+        return;
+      }
+      done.push(key);
+      setCreated({ id: productId, done: [...done] });
+    }
+    router.push(`/admin/products/${productId}`);
   }
   return (
     <Card className="mb-6">
-      <CreateCardHeader
-        title={t("createProduct")}
-        description={t("productCreateDescription")}
-        open={open}
-        onToggle={() => setOpen((value) => !value)}
-      />
-      {open ? (
-        <CardContent>
+      {(
+        <CardContent className="pt-6">
           <form
             className="grid gap-4 sm:grid-cols-2"
             onSubmit={(event) => void submit(event)}
@@ -874,17 +897,37 @@ export function ProductCreateForm() {
               }
               idPrefix="product"
             />
+            <VariantMatrixEditor
+              value={matrix}
+              onChange={(next) => {
+                setMatrix(next);
+                setMatrixProblem(null);
+              }}
+              problem={matrixProblem}
+            />
+            {created && variantError ? (
+              <div role="alert" className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm sm:col-span-2">
+                <p className="font-medium">
+                  {tv("partial", { done: created.done.length, total: buildVariantRequests(matrix).length })}
+                </p>
+                <ErrorMessage error={variantError} />
+                <Link href={`/admin/products/${created.id}`} className="inline-block font-medium text-primary underline-offset-4 hover:underline">
+                  {tv("openCreated")}
+                </Link>
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-2 sm:col-span-2">
               <Button
                 type="submit"
                 disabled={
                   create.isPending ||
+                  createVariant.isPending ||
                   !form.categoryId ||
                   !form.name.trim()
                 }
               >
                 <Plus className="size-4" />
-                {t("create")}
+                {created ? tv("retry") : t("create")}
               </Button>
               {formError ? (
                 <p className="self-center text-sm text-destructive">
@@ -895,7 +938,7 @@ export function ProductCreateForm() {
             </div>
           </form>
         </CardContent>
-      ) : null}
+      )}
     </Card>
   );
 }

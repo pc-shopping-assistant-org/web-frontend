@@ -2,13 +2,8 @@
 
 import {
   ArrowLeft,
-  ChevronDown,
-  ChevronUp,
-  Pencil,
-  Plus,
   Save,
   Trash2,
-  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState, type FormEvent } from "react";
@@ -29,12 +24,10 @@ import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
-import Image from "next/image";
 import { Link, useRouter } from "@/i18n/navigation";
 import type {
   CategoryTree,
   ProductDetail,
-  ProductVariant,
 } from "@/features/catalog/contracts/responses";
 import type {
   DiscountDetail,
@@ -50,21 +43,18 @@ import {
   OrderStatus,
 } from "@/lib/domain/commerce-enums";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
-import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import { AdminPagination } from "./admin-pagination";
 import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
 import { useAdminInvoice, useAdminInvoices, useAdminOrder, usePaymentMethods, useShippingMethods } from "@/features/orders/queries";
 import { ConfirmAction } from "./confirm-action";
-import { FileUploadField } from "./file-upload";
 import {
   galleryFromProduct,
   galleryRequest,
-  optionsRequest,
   ProductGalleryEditor,
-  VariantOptionsEditor,
 } from "./product-fields";
 import { SpecificationsEditor } from "./specifications-editor";
 import { StatusSelect } from "./status-select";
+import { ProductVariantsSection } from "./variant-table";
 
 import { useBrands, useCategories } from "@/features/catalog/queries";
 import {
@@ -73,15 +63,12 @@ import {
   useAdminProductStatus,
   useAdminSupplier,
   useAdminDiscountStatus,
-  useCreateAdminVariant,
   useDeleteAdminDiscount,
   useDeleteAdminProduct,
   useDeleteAdminSupplier,
-  useDeleteAdminVariant,
   useUpdateAdminDiscount,
   useUpdateAdminProduct,
   useUpdateAdminSupplier,
-  useUpdateAdminVariant,
 } from "./queries";
 
 /** Small shared back link so every admin detail screen has a predictable exit. */
@@ -252,7 +239,7 @@ export function AdminProductDetailPage({ productId }: { productId: string }) {
       </div>
       <div className="space-y-6">
         <ProductEditor product={product.data} />
-        <VariantManager product={product.data} />
+        <ProductVariantsSection product={product.data} />
       </div>
     </div>
   );
@@ -378,6 +365,11 @@ function ProductEditor({ product }: { product: ProductDetail }) {
                 ))}
             </Select>
           </div>
+          <ProductGalleryEditor
+            id="admin-product-gallery"
+            items={form.images}
+            onChange={(images) => set("images", images)}
+          />
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="admin-product-description">
               {t("description")}
@@ -388,11 +380,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
               onChange={(event) => set("description", event.target.value)}
             />
           </div>
-          <ProductGalleryEditor
-            id="admin-product-gallery"
-            items={form.images}
-            onChange={(images) => set("images", images)}
-          />
           <SpecificationsEditor
             categoryId={form.categoryId}
             value={form.specifications}
@@ -422,342 +409,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
         </form>
       </CardContent>
     </Card>
-  );
-}
-
-function VariantManager({ product }: { product: ProductDetail }) {
-  const t = useTranslations("admin");
-  const remove = useDeleteAdminVariant();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-
-  const variants = product.variants ?? [];
-  return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="min-w-0">
-          <CardTitle>{t("variants")}</CardTitle>
-          <CardDescription className="mt-1">
-            {t("variantDescription")}
-          </CardDescription>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-expanded={createOpen}
-          onClick={() => setCreateOpen((value) => !value)}
-        >
-          {createOpen ? (
-            <ChevronUp className="size-4" />
-          ) : (
-            <ChevronDown className="size-4" />
-          )}
-          {createOpen ? t("hideCreate") : t("createVariant")}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {variants.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {t("noVariants")}
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {variants.map((variant) => (
-              <div
-                key={variant.id}
-                className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted/60">
-                      {variant.imageUrl ? (
-                        <Image
-                          src={variant.imageUrl}
-                          alt={variant.sku}
-                          fill
-                          sizes="64px"
-                          unoptimized
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span className="flex size-full items-center justify-center text-primary/45">
-                          <CatalogCategoryIcon
-                            categoryName={product.category?.name ?? product.name}
-                            className="size-8"
-                            strokeWidth={1.45}
-                          />
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold">{variant.sku}</p>
-                      <p className="mt-1 text-sm font-medium">
-                        {formatMoney(variant.price, "vi")}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {t("stockLabel")}: {variant.quantity} ·{" "}
-                        {t("warranty")}:{" "}
-                        {variant.warrantyMonths
-                          ? t("warrantyMonthsValue", { count: variant.warrantyMonths })
-                          : "—"}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {variant.options
-                          .map((option) => `${option.name}: ${option.value}`)
-                          .join(" · ") || t("noOptions")}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusBadge status={variant.status} />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setEditingId((current) =>
-                          current === variant.id ? null : variant.id,
-                        )
-                      }
-                    >
-                      <Pencil className="size-3.5" />
-                      {editingId === variant.id ? t("close") : t("edit")}
-                    </Button>
-                    <ConfirmAction
-                      title={t("confirmDelete")}
-                      confirmLabel={t("delete")}
-                      cancelLabel={t("cancel")}
-                      onConfirm={() =>
-                        remove.mutateAsync({ productId: product.id, id: variant.id })
-                      }
-                      size="sm"
-                      variant="destructive"
-                    >
-                      <Trash2 className="size-3.5" />
-                      {t("delete")}
-                    </ConfirmAction>
-                  </div>
-                </div>
-                {editingId === variant.id ? (
-                  <div className="mt-5 border-t pt-5">
-                    <VariantForm
-                      productId={product.id}
-                      variant={variant}
-                      onSaved={() => setEditingId(null)}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-        {createOpen ? (
-          <VariantForm productId={product.id} onSaved={() => undefined} />
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Creates a variant, or edits `variant` when it is given. */
-function VariantForm({
-  productId,
-  variant,
-  onSaved,
-}: {
-  productId: string;
-  variant?: ProductVariant;
-  onSaved: () => void;
-}) {
-  const t = useTranslations("admin");
-  const create = useCreateAdminVariant();
-  const update = useUpdateAdminVariant();
-  const mutation = variant ? update : create;
-  const initial = useMemo(
-    () => ({
-      sku: variant?.sku ?? "",
-      model: variant?.model ?? "",
-      barcode: variant?.barcode ?? "",
-      releaseAt: variant?.releaseAt ?? "",
-      price: variant ? String(variant.price) : "",
-      quantity: variant ? String(variant.quantity) : "0",
-      warrantyMonths: String(variant?.warrantyMonths ?? 12),
-      description: variant?.description ?? "",
-      options: (variant?.options ?? []).map(({ name, value }) => ({ name, value })),
-      image: variant?.imageFileId
-        ? { fileId: variant.imageFileId, url: variant.imageUrl }
-        : (null as { fileId: string; url?: string } | null),
-      status: (variant?.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
-    }),
-    [variant],
-  );
-  const [form, setForm] = useState(initial);
-  const [formError, setFormError] = useState("");
-  const idPrefix = variant ? `variant-${variant.id}` : "variant-new";
-  const set = <K extends keyof typeof initial>(key: K, value: (typeof initial)[K]) =>
-    setForm((current) => ({ ...current, [key]: value }));
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setFormError("");
-    const options = optionsRequest(form.options);
-    if (options.some((option) => !option.name || !option.value)) {
-      setFormError(t("optionIncomplete"));
-      return;
-    }
-    if (new Set(options.map((option) => option.name.toLowerCase())).size !== options.length) {
-      setFormError(t("duplicateOptionType"));
-      return;
-    }
-    const request = {
-      sku: form.sku.trim(),
-      model: form.model.trim() || undefined,
-      barcode: form.barcode.trim() || undefined,
-      releaseAt: form.releaseAt || undefined,
-      price: Number(form.price),
-      quantity: Number(form.quantity),
-      warrantyMonths: Number(form.warrantyMonths),
-      description: form.description.trim() || undefined,
-      imageFileId: form.image?.fileId,
-      options,
-    };
-    try {
-      if (variant) {
-        await update.mutateAsync({ productId, id: variant.id, request: { ...request, status: form.status } });
-      } else {
-        await create.mutateAsync({ productId, request });
-        setForm(initial);
-      }
-    } catch {
-      return;
-    }
-    onSaved();
-  }
-
-  return (
-    <form
-      className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2"
-      onSubmit={(event) => void submit(event)}
-    >
-      <div className="sm:col-span-2">
-        <p className="font-semibold">{variant ? t("editVariant") : t("createVariant")}</p>
-        {variant ? null : (
-          <p className="mt-1 text-sm text-muted-foreground">{t("variantCreateHint")}</p>
-        )}
-      </div>
-      <Field
-        id={`${idPrefix}-sku`}
-        label="SKU"
-        value={form.sku}
-        onChange={(value) => set("sku", value)}
-        required
-      />
-      <Field
-        id={`${idPrefix}-model`}
-        label={t("model")}
-        value={form.model}
-        onChange={(value) => set("model", value)}
-      />
-      <Field
-        id={`${idPrefix}-barcode`}
-        label={t("barcode")}
-        value={form.barcode}
-        onChange={(value) => set("barcode", value)}
-      />
-      <Field
-        id={`${idPrefix}-release`}
-        label={t("releaseAt")}
-        type="date"
-        value={form.releaseAt}
-        onChange={(value) => set("releaseAt", value)}
-      />
-      <Field
-        id={`${idPrefix}-price`}
-        label={t("price")}
-        type="number"
-        min="0"
-        value={form.price}
-        onChange={(value) => set("price", value)}
-        required
-      />
-      <Field
-        id={`${idPrefix}-quantity`}
-        label={t("quantity")}
-        type="number"
-        min="0"
-        value={form.quantity}
-        onChange={(value) => set("quantity", value)}
-        required
-      />
-      <Field
-        id={`${idPrefix}-warranty`}
-        label={t("warrantyMonths")}
-        type="number"
-        min="1"
-        value={form.warrantyMonths}
-        onChange={(value) => set("warrantyMonths", value)}
-        required
-      />
-      {variant ? (
-        <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-status`}>{t("status")}</Label>
-          <Select
-            id={`${idPrefix}-status`}
-            value={form.status}
-            onChange={(event) => set("status", event.target.value as EditableResourceStatus)}
-          >
-            <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
-            <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
-          </Select>
-        </div>
-      ) : null}
-      <VariantOptionsEditor
-        id={`${idPrefix}-options`}
-        rows={form.options}
-        onChange={(rows) => set("options", rows)}
-      />
-      {form.image ? (
-        <div className="flex items-center gap-3 rounded-lg border bg-background p-2 sm:col-span-2">
-          <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
-            {form.image.url ? (
-              <Image src={form.image.url} alt="" fill sizes="48px" unoptimized className="object-cover" />
-            ) : null}
-          </div>
-          <span className="min-w-0 flex-1 truncate text-sm">{t("variantImage")}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("removeFile")}
-            onClick={() => set("image", null)}
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
-      ) : null}
-      <FileUploadField
-        id={`${idPrefix}-image`}
-        label={t("variantImage")}
-        onUploaded={(file) => set("image", { fileId: file.id, url: file.publicUrl })}
-      />
-      <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor={`${idPrefix}-description`}>{t("description")}</Label>
-        <Textarea
-          id={`${idPrefix}-description`}
-          value={form.description}
-          onChange={(event) => set("description", event.target.value)}
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <Button type="submit" disabled={mutation.isPending || !form.sku.trim() || !form.price}>
-          {variant ? <Save className="size-4" /> : <Plus className="size-4" />}
-          {variant ? t("save") : t("create")}
-        </Button>
-      </div>
-      <div className="sm:col-span-2">
-        <FormError error={mutation.error} formError={formError} />
-      </div>
-    </form>
   );
 }
 
