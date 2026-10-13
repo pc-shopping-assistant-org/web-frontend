@@ -157,6 +157,8 @@ export function mapProductSummary(dto: ProductSummaryDto): ProductSummary {
     imageUrl: dto.mainImageUrl ?? undefined,
     maxPrice: number(dto.maxPrice),
     minPrice: number(dto.minPrice),
+    variantCount: dto.variantCount ?? undefined,
+    totalQuantity: dto.totalQuantity ?? undefined,
     ratingAverage: 0,
     reviewCount: 0,
     status: dto.status,

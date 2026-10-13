@@ -2,13 +2,8 @@
 
 import {
   ArrowLeft,
-  ChevronDown,
-  ChevronUp,
-  Pencil,
-  Plus,
   Save,
   Trash2,
-  X,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState, type FormEvent } from "react";
@@ -25,74 +20,46 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { AdminPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
-import Image from "next/image";
 import { Link, useRouter } from "@/i18n/navigation";
 import type {
   CategoryTree,
   ProductDetail,
-  ProductVariant,
 } from "@/features/catalog/contracts/responses";
 import type {
-  DiscountDetail,
-  EmployeeDetail,
-  Role,
-} from "@/features/admin/contracts/responses";
-import type {
-  UpdateEmployeeRequest,
   UpdateSupplierRequest,
 } from "@/features/admin/contracts/requests";
 import { formatMoney } from "@/lib/format";
-import {AccountStatus, Gender, type EmployeeGender} from "@/lib/domain/account-enums";
 import {
-  DiscountScope,
-  DiscountStatus,
-  DiscountType,
   OrderStatus,
 } from "@/lib/domain/commerce-enums";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
-import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import { AdminPagination } from "./admin-pagination";
 import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
 import { useAdminInvoice, useAdminInvoices, useAdminOrder, usePaymentMethods, useShippingMethods } from "@/features/orders/queries";
 import { ConfirmAction } from "./confirm-action";
-import { FileUploadField, type UploadedFile } from "./file-upload";
 import {
   galleryFromProduct,
   galleryRequest,
-  optionsRequest,
   ProductGalleryEditor,
-  VariantOptionsEditor,
 } from "./product-fields";
 import { SpecificationsEditor } from "./specifications-editor";
 import { StatusSelect } from "./status-select";
+import { DiscountForm } from "./discount-create";
+import { ProductVariantsSection } from "./variant-table";
 
 import { useBrands, useCategories } from "@/features/catalog/queries";
 import {
-  useAdminCustomer,
-  useAdminCustomerOrders,
-  useAdminCustomerStatus,
   useAdminDiscount,
-  useAdminEmployee,
-  useAdminEmployeeStatus,
   useAdminProduct,
   useAdminProductStatus,
   useAdminSupplier,
-  useAdminDiscountStatus,
-  useCreateAdminVariant,
-  useDeleteAdminDiscount,
   useDeleteAdminProduct,
   useDeleteAdminSupplier,
-  useDeleteAdminVariant,
-  useRoles,
-  useUpdateAdminDiscount,
-  useUpdateAdminEmployee,
   useUpdateAdminProduct,
   useUpdateAdminSupplier,
-  useUpdateAdminVariant,
 } from "./queries";
 
 /** Small shared back link so every admin detail screen has a predictable exit. */
@@ -151,30 +118,6 @@ function Field({
     </div>
   );
 }
-function DateTimeField({
-  id,
-  label,
-  value,
-  onChange,
-  required,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-}) {
-  return (
-    <Field
-      id={id}
-      label={label}
-      type="datetime-local"
-      value={value}
-      onChange={onChange}
-      required={required}
-    />
-  );
-}
 function FormError({
   error,
   formError,
@@ -207,17 +150,6 @@ function flatten(
     ...flatten(category.children ?? [], depth + 1),
   ]);
 }
-/** The backend sends UTC instants; a datetime-local input shows (and `toIso` reads) the browser's local time. */
-function toDateTimeInput(value?: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  const pad = (part: number) => String(part).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-function toIso(value: string) {
-  return value ? new Date(value).toISOString() : new Date().toISOString();
-}
-
 export function AdminProductDetailPage({ productId }: { productId: string }) {
   const t = useTranslations("admin");
   const router = useRouter();
@@ -263,7 +195,7 @@ export function AdminProductDetailPage({ productId }: { productId: string }) {
       </div>
       <div className="space-y-6">
         <ProductEditor product={product.data} />
-        <VariantManager product={product.data} />
+        <ProductVariantsSection product={product.data} />
       </div>
     </div>
   );
@@ -389,6 +321,11 @@ function ProductEditor({ product }: { product: ProductDetail }) {
                 ))}
             </Select>
           </div>
+          <ProductGalleryEditor
+            id="admin-product-gallery"
+            items={form.images}
+            onChange={(images) => set("images", images)}
+          />
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="admin-product-description">
               {t("description")}
@@ -399,11 +336,6 @@ function ProductEditor({ product }: { product: ProductDetail }) {
               onChange={(event) => set("description", event.target.value)}
             />
           </div>
-          <ProductGalleryEditor
-            id="admin-product-gallery"
-            items={form.images}
-            onChange={(images) => set("images", images)}
-          />
           <SpecificationsEditor
             categoryId={form.categoryId}
             value={form.specifications}
@@ -436,701 +368,12 @@ function ProductEditor({ product }: { product: ProductDetail }) {
   );
 }
 
-function VariantManager({ product }: { product: ProductDetail }) {
-  const t = useTranslations("admin");
-  const remove = useDeleteAdminVariant();
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-
-  const variants = product.variants ?? [];
-  return (
-    <Card>
-      <CardHeader className="flex-row items-start justify-between gap-4">
-        <div className="min-w-0">
-          <CardTitle>{t("variants")}</CardTitle>
-          <CardDescription className="mt-1">
-            {t("variantDescription")}
-          </CardDescription>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          aria-expanded={createOpen}
-          onClick={() => setCreateOpen((value) => !value)}
-        >
-          {createOpen ? (
-            <ChevronUp className="size-4" />
-          ) : (
-            <ChevronDown className="size-4" />
-          )}
-          {createOpen ? t("hideCreate") : t("createVariant")}
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        {variants.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-            {t("noVariants")}
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {variants.map((variant) => (
-              <div
-                key={variant.id}
-                className="rounded-2xl border bg-card p-4 shadow-sm sm:p-5"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted/60">
-                      {variant.imageUrl ? (
-                        <Image
-                          src={variant.imageUrl}
-                          alt={variant.sku}
-                          fill
-                          sizes="64px"
-                          unoptimized
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span className="flex size-full items-center justify-center text-primary/45">
-                          <CatalogCategoryIcon
-                            categoryName={product.category?.name ?? product.name}
-                            className="size-8"
-                            strokeWidth={1.45}
-                          />
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold">{variant.sku}</p>
-                      <p className="mt-1 text-sm font-medium">
-                        {formatMoney(variant.price, "vi")}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {t("stockLabel")}: {variant.quantity} ·{" "}
-                        {t("warranty")}:{" "}
-                        {variant.warrantyMonths
-                          ? t("warrantyMonthsValue", { count: variant.warrantyMonths })
-                          : "—"}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {variant.options
-                          .map((option) => `${option.name}: ${option.value}`)
-                          .join(" · ") || t("noOptions")}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusBadge status={variant.status} />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setEditingId((current) =>
-                          current === variant.id ? null : variant.id,
-                        )
-                      }
-                    >
-                      <Pencil className="size-3.5" />
-                      {editingId === variant.id ? t("close") : t("edit")}
-                    </Button>
-                    <ConfirmAction
-                      title={t("confirmDelete")}
-                      confirmLabel={t("delete")}
-                      cancelLabel={t("cancel")}
-                      onConfirm={() =>
-                        remove.mutateAsync({ productId: product.id, id: variant.id })
-                      }
-                      size="sm"
-                      variant="destructive"
-                    >
-                      <Trash2 className="size-3.5" />
-                      {t("delete")}
-                    </ConfirmAction>
-                  </div>
-                </div>
-                {editingId === variant.id ? (
-                  <div className="mt-5 border-t pt-5">
-                    <VariantForm
-                      productId={product.id}
-                      variant={variant}
-                      onSaved={() => setEditingId(null)}
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-        {createOpen ? (
-          <VariantForm productId={product.id} onSaved={() => undefined} />
-        ) : null}
-      </CardContent>
-    </Card>
-  );
-}
-
-/** Creates a variant, or edits `variant` when it is given. */
-function VariantForm({
-  productId,
-  variant,
-  onSaved,
-}: {
-  productId: string;
-  variant?: ProductVariant;
-  onSaved: () => void;
-}) {
-  const t = useTranslations("admin");
-  const create = useCreateAdminVariant();
-  const update = useUpdateAdminVariant();
-  const mutation = variant ? update : create;
-  const initial = useMemo(
-    () => ({
-      sku: variant?.sku ?? "",
-      model: variant?.model ?? "",
-      barcode: variant?.barcode ?? "",
-      releaseAt: variant?.releaseAt ?? "",
-      price: variant ? String(variant.price) : "",
-      quantity: variant ? String(variant.quantity) : "0",
-      warrantyMonths: String(variant?.warrantyMonths ?? 12),
-      description: variant?.description ?? "",
-      options: (variant?.options ?? []).map(({ name, value }) => ({ name, value })),
-      image: variant?.imageFileId
-        ? { fileId: variant.imageFileId, url: variant.imageUrl }
-        : (null as { fileId: string; url?: string } | null),
-      status: (variant?.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
-    }),
-    [variant],
-  );
-  const [form, setForm] = useState(initial);
-  const [formError, setFormError] = useState("");
-  const idPrefix = variant ? `variant-${variant.id}` : "variant-new";
-  const set = <K extends keyof typeof initial>(key: K, value: (typeof initial)[K]) =>
-    setForm((current) => ({ ...current, [key]: value }));
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setFormError("");
-    const options = optionsRequest(form.options);
-    if (options.some((option) => !option.name || !option.value)) {
-      setFormError(t("optionIncomplete"));
-      return;
-    }
-    if (new Set(options.map((option) => option.name.toLowerCase())).size !== options.length) {
-      setFormError(t("duplicateOptionType"));
-      return;
-    }
-    const request = {
-      sku: form.sku.trim(),
-      model: form.model.trim() || undefined,
-      barcode: form.barcode.trim() || undefined,
-      releaseAt: form.releaseAt || undefined,
-      price: Number(form.price),
-      quantity: Number(form.quantity),
-      warrantyMonths: Number(form.warrantyMonths),
-      description: form.description.trim() || undefined,
-      imageFileId: form.image?.fileId,
-      options,
-    };
-    try {
-      if (variant) {
-        await update.mutateAsync({ productId, id: variant.id, request: { ...request, status: form.status } });
-      } else {
-        await create.mutateAsync({ productId, request });
-        setForm(initial);
-      }
-    } catch {
-      return;
-    }
-    onSaved();
-  }
-
-  return (
-    <form
-      className="grid gap-4 rounded-2xl border bg-muted/20 p-4 sm:grid-cols-2"
-      onSubmit={(event) => void submit(event)}
-    >
-      <div className="sm:col-span-2">
-        <p className="font-semibold">{variant ? t("editVariant") : t("createVariant")}</p>
-        {variant ? null : (
-          <p className="mt-1 text-sm text-muted-foreground">{t("variantCreateHint")}</p>
-        )}
-      </div>
-      <Field
-        id={`${idPrefix}-sku`}
-        label="SKU"
-        value={form.sku}
-        onChange={(value) => set("sku", value)}
-        required
-      />
-      <Field
-        id={`${idPrefix}-model`}
-        label={t("model")}
-        value={form.model}
-        onChange={(value) => set("model", value)}
-      />
-      <Field
-        id={`${idPrefix}-barcode`}
-        label={t("barcode")}
-        value={form.barcode}
-        onChange={(value) => set("barcode", value)}
-      />
-      <Field
-        id={`${idPrefix}-release`}
-        label={t("releaseAt")}
-        type="date"
-        value={form.releaseAt}
-        onChange={(value) => set("releaseAt", value)}
-      />
-      <Field
-        id={`${idPrefix}-price`}
-        label={t("price")}
-        type="number"
-        min="0"
-        value={form.price}
-        onChange={(value) => set("price", value)}
-        required
-      />
-      <Field
-        id={`${idPrefix}-quantity`}
-        label={t("quantity")}
-        type="number"
-        min="0"
-        value={form.quantity}
-        onChange={(value) => set("quantity", value)}
-        required
-      />
-      <Field
-        id={`${idPrefix}-warranty`}
-        label={t("warrantyMonths")}
-        type="number"
-        min="1"
-        value={form.warrantyMonths}
-        onChange={(value) => set("warrantyMonths", value)}
-        required
-      />
-      {variant ? (
-        <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-status`}>{t("status")}</Label>
-          <Select
-            id={`${idPrefix}-status`}
-            value={form.status}
-            onChange={(event) => set("status", event.target.value as EditableResourceStatus)}
-          >
-            <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
-            <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
-          </Select>
-        </div>
-      ) : null}
-      <VariantOptionsEditor
-        id={`${idPrefix}-options`}
-        rows={form.options}
-        onChange={(rows) => set("options", rows)}
-      />
-      {form.image ? (
-        <div className="flex items-center gap-3 rounded-lg border bg-background p-2 sm:col-span-2">
-          <div className="relative size-12 shrink-0 overflow-hidden rounded-md bg-muted">
-            {form.image.url ? (
-              <Image src={form.image.url} alt="" fill sizes="48px" unoptimized className="object-cover" />
-            ) : null}
-          </div>
-          <span className="min-w-0 flex-1 truncate text-sm">{t("variantImage")}</span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("removeFile")}
-            onClick={() => set("image", null)}
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
-      ) : null}
-      <FileUploadField
-        id={`${idPrefix}-image`}
-        label={t("variantImage")}
-        onUploaded={(file) => set("image", { fileId: file.id, url: file.publicUrl })}
-      />
-      <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor={`${idPrefix}-description`}>{t("description")}</Label>
-        <Textarea
-          id={`${idPrefix}-description`}
-          value={form.description}
-          onChange={(event) => set("description", event.target.value)}
-        />
-      </div>
-      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-        <Button type="submit" disabled={mutation.isPending || !form.sku.trim() || !form.price}>
-          {variant ? <Save className="size-4" /> : <Plus className="size-4" />}
-          {variant ? t("save") : t("create")}
-        </Button>
-      </div>
-      <div className="sm:col-span-2">
-        <FormError error={mutation.error} formError={formError} />
-      </div>
-    </form>
-  );
-}
-
-export function AdminCustomerDetailPage({
-  customerId,
-}: {
-  customerId: string;
-}) {
-  const t = useTranslations("admin");
-  const customer = useAdminCustomer(customerId);
-  const orders = useAdminCustomerOrders(customerId);
-  const status = useAdminCustomerStatus();
-  if (customer.isPending) return <Loading />;
-  if (customer.isError || !customer.data)
-    return (
-      <>
-        <BackLink href="/admin/customers">{t("back")}</BackLink>
-        <Failure error={customer.error} />
-      </>
-    );
-  const item = customer.data;
-  return (
-    <div>
-      <BackLink href="/admin/customers">{t("back")}</BackLink>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="eyebrow">{t("customerDetail")}</p>
-          <h1 className="mt-2 text-3xl font-semibold">
-            {item.fullName ?? item.email}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {item.accountId ?? item.id}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <StatusBadge status={item.status} />
-          <StatusSelect
-            currentStatus={item.status ?? AccountStatus.Active}
-            options={[AccountStatus.Active, AccountStatus.Locked, AccountStatus.Inactive]}
-            label={t("status")}
-            onStatus={(nextStatus) =>
-              status.mutateAsync({ id: customerId, status: nextStatus })
-            }
-            className="w-32"
-            disabled={status.isPending}
-          />
-        </div>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("customerInformation")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              <strong>{t("email")}:</strong> {item.email ?? "—"}
-            </p>
-            <p>
-              <strong>{t("phone")}:</strong> {item.phone ?? "—"}
-            </p>
-            <p>
-              <strong>{t("gender")}:</strong> {item.gender ?? "—"}
-            </p>
-            <p>
-              <strong>{t("birthday")}:</strong> {item.birthday ?? "—"}
-            </p>
-            <p>
-              <strong>{t("totalOrders")}:</strong> {item.totalOrders ?? 0}
-            </p>
-            <p>
-              <strong>{t("totalSpent")}:</strong>{" "}
-              {formatMoney(item.totalSpent, "vi")}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("addresses")}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {item.addresses?.length ? (
-              item.addresses.map((address, index) => (
-                <div
-                  key={address.id ?? index}
-                  className="rounded-lg border p-3 text-sm"
-                >
-                  <p className="font-medium">
-                    {address.recipientName}{" "}
-                    {address.default ? `· ${t("defaultAddress")}` : ""}
-                  </p>
-                  <p className="text-muted-foreground">
-                    {address.phone} · {address.addressLine}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                {t("noAddresses")}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>{t("customerOrders")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {orders.isPending ? (
-            <Loading />
-          ) : orders.isError ? (
-            <Failure error={orders.error} />
-          ) : orders.data?.length ? (
-            <div className="space-y-3">
-              {orders.data.map((order, index) => (
-                <Link
-                  key={order.orderId ?? index}
-                  href={
-                    order.orderId
-                      ? `/admin/orders/${order.orderId}`
-                      : "/admin/orders"
-                  }
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm hover:bg-muted"
-                >
-                  <span>{order.orderId}</span>
-                  <span className="text-muted-foreground">
-                    {order.status} · {formatMoney(order.totalAmount, "vi")}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">{t("noOrders")}</p>
-          )}
-        </CardContent>
-      </Card>
-      <FormError error={status.error} />
-    </div>
-  );
-}
-
-export function AdminEmployeeDetailPage({
-  employeeId,
-}: {
-  employeeId: string;
-}) {
-  const t = useTranslations("admin");
-  const employee = useAdminEmployee(employeeId);
-  const roles = useRoles();
-  const update = useUpdateAdminEmployee();
-  const status = useAdminEmployeeStatus();
-  if (employee.isPending) return <Loading />;
-  if (employee.isError || !employee.data)
-    return (
-      <>
-        <BackLink href="/admin/employees">{t("back")}</BackLink>
-        <Failure error={employee.error} />
-      </>
-    );
-  return (
-    <div>
-      <BackLink href="/admin/employees">{t("back")}</BackLink>
-      <h1 className="mb-8 text-3xl font-semibold">{t("employeeDetail")}</h1>
-      <EmployeeForm
-        employee={employee.data}
-        roles={roles.data ?? []}
-        onSubmit={(request) => update.mutateAsync({ id: employeeId, request })}
-        loading={update.isPending}
-        error={update.error}
-        status={employee.data.status}
-        onStatus={(next) =>
-          status.mutateAsync({ id: employeeId, status: next })
-        }
-      />
-    </div>
-  );
-}
-
-type EmployeeRequest = UpdateEmployeeRequest;
-function EmployeeForm({
-  employee,
-  roles,
-  onSubmit,
-  loading,
-  error,
-  status: currentStatus,
-  onStatus,
-}: {
-  employee: EmployeeDetail;
-  roles: Role[];
-  onSubmit: (request: EmployeeRequest) => Promise<unknown>;
-  loading: boolean;
-  error: unknown;
-  status?: string;
-  onStatus: (status: string) => Promise<unknown>;
-}) {
-  const t = useTranslations("admin");
-  const defaults = useMemo(
-    () => ({
-      fullName: employee.fullName ?? "",
-      email: employee.email ?? "",
-      phone: employee.phone ?? "",
-      gender: (employee.gender as EmployeeGender | undefined) ?? Gender.Male,
-      roleId: employee.roleId ?? "",
-      salary: String(employee.salary ?? 0),
-      joinedAt: employee.joinedAt ?? "",
-      birthday: employee.birthday ?? "",
-      address: employee.address ?? "",
-      avatarFile: employee.avatarFileId
-        ? ({ id: employee.avatarFileId } as UploadedFile)
-        : null,
-    }),
-    [employee],
-  );
-  const [form, setForm] = useState<typeof defaults | null>(null);
-  const value = form ?? defaults;
-  function set<K extends keyof typeof defaults>(
-    key: K,
-    next: (typeof defaults)[K],
-  ) {
-    setForm((current) => ({ ...(current ?? defaults), [key]: next }));
-  }
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    await onSubmit({
-      fullName: value.fullName.trim(),
-      roleId: value.roleId,
-      email: value.email.trim() || undefined,
-      phone: value.phone.trim() || undefined,
-      gender: value.gender || undefined,
-      salary: Number(value.salary),
-      joinedAt: value.joinedAt || undefined,
-      birthday: value.birthday || undefined,
-      address: value.address.trim() || undefined,
-      avatarFileId: value.avatarFile?.id,
-    });
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("editEmployee")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form
-          className="grid gap-4 sm:grid-cols-2"
-          onSubmit={(event) => void submit(event)}
-        >
-          <Field
-            id="employee-name"
-            label={t("fullName")}
-            value={value.fullName}
-            onChange={(next) => set("fullName", next)}
-            required
-          />
-          <Field
-            id="employee-email"
-            label={t("email")}
-            type="email"
-            value={value.email}
-            onChange={(next) => set("email", next)}
-          />
-          <Field
-            id="employee-phone"
-            label={t("phone")}
-            value={value.phone}
-            onChange={(next) => set("phone", next)}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="employee-role">{t("role")}</Label>
-            <Select
-              id="employee-role"
-              value={value.roleId}
-              onChange={(event) => set("roleId", event.target.value)}
-              required
-            >
-              <option value="">{t("chooseRole")}</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="employee-gender">{t("gender")}</Label>
-            <Select
-              id="employee-gender"
-              value={value.gender}
-              onChange={(event) => set("gender", event.target.value as EmployeeGender)}
-            >
-              <option value={Gender.Male}>{t("male")}</option>
-              <option value={Gender.Female}>{t("female")}</option>
-            </Select>
-          </div>
-          <Field
-            id="employee-salary"
-            label={t("salary")}
-            type="number"
-            value={value.salary}
-            onChange={(next) => set("salary", next)}
-          />
-          <Field
-            id="employee-joined"
-            label={t("joinedAt")}
-            type="date"
-            value={value.joinedAt}
-            onChange={(next) => set("joinedAt", next)}
-          />
-          <Field
-            id="employee-birthday"
-            label={t("birthday")}
-            type="date"
-            value={value.birthday}
-            onChange={(next) => set("birthday", next)}
-          />
-          <FileUploadField
-            id="employee-avatar"
-            label={t("avatar")}
-            currentFileId={
-              employee.avatarFileId && !value.avatarFile?.originalName
-                ? String(employee.avatarFileId)
-                : undefined
-            }
-            value={value.avatarFile?.originalName ? [value.avatarFile] : []}
-            onUploaded={(file) => set("avatarFile", file)}
-            onRemove={() => set("avatarFile", null)}
-          />
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="employee-address">{t("address")}</Label>
-            <Textarea
-              id="employee-address"
-              value={value.address}
-              onChange={(event) => set("address", event.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 sm:col-span-2">
-            <Button type="submit" disabled={loading}>
-              <Save className="size-4" />
-              {t("save")}
-            </Button>
-            <StatusSelect
-              currentStatus={currentStatus ?? AccountStatus.Active}
-              options={[AccountStatus.Active, AccountStatus.Locked, AccountStatus.Inactive]}
-              label={t("status")}
-              onStatus={onStatus}
-              className="w-32"
-            />
-          </div>
-          <FormError error={error} />
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function AdminDiscountDetailPage({
   discountId,
 }: {
   discountId: string;
 }) {
   const t = useTranslations("admin");
-  const router = useRouter();
   const discount = useAdminDiscount(discountId);
   if (discount.isPending) return <Loading />;
   if (discount.isError || !discount.data)
@@ -1143,242 +386,12 @@ export function AdminDiscountDetailPage({
   return (
     <div>
       <BackLink href="/admin/discounts">{t("back")}</BackLink>
-      <h1 className="mb-8 text-3xl font-semibold">{t("discountDetail")}</h1>
-      <DiscountForm
-        discount={discount.data}
-        onDeleted={() => router.push("/admin/discounts")}
-      />
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("editDiscount")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{discount.data.title}</p>
+      </div>
+      <DiscountForm discount={discount.data} />
     </div>
-  );
-}
-
-function DiscountForm({
-  discount,
-  create = false,
-  onDeleted,
-}: {
-  discount?: DiscountDetail;
-  create?: boolean;
-  onDeleted?: () => void;
-}) {
-  const t = useTranslations("admin");
-  const categories = useCategories();
-  const update = useUpdateAdminDiscount();
-  const remove = useDeleteAdminDiscount();
-  const status = useAdminDiscountStatus();
-  const defaults = useMemo(
-    () => ({
-      title: discount?.title ?? "",
-      code: discount?.code ?? "",
-      discountType: (discount?.discountType as DiscountType | undefined) ?? DiscountType.Percent,
-      value: String(discount?.value ?? 10),
-      applicationScope: (discount?.applicationScope as DiscountScope | undefined) ?? DiscountScope.Order,
-      minOrderAmount: String(discount?.minOrderAmount ?? 0),
-      startAt: toDateTimeInput(discount?.startAt),
-      endAt: toDateTimeInput(discount?.endAt),
-      description: discount?.description ?? "",
-      categoryIds: discount?.categoryIds ?? [],
-    }),
-    [discount],
-  );
-  const [form, setForm] = useState<typeof defaults | null>(null);
-  const [formError, setFormError] = useState("");
-  const value = form ?? defaults;
-  function set<K extends keyof typeof defaults>(
-    key: K,
-    next: (typeof defaults)[K],
-  ) {
-    setForm((current) => ({ ...(current ?? defaults), [key]: next }));
-  }
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setFormError("");
-    if (
-      value.applicationScope === DiscountScope.Category &&
-      value.categoryIds.length === 0
-    ) {
-      setFormError(t("discountTargetRequired"));
-      return;
-    }
-    const request = {
-      title: value.title.trim(),
-      code:
-        value.applicationScope === DiscountScope.Order
-          ? value.code.trim() || undefined
-          : undefined,
-      discountType: value.discountType,
-      value: Number(value.value),
-      startAt: toIso(value.startAt),
-      endAt: toIso(value.endAt),
-      applicationScope: value.applicationScope,
-      minOrderAmount: Number(value.minOrderAmount),
-      description: value.description.trim() || undefined,
-      categoryIds:
-        value.applicationScope === DiscountScope.Category ? value.categoryIds : [],
-    };
-    if (!discount?.id) return;
-    try {
-      const saved = await update.mutateAsync({ id: discount.id, request });
-      setForm({ ...value, startAt: toDateTimeInput(saved.startAt), endAt: toDateTimeInput(saved.endAt) });
-    } catch {
-      // the failed mutation shows its own error
-    }
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {create ? t("createDiscount") : t("editDiscount")}
-        </CardTitle>
-        <CardDescription>{t("discountTargetDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form
-          className="grid gap-4 sm:grid-cols-2"
-          onSubmit={(event) => void submit(event)}
-        >
-          <Field
-            id="discount-title"
-            label={t("titleField")}
-            value={value.title}
-            onChange={(next) => set("title", next)}
-            required
-          />
-          <Field
-            id="discount-code"
-            label={t("code")}
-            value={value.code}
-            onChange={(next) => set("code", next)}
-            disabled={value.applicationScope !== DiscountScope.Order}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="discount-type">{t("discountType")}</Label>
-            <Select
-              id="discount-type"
-              value={value.discountType}
-              onChange={(event) => set("discountType", event.target.value as DiscountType)}
-            >
-              <option value={DiscountType.Percent}>{t("discountTypeValues.PERCENT")}</option>
-              <option value={DiscountType.Fixed}>{t("discountTypeValues.FIXED")}</option>
-            </Select>
-          </div>
-          <Field
-            id="discount-value"
-            label={t("value")}
-            type="number"
-            value={value.value}
-            onChange={(next) => set("value", next)}
-            required
-          />
-          <DateTimeField
-            id="discount-start"
-            label={t("startAt")}
-            value={value.startAt}
-            onChange={(next) => set("startAt", next)}
-            required
-          />
-          <DateTimeField
-            id="discount-end"
-            label={t("endAt")}
-            value={value.endAt}
-            onChange={(next) => set("endAt", next)}
-            required
-          />
-          <Field
-            id="discount-min"
-            label={t("minOrderAmount")}
-            type="number"
-            value={value.minOrderAmount}
-            onChange={(next) => set("minOrderAmount", next)}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="discount-scope">{t("applicationScope")}</Label>
-            <Select
-              id="discount-scope"
-              value={value.applicationScope}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...(current ?? defaults),
-                  applicationScope: event.target.value as DiscountScope,
-                  code:
-                    event.target.value === DiscountScope.Order ? current?.code ?? "" : "",
-                }))
-              }
-            >
-              <option value={DiscountScope.Order}>{t("scopeValues.ORDER")}</option>
-              <option value={DiscountScope.AllItems}>{t("scopeValues.ALL_ITEMS")}</option>
-              <option value={DiscountScope.Category}>{t("scopeValues.CATEGORY")}</option>
-            </Select>
-          </div>
-          {value.applicationScope === DiscountScope.Category ? (
-            <MultiSelectList
-              id="discount-categories"
-              label={t("targetCategories")}
-              hint={t("targetCategoriesHint")}
-              options={flatten(categories.data ?? []).map((category) => ({
-                value: category.id,
-                label: category.label,
-              }))}
-              value={value.categoryIds}
-              onChange={(next) => set("categoryIds", next)}
-              selectedLabel={t("selectedCount", {count: value.categoryIds.length})}
-              emptyLabel={t("noCategories")}
-              className="sm:col-span-2"
-            />
-          ) : null}
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="discount-description">{t("description")}</Label>
-            <Textarea
-              id="discount-description"
-              value={value.description}
-              onChange={(event) => set("description", event.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 sm:col-span-2">
-            <Button type="submit" disabled={update.isPending || !discount}>
-              <Save className="size-4" />
-              {t("save")}
-            </Button>
-            {discount?.id ? (
-              <>
-                <StatusSelect
-                  currentStatus={discount.status ?? DiscountStatus.Active}
-                  options={[DiscountStatus.Active, DiscountStatus.Inactive]}
-                  label={t("status")}
-                  onStatus={(nextStatus) =>
-                    status.mutateAsync({
-                      id: discount.id!,
-                      status: nextStatus,
-                    })
-                  }
-                  className="w-36"
-                  disabled={status.isPending}
-                />
-                <ConfirmAction
-                  title={t("confirmDelete")}
-                  confirmLabel={t("delete")}
-                  cancelLabel={t("cancel")}
-                  onConfirm={() =>
-                    remove.mutateAsync(discount.id!).then(() => {
-                      onDeleted?.();
-                    })
-                  }
-                  size="default"
-                  variant="destructive"
-                >
-                  <Trash2 className="size-4" />
-                  {t("delete")}
-                </ConfirmAction>
-              </>
-            ) : null}
-          </div>
-          <FormError
-            error={update.error ?? status.error}
-            formError={formError}
-          />
-        </form>
-      </CardContent>
-    </Card>
   );
 }
 

@@ -1,19 +1,18 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
+import { ImagePlus, LoaderCircle, X } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ErrorMessage } from "@/components/ui/error-message";
 import type { ProductImage } from "@/features/catalog/models";
+import { cn } from "@/lib/utils";
 
-import { FileUploadField, type UploadedFile } from "./file-upload";
+import { useUploadAdminFile } from "./queries";
 
 /** One gallery entry while a product form is being edited; `url` is only known for stored or just uploaded files. */
 export type GalleryItem = { fileId: string; url?: string; main: boolean };
-export type OptionRow = { name: string; value: string };
 
 export function galleryFromProduct(images: ProductImage[]): GalleryItem[] {
   return images.map((image) => ({ fileId: image.fileId, url: image.imageUrl, main: image.main }));
@@ -25,13 +24,13 @@ export function galleryRequest(items: GalleryItem[]) {
   return items.map((item, index) => ({ fileId: item.fileId, main: hasMain ? item.main : index === 0 }));
 }
 
-/** Options with an empty name and value are dropped; the backend rejects half-filled ones. */
-export function optionsRequest(rows: OptionRow[]) {
-  return rows
-    .map((row) => ({ name: row.name.trim(), value: row.value.trim() }))
-    .filter((row) => row.name || row.value);
-}
+/** Most pictures a product can have; the first one uploaded is its cover. */
+export const MAX_GALLERY_IMAGES = 9;
 
+/**
+ * The pictures of a product as a row of squares and one tile to add more. The cover is the first square; another
+ * picture becomes the cover by moving to the front.
+ */
 export function ProductGalleryEditor({
   id,
   items,
@@ -42,113 +41,103 @@ export function ProductGalleryEditor({
   onChange: (items: GalleryItem[]) => void;
 }) {
   const t = useTranslations("admin");
+  const upload = useUploadAdminFile();
+  const [error, setError] = useState<unknown>(null);
+  /** The uploads of one choice finish one after another, so each must add to the list as it is now, not as it was. */
+  const latest = useRef(items);
+  useEffect(() => {
+    latest.current = items;
+  }, [items]);
   const mainId = items.find((item) => item.main)?.fileId ?? items[0]?.fileId;
+  const room = MAX_GALLERY_IMAGES - items.length;
 
-  function add(file: UploadedFile) {
-    if (items.some((item) => item.fileId === file.id)) return;
-    onChange([...items, { fileId: file.id, url: file.publicUrl, main: items.length === 0 }]);
+  async function pick(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? []).slice(0, Math.max(room, 0));
+    event.target.value = "";
+    setError(null);
+    for (const file of files) {
+      try {
+        const uploaded = await upload.mutateAsync(file);
+        if (!uploaded.id || latest.current.some((item) => item.fileId === uploaded.id)) continue;
+        const next = [...latest.current, { fileId: uploaded.id, url: uploaded.publicUrl, main: latest.current.length === 0 }];
+        latest.current = next;
+        onChange(next);
+      } catch (uploadError) {
+        setError(uploadError);
+        return;
+      }
+    }
   }
   function remove(fileId: string) {
     const rest = items.filter((item) => item.fileId !== fileId);
     onChange(rest.some((item) => item.main) || rest.length === 0 ? rest : rest.map((item, index) => ({ ...item, main: index === 0 })));
   }
+  function makeCover(fileId: string) {
+    const chosen = items.find((item) => item.fileId === fileId);
+    if (!chosen) return;
+    onChange([{ ...chosen, main: true }, ...items.filter((item) => item.fileId !== fileId).map((item) => ({ ...item, main: false }))]);
+  }
 
   return (
     <div className="space-y-3 sm:col-span-2">
       <div>
-        <p className="text-sm font-medium">{t("gallery")}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{t("galleryDescription")}</p>
+        <p className="text-base font-semibold">{t("gallery")}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("galleryDescription")}</p>
       </div>
-      {items.length ? (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {items.map((item) => (
-            <div key={item.fileId} className="flex items-center gap-3 rounded-lg border p-3">
-              <div className="relative size-12 shrink-0 overflow-hidden rounded-lg bg-muted">
-                {item.url ? (
-                  <Image src={item.url} alt="" fill sizes="48px" unoptimized className="object-cover" />
-                ) : null}
-              </div>
-              <label className="flex min-w-0 flex-1 items-center gap-2 text-xs text-muted-foreground">
-                <input
-                  type="radio"
-                  name={`${id}-main`}
-                  checked={mainId === item.fileId}
-                  onChange={() =>
-                    onChange(items.map((entry) => ({ ...entry, main: entry.fileId === item.fileId })))
-                  }
-                />
-                {mainId === item.fileId ? t("mainImage") : t("galleryImage")}
-              </label>
-              <Button
+      <div className="flex flex-wrap gap-3">
+        {items.map((item) => {
+          const cover = mainId === item.fileId;
+          return (
+            <div key={item.fileId} className="group relative size-28 overflow-hidden rounded-lg border bg-muted">
+              {item.url ? <Image src={item.url} alt="" fill sizes="112px" unoptimized className="object-cover" /> : null}
+              {cover ? (
+                <span className="absolute inset-x-0 bottom-0 bg-primary/90 py-1 text-center text-xs font-medium text-primary-foreground">
+                  {t("mainImage")}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => makeCover(item.fileId)}
+                  className="absolute inset-x-0 bottom-0 bg-black/60 py-1 text-center text-xs font-medium text-white opacity-0 transition focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
+                >
+                  {t("makeCover")}
+                </button>
+              )}
+              <button
                 type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("removeFile")}
+                aria-label={t("removeImage")}
                 onClick={() => remove(item.fileId)}
+                className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white transition hover:bg-black/80"
               >
-                <X className="size-4" />
-              </Button>
+                <X className="size-3.5" />
+              </button>
             </div>
-          ))}
-        </div>
-      ) : (
-        <p className="rounded-lg border border-dashed p-5 text-center text-sm text-muted-foreground">
-          {t("noImages")}
-        </p>
-      )}
-      <FileUploadField id={id} label={t("addImages")} multiple onUploaded={add} />
-    </div>
-  );
-}
-
-/** Free-form `name: value` rows such as Color: Blue. */
-export function VariantOptionsEditor({
-  id,
-  rows,
-  onChange,
-}: {
-  id: string;
-  rows: OptionRow[];
-  onChange: (rows: OptionRow[]) => void;
-}) {
-  const t = useTranslations("admin");
-  const update = (index: number, patch: Partial<OptionRow>) =>
-    onChange(rows.map((row, position) => (position === index ? { ...row, ...patch } : row)));
-  return (
-    <div className="space-y-2 sm:col-span-2">
-      <Label htmlFor={`${id}-0-name`}>{t("options")}</Label>
-      <p className="text-xs text-muted-foreground">{t("optionTypeHint")}</p>
-      {rows.map((row, index) => (
-        <div key={index} className="grid grid-cols-[1fr_1fr_auto] gap-2">
-          <Input
-            id={`${id}-${index}-name`}
-            aria-label={t("optionName")}
-            placeholder={t("optionName")}
-            value={row.name}
-            onChange={(event) => update(index, { name: event.target.value })}
-          />
-          <Input
-            id={`${id}-${index}-value`}
-            aria-label={t("optionValue")}
-            placeholder={t("optionValue")}
-            value={row.value}
-            onChange={(event) => update(index, { value: event.target.value })}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={t("removeOption")}
-            onClick={() => onChange(rows.filter((_, position) => position !== index))}
+          );
+        })}
+        {room > 0 ? (
+          <label
+            htmlFor={id}
+            className={cn(
+              "flex size-28 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed bg-background px-2 text-center text-xs font-medium text-primary transition hover:border-primary/60 hover:bg-primary/5 focus-within:ring-2 focus-within:ring-ring",
+              upload.isPending && "cursor-wait opacity-70",
+            )}
           >
-            <X className="size-4" />
-          </Button>
-        </div>
-      ))}
-      <Button type="button" variant="outline" size="sm" onClick={() => onChange([...rows, { name: "", value: "" }])}>
-        <Plus className="size-4" />
-        {t("addOption")}
-      </Button>
+            {upload.isPending ? <LoaderCircle className="size-6 animate-spin" /> : <ImagePlus className="size-6" />}
+            {upload.isPending ? t("uploading") : t("addImageTile", { count: items.length, max: MAX_GALLERY_IMAGES })}
+            <input
+              id={id}
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              disabled={upload.isPending}
+              onChange={(event) => void pick(event)}
+            />
+          </label>
+        ) : null}
+      </div>
+      <p className="text-xs text-muted-foreground">{t("fileTypes")}</p>
+      {error ? <ErrorMessage error={error} /> : null}
     </div>
   );
 }

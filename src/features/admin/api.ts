@@ -1,54 +1,26 @@
 import { backendFetch } from "@/lib/api/client";
 import type {
   AttributeDefinitionDto,
-  CategoryAttributeDto,
-  CategoryAttributeGroupDto,
   CategorySpecsDto,
-  CustomerDetailDto,
-  CustomerOrderSummaryDto,
-  DashboardOverviewDto,
   DiscountDto,
-  EmployeeDetailDto,
-  OptionDto,
-  OrderStatusStatDto,
-  RoleDto,
   SupplierDto,
 } from "@/features/admin/contracts/dto";
 import type {
   AdminProductFilter,
-  CustomerFilter,
   DiscountFilter,
-  EmployeeFilter,
   ReviewFilter,
   SupplierFilter,
 } from "@/features/admin/contracts/filters";
 import {
   mapAttributeDefinition,
-  mapCategoryAttribute,
-  mapCategoryAttributeGroup,
   mapCategorySpecs,
-  mapCustomerDetail,
-  mapCustomerOrderSummary,
-  mapDashboardOverview,
   mapDiscountDetail,
-  mapEmployeeDetail,
-  mapOption,
-  mapOrderStatusStat,
-  mapRole,
-  mapRevenueChartData,
   mapSupplier,
-  mapTopSellingProduct,
-  mapCustomersPage,
   mapDiscountsPage,
-  mapEmployeesPage,
   mapSuppliersPage,
 } from "@/features/admin/mappers";
 import type {
-  CustomersPageDto,
   DiscountsPageDto,
-  EmployeesPageDto,
-  RevenueChartDataDto,
-  TopSellingProductDto,
   SuppliersPageDto,
 } from "@/features/admin/contracts/dto";
 import type {CategoryDto, BrandDto} from "@/features/catalog/contracts/dto";
@@ -72,54 +44,39 @@ import type {
 import {
 } from "@/features/orders/mappers";
 import {
-  analyticsDateRangeRequestSchema,
-  assignAttributeRequestSchema,
   createAttributeDefinitionRequestSchema,
   createBrandRequestSchema,
-  createCategoryGroupRequestSchema,
   createCategoryRequestSchema,
   createDiscountRequestSchema,
-  createEmployeeRequestSchema,
-  createOptionRequestSchema,
   createProductRequestSchema,
   createProductVariantRequestSchema,
   createSupplierRequestSchema,
-  updateAccountStatusRequestSchema,
   updateAttributeDefinitionRequestSchema,
   updateBrandRequestSchema,
-  updateCategoryGroupRequestSchema,
   updateCategoryRequestSchema,
   updateDiscountRequestSchema,
   updateDiscountStatusRequestSchema,
-  updateEmployeeRequestSchema,
-  updateOptionRequestSchema,
   updateProductRequestSchema,
   updateProductVariantRequestSchema,
   updateResourceStatusRequestSchema,
+  replaceCategorySpecsRequestSchema,
   updateReviewStatusRequestSchema,
   updateSupplierRequestSchema,
 } from "@/features/admin/contracts/requests";
 import {parseRequest} from "@/lib/api/parse-request";
 import type {
-  AnalyticsDateRangeRequest,
-  AssignAttributeRequest,
   CreateAttributeDefinitionRequest,
   CreateBrandRequest,
-  CreateCategoryGroupRequest,
   CreateCategoryRequest,
   CreateDiscountRequest,
-  CreateEmployeeRequest,
-  CreateOptionRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CreateSupplierRequest,
+  ReplaceCategorySpecsRequest,
   UpdateAttributeDefinitionRequest,
   UpdateBrandRequest,
-  UpdateCategoryGroupRequest,
   UpdateCategoryRequest,
   UpdateDiscountRequest,
-  UpdateEmployeeRequest,
-  UpdateOptionRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
   UpdateSupplierRequest,
@@ -135,47 +92,10 @@ function queryString(values: Record<string, unknown>) {
   return params.size ? `?${params.toString()}` : "";
 }
 
-export function getDashboardOverview() {
-  return backendFetch<DashboardOverviewDto>("/admin/analytics/overview").then(
-    mapDashboardOverview,
-  );
-}
-export function getOrderStatusStats() {
-  return backendFetch<OrderStatusStatDto[]>(
-    "/admin/analytics/order-status-stats",
-  ).then((stats) => stats.map(mapOrderStatusStat));
-}
-export function getRevenueChart(
-  filter: AnalyticsDateRangeRequest = {},
-) {
-  const payload = parseRequest(analyticsDateRangeRequestSchema, filter);
-  return backendFetch<RevenueChartDataDto>(
-    `/admin/analytics/revenue-chart${queryString(payload)}`,
-  ).then(mapRevenueChartData);
-}
-export function getTopSelling(limit = 5, fromDate?: string, toDate?: string) {
-  return backendFetch<TopSellingProductDto[]>(
-    `/admin/analytics/top-selling${queryString({ limit, fromDate, toDate })}`,
-  ).then((items) => items.map(mapTopSellingProduct));
-}
 export function getAdminProducts(
   filter: AdminProductFilter = {},
 ) {
   return backendFetch<ProductPageDto>(`/catalog-service/products/admin${queryString(filter)}`).then(mapProductPage);
-}
-export function getCustomers(
-  filter: CustomerFilter = {},
-) {
-  return backendFetch<CustomersPageDto>(
-    `/admin/customers${queryString(filter)}`,
-  ).then(mapCustomersPage);
-}
-export function getEmployees(
-  filter: EmployeeFilter = {},
-) {
-  return backendFetch<EmployeesPageDto>(
-    `/admin/employees${queryString(filter)}`,
-  ).then(mapEmployeesPage);
 }
 export function getSuppliers(
   filter: SupplierFilter = {},
@@ -196,21 +116,6 @@ export function getAdminReviews(
 ) {
   return backendFetch<ReviewsPageDto>(`/admin/reviews${queryString(filter)}`).then(mapReviewsPage);
 }
-export function getAdminCustomer(id: string) {
-  return backendFetch<CustomerDetailDto>(
-    `/admin/customers/${encodeURIComponent(id)}`,
-  ).then(mapCustomerDetail);
-}
-export function getAdminCustomerOrders(id: string) {
-  return backendFetch<CustomerOrderSummaryDto[]>(
-    `/admin/customers/${encodeURIComponent(id)}/orders`,
-  ).then((orders) => orders.map(mapCustomerOrderSummary));
-}
-export function getAdminEmployee(id: string) {
-  return backendFetch<EmployeeDetailDto>(
-    `/admin/employees/${encodeURIComponent(id)}`,
-  ).then(mapEmployeeDetail);
-}
 export function getAdminDiscount(id: string) {
   return backendFetch<DiscountDto>(
     `${PROMOTION}/discounts/${encodeURIComponent(id)}`,
@@ -221,17 +126,9 @@ export function getAdminSupplier(id: string) {
     `/admin/suppliers/${encodeURIComponent(id)}`,
   ).then(mapSupplier);
 }
-export function getRoles() {
-  return backendFetch<RoleDto[]>("/admin/roles").then((roles) => roles.map(mapRole));
-}
-export function getOptions(type?: string) {
-  return backendFetch<OptionDto[]>(
-    `/options${queryString({ type })}`,
-  ).then((options) => options.map(mapOption));
-}
 export function getAttributes() {
   return backendFetch<AttributeDefinitionDto[]>(
-    "/attributes",
+    `${CATALOG}/attribute-definitions`,
   ).then((attributes) => attributes.map(mapAttributeDefinition));
 }
 export function getCategorySpecsSchema(categoryId: string) {
@@ -276,28 +173,6 @@ export function updateProductStatus(productId: string, status: string) {
     `${CATALOG}/products/${encodeURIComponent(productId)}/status`,
     { method: "PATCH", body: JSON.stringify({status: payload.status}) },
   ).then(mapProductDetail);
-}
-export function updateCustomerStatus(
-  accountId: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateAccountStatusRequestSchema, {status, reason});
-  return backendFetch<string>(
-    `/admin/customers/${encodeURIComponent(accountId)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
-}
-export function updateEmployeeStatus(
-  accountId: string,
-  status: string,
-  reason?: string,
-) {
-  const payload = parseRequest(updateAccountStatusRequestSchema, {status, reason});
-  return backendFetch<string>(
-    `/admin/employees/${encodeURIComponent(accountId)}/status`,
-    { method: "PATCH", body: JSON.stringify(payload) },
-  );
 }
 export function updateDiscountStatus(id: string, status: string) {
   const payload = parseRequest(updateDiscountStatusRequestSchema, {status});
@@ -386,25 +261,6 @@ export function deleteDiscount(id: string) {
     method: "DELETE",
   });
 }
-export function createEmployee(
-  request: CreateEmployeeRequest,
-) {
-  const payload = parseRequest(createEmployeeRequestSchema, request);
-  return backendFetch<EmployeeDetailDto>(
-    "/admin/employees",
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapEmployeeDetail);
-}
-export function updateEmployee(
-  id: string,
-  request: UpdateEmployeeRequest,
-) {
-  const payload = parseRequest(updateEmployeeRequestSchema, request);
-  return backendFetch<EmployeeDetailDto>(
-    `/admin/employees/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapEmployeeDetail);
-}
 export function createSupplier(
   request: CreateSupplierRequest,
 ) {
@@ -430,34 +286,12 @@ export function deleteSupplier(id: string) {
   });
 }
 
-export function createOption(request: CreateOptionRequest) {
-  const payload = parseRequest(createOptionRequestSchema, request);
-  return backendFetch<OptionDto>("/admin/options", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }).then(mapOption);
-}
-export function updateOption(
-  id: string,
-  request: UpdateOptionRequest,
-) {
-  const payload = parseRequest(updateOptionRequestSchema, request);
-  return backendFetch<OptionDto>(
-    `/admin/options/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapOption);
-}
-export function deleteOption(id: string) {
-  return backendFetch<string>(`/admin/options/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-}
 export function createAttribute(
   request: CreateAttributeDefinitionRequest,
 ) {
   const payload = parseRequest(createAttributeDefinitionRequestSchema, request);
   return backendFetch<AttributeDefinitionDto>(
-    "/admin/attributes",
+    `${CATALOG}/attribute-definitions`,
     { method: "POST", body: JSON.stringify(payload) },
   ).then(mapAttributeDefinition);
 }
@@ -467,49 +301,26 @@ export function updateAttribute(
 ) {
   const payload = parseRequest(updateAttributeDefinitionRequestSchema, request);
   return backendFetch<AttributeDefinitionDto>(
-    `/admin/attributes/${encodeURIComponent(id)}`,
+    `${CATALOG}/attribute-definitions/${encodeURIComponent(id)}`,
     { method: "PUT", body: JSON.stringify(payload) },
   ).then(mapAttributeDefinition);
 }
 export function deleteAttribute(id: string) {
-  return backendFetch<string>(`/admin/attributes/${encodeURIComponent(id)}`, {
+  return backendFetch<string>(`${CATALOG}/attribute-definitions/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
 
-export function createCategoryAttributeGroup(
-  request: CreateCategoryGroupRequest,
+/** The whole specification form of a category is replaced in one call: groups, their attributes and the order. */
+export function replaceCategorySpecs(
+  categoryId: string,
+  request: ReplaceCategorySpecsRequest,
 ) {
-  const payload = parseRequest(createCategoryGroupRequestSchema, request);
-  return backendFetch<CategoryAttributeGroupDto>(
-    "/admin/category-attributes/groups",
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapCategoryAttributeGroup);
-}
-export function updateCategoryAttributeGroup(
-  groupId: string,
-  request: UpdateCategoryGroupRequest,
-) {
-  const payload = parseRequest(updateCategoryGroupRequestSchema, request);
-  return backendFetch<CategoryAttributeGroupDto>(
-    `/admin/category-attributes/groups/${encodeURIComponent(groupId)}`,
+  const payload = parseRequest(replaceCategorySpecsRequestSchema, request);
+  return backendFetch<CategorySpecsDto>(
+    `${CATALOG}/categories/${encodeURIComponent(categoryId)}/attributes`,
     { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapCategoryAttributeGroup);
-}
-export function assignCategoryAttribute(
-  request: AssignAttributeRequest,
-) {
-  const payload = parseRequest(assignAttributeRequestSchema, request);
-  return backendFetch<CategoryAttributeDto>(
-    "/admin/category-attributes/assign",
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapCategoryAttribute);
-}
-export function deleteCategoryAttributeAssignment(id: string) {
-  return backendFetch<string>(
-    `/admin/category-attributes/assign/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
+  ).then(mapCategorySpecs);
 }
 
 /** Every category including inactive ones, as a tree. */

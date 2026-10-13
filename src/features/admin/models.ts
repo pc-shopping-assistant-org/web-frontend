@@ -1,9 +1,8 @@
-import type {CustomerAddress} from "@/features/account/models";
 import type {
   Review,
   Supplier as CatalogSupplier,
 } from "@/features/catalog/models";
-import type {OrderStatus, PaymentStatus} from "@/lib/domain/commerce-enums";
+import type {PaymentStatus} from "@/lib/domain/commerce-enums";
 
 export type AttributeDefinition = {
   id: string;
@@ -40,84 +39,10 @@ export type GroupSchemaItem = {
   attributes: AttributeSchemaItem[];
 };
 
-export type CategoryAttributeGroup = {
-  id: string;
-  categoryId: string;
-  name: string;
-  displayOrder: number;
-  status?: string;
-  createdAt?: string;
-};
-
-export type CategoryAttribute = {
-  id: string;
-  categoryGroupId: string;
-  attributeId: string;
-  attributeKey?: string;
-  attributeDisplayName?: string;
-  displayOrder: number;
-  required: boolean;
-  status?: string;
-};
-
 export type CategorySpecs = {
   categoryId: string;
   categoryName: string;
   groups: GroupSchemaItem[];
-};
-
-export type CustomerDetail = {
-  id: string;
-  accountId: string;
-  fullName?: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  avatarFileId?: string;
-  birthday?: string;
-  gender?: string;
-  status?: string;
-  createdAt?: string;
-  addresses: CustomerAddress[];
-  totalOrders: number;
-  totalSpent: number;
-};
-
-export type CustomerOrderSummary = {
-  orderId: string;
-  orderTime?: string;
-  recipientName?: string;
-  recipientPhone?: string;
-  deliveryAddress?: string;
-  discountAmount: number;
-  shippingFee: number;
-  totalAmount: number;
-  status?: OrderStatus | string;
-};
-
-export type CustomersPage = {
-  hasNext: boolean;
-  hasPrev: boolean;
-  items: CustomerDetail[];
-  nextCursor?: string;
-  prevCursor?: string;
-  size: number;
-};
-
-export type DashboardOverview = {
-  cancelledOrders: number;
-  completedOrders: number;
-  newCustomersThisMonth: number;
-  revenueGrowthRate?: number;
-  totalCustomers: number;
-  totalOrders: number;
-  totalRevenue: number;
-};
-
-export type OrderStatusStat = {
-  status?: OrderStatus | string;
-  count: number;
-  percentage?: number;
 };
 
 export type DiscountSummary = {
@@ -151,33 +76,6 @@ export type DiscountsPage = {
   last: boolean;
 };
 
-export type EmployeeDetail = {
-  id: string;
-  accountId: string;
-  fullName?: string;
-  email?: string;
-  phone?: string;
-  roleId?: string;
-  roleName?: string;
-  gender?: string;
-  salary: number;
-  address?: string;
-  avatarFileId?: string;
-  birthday?: string;
-  joinedAt?: string;
-  status?: string;
-  createdAt?: string;
-};
-
-export type EmployeesPage = {
-  hasNext: boolean;
-  hasPrev: boolean;
-  items: EmployeeDetail[];
-  nextCursor?: string;
-  prevCursor?: string;
-  size: number;
-};
-
 export type FileResponse = {
   id: string;
   originalName?: string;
@@ -209,29 +107,6 @@ export type PaymentsPage = {
   size: number;
 };
 
-export type Role = {id: string; name: string; status?: string};
-export type Option = {
-  id: string;
-  name: string;
-  type: string;
-  value: string;
-  status?: string;
-  createdAt?: string;
-};
-
-export type RevenueChartPoint = {
-  dateLabel?: string;
-  orderCount: number;
-  revenue: number;
-};
-
-export type RevenueChartData = {
-  dataPoints: RevenueChartPoint[];
-  period?: string;
-  totalOrders: number;
-  totalRevenue: number;
-};
-
 export type Supplier = CatalogSupplier;
 export type SuppliersPage = {
   hasNext: boolean;
@@ -240,14 +115,6 @@ export type SuppliersPage = {
   nextCursor?: string;
   prevCursor?: string;
   size: number;
-};
-
-export type TopSellingProduct = {
-  productId: string;
-  productName?: string;
-  imageUrl?: string;
-  totalQuantitySold: number;
-  totalRevenue: number;
 };
 
 export type AdminReviewPage = {
