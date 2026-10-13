@@ -2,9 +2,6 @@ import type {BackendSchema} from "@/lib/api/generated/types";
 
 /** OpenAPI transport shapes kept inside admin adapters. */
 export type AttributeDefinitionDto = BackendSchema["AttributeDefinitionResponse"];
-export type AttributeSchemaItemDto = BackendSchema["AttributeSchemaItem"];
-export type CategoryAttributeGroupDto = BackendSchema["CategoryAttributeGroupResponse"];
-export type CategoryAttributeDto = BackendSchema["CategoryAttributeResponse"];
 /** The specification form of a category as catalog-service serves it. */
 export type CategorySpecsDto = {
   categoryId: string;
@@ -56,6 +53,5 @@ export type DiscountsPageDto = {
 export type FileResponseDto = BackendSchema["FileResponse"];
 export type PaymentDetailDto = BackendSchema["PaymentDetailResponse"];
 export type PaymentsPageDto = BackendSchema["CursorPageResponsePaymentDetailResponse"];
-export type OptionDto = BackendSchema["OptionResponse"];
 export type SupplierDto = BackendSchema["SupplierResponse"];
 export type SuppliersPageDto = BackendSchema["CursorPageResponseSupplierResponse"];

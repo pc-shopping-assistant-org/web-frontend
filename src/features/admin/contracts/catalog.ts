@@ -3,7 +3,6 @@ import {z} from "zod";
 import {
   ATTRIBUTE_DATA_TYPE_VALUES,
   EDITABLE_RESOURCE_STATUS_VALUES,
-  RESOURCE_STATUS_VALUES,
 } from "@/lib/domain/catalog-enums";
 import {
   nonEmptyText,
@@ -93,19 +92,9 @@ export const updateSupplierRequestSchema = createSupplierRequestSchema.extend({
   status: optionalEnum(EDITABLE_RESOURCE_STATUS_VALUES),
 }).strict();
 
-export const createOptionRequestSchema = z.object({
-  name: nonEmptyText,
-  type: nonEmptyText,
-  value: nonEmptyText,
-}).strict();
-
-export const updateOptionRequestSchema = createOptionRequestSchema.extend({
-  status: optionalEnum(EDITABLE_RESOURCE_STATUS_VALUES),
-}).strict();
-
 export const createAttributeDefinitionRequestSchema = z.object({
-  key: nonEmptyText,
-  displayName: nonEmptyText,
+  key: z.string().trim().min(1).max(100).regex(/^[a-z][a-z0-9_]*$/, "key must be lower snake_case"),
+  displayName: nonEmptyText.max(255),
   dataType: z.enum(ATTRIBUTE_DATA_TYPE_VALUES),
   unit: optionalText,
   allowedValues: z.array(nonEmptyText).optional(),
@@ -114,29 +103,22 @@ export const createAttributeDefinitionRequestSchema = z.object({
   comparable: z.boolean().optional(),
 }).strict();
 
+/** The key and the data type are fixed once created: stored specifications are keyed and typed by them. */
 export const updateAttributeDefinitionRequestSchema = createAttributeDefinitionRequestSchema.omit({
   key: true,
-}).extend({
-  status: optionalEnum(EDITABLE_RESOURCE_STATUS_VALUES),
+  dataType: true,
 }).strict();
 
-export const createCategoryGroupRequestSchema = z.object({
-  categoryId: uuid,
-  name: nonEmptyText,
-  displayOrder: z.number().int().nonnegative().optional(),
-}).strict();
-
-export const updateCategoryGroupRequestSchema = z.object({
-  name: nonEmptyText,
-  displayOrder: z.number().int().nonnegative().optional(),
-  status: optionalEnum(RESOURCE_STATUS_VALUES),
-}).strict();
-
-export const assignAttributeRequestSchema = z.object({
-  categoryGroupId: uuid,
-  attributeId: uuid,
-  required: z.boolean().optional(),
-  displayOrder: z.number().int().nonnegative().optional(),
+export const replaceCategorySpecsRequestSchema = z.object({
+  groups: z.array(z.object({
+    name: nonEmptyText.max(100),
+    displayOrder: z.number().int().nonnegative().optional(),
+    attributes: z.array(z.object({
+      attributeId: uuid,
+      required: z.boolean().optional(),
+      displayOrder: z.number().int().nonnegative().optional(),
+    }).strict()),
+  }).strict()),
 }).strict();
 
 export type ProductImageRequest = z.infer<typeof productImageRequestSchema>;
@@ -151,10 +133,6 @@ export type CreateBrandRequest = z.infer<typeof createBrandRequestSchema>;
 export type UpdateBrandRequest = z.infer<typeof updateBrandRequestSchema>;
 export type CreateSupplierRequest = z.infer<typeof createSupplierRequestSchema>;
 export type UpdateSupplierRequest = z.infer<typeof updateSupplierRequestSchema>;
-export type CreateOptionRequest = z.infer<typeof createOptionRequestSchema>;
-export type UpdateOptionRequest = z.infer<typeof updateOptionRequestSchema>;
 export type CreateAttributeDefinitionRequest = z.infer<typeof createAttributeDefinitionRequestSchema>;
 export type UpdateAttributeDefinitionRequest = z.infer<typeof updateAttributeDefinitionRequestSchema>;
-export type CreateCategoryGroupRequest = z.infer<typeof createCategoryGroupRequestSchema>;
-export type UpdateCategoryGroupRequest = z.infer<typeof updateCategoryGroupRequestSchema>;
-export type AssignAttributeRequest = z.infer<typeof assignAttributeRequestSchema>;
+export type ReplaceCategorySpecsRequest = z.infer<typeof replaceCategorySpecsRequestSchema>;

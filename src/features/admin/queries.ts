@@ -3,25 +3,20 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  assignCategoryAttribute,
   createBrand,
   createCategory,
-  createCategoryAttributeGroup,
   createDiscount,
   createAttribute,
-  createOption,
   createProduct,
   createSupplier,
   createVariant,
   deleteBrand,
-  deleteCategoryAttributeAssignment,
   deleteCategory,
   deleteDiscount,
   deleteProduct,
   deleteSupplier,
   deleteVariant,
   deleteAttribute,
-  deleteOption,
   getAdminDiscount,
   getAdminProducts,
   getAdminReviews,
@@ -31,20 +26,18 @@ import {
   getAdminCategories,
   getCategorySpecsSchema,
   getDiscounts,
-  getOptions,
   getAdminProductById,
   getSuppliers,
   updateBrand,
-  updateCategoryAttributeGroup,
   updateCategory,
   updateDiscount,
   updateAttribute,
-  updateOption,
   updateProduct,
   updateSupplier,
   updateVariant,
   updateDiscountStatus,
   updateProductStatus,
+  replaceCategorySpecs,
   updateReviewStatus,
   uploadAdminFile,
 } from "./api";
@@ -117,14 +110,6 @@ export function useAdminProduct(id: string) {
     retry: false,
   });
 }
-export function useOptions(type?: string) {
-  return useQuery({
-    queryKey: ["admin", "options", type],
-    queryFn: () => getOptions(type),
-    staleTime: 300_000,
-    retry: false,
-  });
-}
 export function useAttributes() {
   return useQuery({
     queryKey: ["admin", "attributes"],
@@ -194,42 +179,11 @@ export function useAdminBrands() {
 export function useCreateAdminCategory() {
   return useAdminMutation(createCategory);
 }
-export function useCreateAdminCategoryAttributeGroup() {
-  return useAdminMutation(createCategoryAttributeGroup);
-}
-export function useUpdateAdminCategoryAttributeGroup() {
+export function useReplaceAdminCategorySpecs() {
   return useAdminMutation(
-    ({
-      id,
-      request,
-    }: {
-      id: string;
-      request: Parameters<typeof updateCategoryAttributeGroup>[1];
-    }) => updateCategoryAttributeGroup(id, request),
+    ({ categoryId, request }: { categoryId: string; request: Parameters<typeof replaceCategorySpecs>[1] }) =>
+      replaceCategorySpecs(categoryId, request),
   );
-}
-export function useAssignAdminCategoryAttribute() {
-  return useAdminMutation(assignCategoryAttribute);
-}
-export function useDeleteAdminCategoryAttribute() {
-  return useAdminMutation(deleteCategoryAttributeAssignment);
-}
-export function useCreateAdminOption() {
-  return useAdminMutation(createOption);
-}
-export function useUpdateAdminOption() {
-  return useAdminMutation(
-    ({
-      id,
-      request,
-    }: {
-      id: string;
-      request: Parameters<typeof updateOption>[1];
-    }) => updateOption(id, request),
-  );
-}
-export function useDeleteAdminOption() {
-  return useAdminMutation(deleteOption);
 }
 export function useCreateAdminAttribute() {
   return useAdminMutation(createAttribute);

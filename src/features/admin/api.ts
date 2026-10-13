@@ -1,11 +1,8 @@
 import { backendFetch } from "@/lib/api/client";
 import type {
   AttributeDefinitionDto,
-  CategoryAttributeDto,
-  CategoryAttributeGroupDto,
   CategorySpecsDto,
   DiscountDto,
-  OptionDto,
   SupplierDto,
 } from "@/features/admin/contracts/dto";
 import type {
@@ -16,11 +13,8 @@ import type {
 } from "@/features/admin/contracts/filters";
 import {
   mapAttributeDefinition,
-  mapCategoryAttribute,
-  mapCategoryAttributeGroup,
   mapCategorySpecs,
   mapDiscountDetail,
-  mapOption,
   mapSupplier,
   mapDiscountsPage,
   mapSuppliersPage,
@@ -50,47 +44,39 @@ import type {
 import {
 } from "@/features/orders/mappers";
 import {
-  assignAttributeRequestSchema,
   createAttributeDefinitionRequestSchema,
   createBrandRequestSchema,
-  createCategoryGroupRequestSchema,
   createCategoryRequestSchema,
   createDiscountRequestSchema,
-  createOptionRequestSchema,
   createProductRequestSchema,
   createProductVariantRequestSchema,
   createSupplierRequestSchema,
   updateAttributeDefinitionRequestSchema,
   updateBrandRequestSchema,
-  updateCategoryGroupRequestSchema,
   updateCategoryRequestSchema,
   updateDiscountRequestSchema,
   updateDiscountStatusRequestSchema,
-  updateOptionRequestSchema,
   updateProductRequestSchema,
   updateProductVariantRequestSchema,
   updateResourceStatusRequestSchema,
+  replaceCategorySpecsRequestSchema,
   updateReviewStatusRequestSchema,
   updateSupplierRequestSchema,
 } from "@/features/admin/contracts/requests";
 import {parseRequest} from "@/lib/api/parse-request";
 import type {
-  AssignAttributeRequest,
   CreateAttributeDefinitionRequest,
   CreateBrandRequest,
-  CreateCategoryGroupRequest,
   CreateCategoryRequest,
   CreateDiscountRequest,
-  CreateOptionRequest,
   CreateProductRequest,
   CreateProductVariantRequest,
   CreateSupplierRequest,
+  ReplaceCategorySpecsRequest,
   UpdateAttributeDefinitionRequest,
   UpdateBrandRequest,
-  UpdateCategoryGroupRequest,
   UpdateCategoryRequest,
   UpdateDiscountRequest,
-  UpdateOptionRequest,
   UpdateProductRequest,
   UpdateProductVariantRequest,
   UpdateSupplierRequest,
@@ -140,14 +126,9 @@ export function getAdminSupplier(id: string) {
     `/admin/suppliers/${encodeURIComponent(id)}`,
   ).then(mapSupplier);
 }
-export function getOptions(type?: string) {
-  return backendFetch<OptionDto[]>(
-    `/options${queryString({ type })}`,
-  ).then((options) => options.map(mapOption));
-}
 export function getAttributes() {
   return backendFetch<AttributeDefinitionDto[]>(
-    "/attributes",
+    `${CATALOG}/attribute-definitions`,
   ).then((attributes) => attributes.map(mapAttributeDefinition));
 }
 export function getCategorySpecsSchema(categoryId: string) {
@@ -305,34 +286,12 @@ export function deleteSupplier(id: string) {
   });
 }
 
-export function createOption(request: CreateOptionRequest) {
-  const payload = parseRequest(createOptionRequestSchema, request);
-  return backendFetch<OptionDto>("/admin/options", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }).then(mapOption);
-}
-export function updateOption(
-  id: string,
-  request: UpdateOptionRequest,
-) {
-  const payload = parseRequest(updateOptionRequestSchema, request);
-  return backendFetch<OptionDto>(
-    `/admin/options/${encodeURIComponent(id)}`,
-    { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapOption);
-}
-export function deleteOption(id: string) {
-  return backendFetch<string>(`/admin/options/${encodeURIComponent(id)}`, {
-    method: "DELETE",
-  });
-}
 export function createAttribute(
   request: CreateAttributeDefinitionRequest,
 ) {
   const payload = parseRequest(createAttributeDefinitionRequestSchema, request);
   return backendFetch<AttributeDefinitionDto>(
-    "/admin/attributes",
+    `${CATALOG}/attribute-definitions`,
     { method: "POST", body: JSON.stringify(payload) },
   ).then(mapAttributeDefinition);
 }
@@ -342,49 +301,26 @@ export function updateAttribute(
 ) {
   const payload = parseRequest(updateAttributeDefinitionRequestSchema, request);
   return backendFetch<AttributeDefinitionDto>(
-    `/admin/attributes/${encodeURIComponent(id)}`,
+    `${CATALOG}/attribute-definitions/${encodeURIComponent(id)}`,
     { method: "PUT", body: JSON.stringify(payload) },
   ).then(mapAttributeDefinition);
 }
 export function deleteAttribute(id: string) {
-  return backendFetch<string>(`/admin/attributes/${encodeURIComponent(id)}`, {
+  return backendFetch<string>(`${CATALOG}/attribute-definitions/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }
 
-export function createCategoryAttributeGroup(
-  request: CreateCategoryGroupRequest,
+/** The whole specification form of a category is replaced in one call: groups, their attributes and the order. */
+export function replaceCategorySpecs(
+  categoryId: string,
+  request: ReplaceCategorySpecsRequest,
 ) {
-  const payload = parseRequest(createCategoryGroupRequestSchema, request);
-  return backendFetch<CategoryAttributeGroupDto>(
-    "/admin/category-attributes/groups",
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapCategoryAttributeGroup);
-}
-export function updateCategoryAttributeGroup(
-  groupId: string,
-  request: UpdateCategoryGroupRequest,
-) {
-  const payload = parseRequest(updateCategoryGroupRequestSchema, request);
-  return backendFetch<CategoryAttributeGroupDto>(
-    `/admin/category-attributes/groups/${encodeURIComponent(groupId)}`,
+  const payload = parseRequest(replaceCategorySpecsRequestSchema, request);
+  return backendFetch<CategorySpecsDto>(
+    `${CATALOG}/categories/${encodeURIComponent(categoryId)}/attributes`,
     { method: "PUT", body: JSON.stringify(payload) },
-  ).then(mapCategoryAttributeGroup);
-}
-export function assignCategoryAttribute(
-  request: AssignAttributeRequest,
-) {
-  const payload = parseRequest(assignAttributeRequestSchema, request);
-  return backendFetch<CategoryAttributeDto>(
-    "/admin/category-attributes/assign",
-    { method: "POST", body: JSON.stringify(payload) },
-  ).then(mapCategoryAttribute);
-}
-export function deleteCategoryAttributeAssignment(id: string) {
-  return backendFetch<string>(
-    `/admin/category-attributes/assign/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  );
+  ).then(mapCategorySpecs);
 }
 
 /** Every category including inactive ones, as a tree. */

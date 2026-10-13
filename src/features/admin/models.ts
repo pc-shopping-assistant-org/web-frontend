@@ -39,26 +39,6 @@ export type GroupSchemaItem = {
   attributes: AttributeSchemaItem[];
 };
 
-export type CategoryAttributeGroup = {
-  id: string;
-  categoryId: string;
-  name: string;
-  displayOrder: number;
-  status?: string;
-  createdAt?: string;
-};
-
-export type CategoryAttribute = {
-  id: string;
-  categoryGroupId: string;
-  attributeId: string;
-  attributeKey?: string;
-  attributeDisplayName?: string;
-  displayOrder: number;
-  required: boolean;
-  status?: string;
-};
-
 export type CategorySpecs = {
   categoryId: string;
   categoryName: string;
@@ -125,15 +105,6 @@ export type PaymentsPage = {
   nextCursor?: string;
   prevCursor?: string;
   size: number;
-};
-
-export type Option = {
-  id: string;
-  name: string;
-  type: string;
-  value: string;
-  status?: string;
-  createdAt?: string;
 };
 
 export type Supplier = CatalogSupplier;

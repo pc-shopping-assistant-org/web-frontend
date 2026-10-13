@@ -1,14 +1,10 @@
 import type {
   AttributeDefinitionDto,
-  AttributeSchemaItemDto,
-  CategoryAttributeDto,
-  CategoryAttributeGroupDto,
   CategorySpecsDto,
   DiscountDto,
   DiscountsPageDto,
   FileResponseDto,
   GroupSchemaItemDto,
-  OptionDto,
   PaymentDetailDto,
   PaymentsPageDto,
   SupplierDto,
@@ -17,14 +13,11 @@ import type {
 import type {
   AttributeDefinition,
   AttributeSchemaItem,
-  CategoryAttribute,
-  CategoryAttributeGroup,
   CategorySpecs,
   DiscountDetail,
   DiscountSummary,
   DiscountsPage,
   FileResponse,
-  Option,
   PaymentDetail,
   PaymentsPage,
   Supplier,
@@ -50,22 +43,6 @@ export function mapAttributeDefinition(dto: AttributeDefinitionDto): AttributeDe
   };
 }
 
-export function mapAttributeSchemaItem(dto: AttributeSchemaItemDto): AttributeSchemaItem {
-  return {
-    assignmentId: dto.assignmentId,
-    attributeId: text(dto.attributeId),
-    allowedValues: dto.allowedValues ?? [],
-    comparable: dto.comparable ?? false,
-    dataType: dto.dataType,
-    displayName: text(dto.displayName),
-    displayOrder: number(dto.displayOrder),
-    filterable: dto.filterable ?? false,
-    key: text(dto.key),
-    required: dto.required ?? false,
-    unit: dto.unit,
-  };
-}
-
 export function mapGroupSchemaItem(dto: GroupSchemaItemDto): CategorySpecs["groups"][number] {
   return {
     groupId: dto.id,
@@ -83,30 +60,6 @@ export function mapGroupSchemaItem(dto: GroupSchemaItemDto): CategorySpecs["grou
       filterable: false,
       comparable: false,
     })),
-  };
-}
-
-export function mapCategoryAttributeGroup(dto: CategoryAttributeGroupDto): CategoryAttributeGroup {
-  return {
-    id: text(dto.id),
-    categoryId: text(dto.categoryId),
-    name: text(dto.name),
-    displayOrder: number(dto.displayOrder),
-    status: dto.status,
-    createdAt: dto.createdAt,
-  };
-}
-
-export function mapCategoryAttribute(dto: CategoryAttributeDto): CategoryAttribute {
-  return {
-    id: text(dto.id),
-    categoryGroupId: text(dto.categoryGroupId),
-    attributeId: text(dto.attributeId),
-    attributeKey: dto.attributeKey,
-    attributeDisplayName: dto.attributeDisplayName,
-    displayOrder: number(dto.displayOrder),
-    required: dto.required ?? false,
-    status: dto.status,
   };
 }
 
@@ -186,17 +139,6 @@ export function mapPaymentsPage(dto: PaymentsPageDto): PaymentsPage {
     nextCursor: dto.nextCursor,
     prevCursor: dto.prevCursor,
     size: number(dto.size),
-  };
-}
-
-export function mapOption(dto: OptionDto): Option {
-  return {
-    id: text(dto.id),
-    name: text(dto.name),
-    type: text(dto.type),
-    value: text(dto.value),
-    status: dto.status,
-    createdAt: dto.createdAt,
   };
 }
 
