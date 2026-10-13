@@ -1250,7 +1250,6 @@
     }
   },
   "customers": {
-    "eyebrow": "Shop management",
     "title": "Customers",
     "description": "Find customers, see their profile and orders, or lock an account.",
     "employeeOnlyTitle": "Shop employees only",
@@ -1296,7 +1295,11 @@
     "lock": "Lock account",
     "lockTitle": "Lock this customer account?",
     "lockDescription": "{name} will be signed out and can no longer sign in. Orders in progress carry on. There is no unlock.",
-    "lockedNotice": "This account is locked. The customer cannot sign in; the profile and the orders stay as they are."
+    "lockedNotice": "This account is locked. The customer cannot sign in; the profile and the orders stay as they are.",
+    "columnCustomer": "Customer",
+    "columnRegistered": "Registered",
+    "view": "View",
+    "empty": "There are no customers yet."
   },
   "dashboard": {
     "eyebrow": "Overview",

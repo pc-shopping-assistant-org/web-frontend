@@ -1,10 +1,11 @@
 "use client";
 
-import {ArrowLeft, Lock} from "lucide-react";
+import {ArrowLeft, Cake, Lock, Mail, Phone, User} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {useState} from "react";
 
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+import {Badge} from "@/components/ui/badge";
+import {Card} from "@/components/ui/card";
 import {ConfirmAction} from "@/components/ui/confirm-action";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {PersonAvatar} from "@/components/ui/person-avatar";
@@ -57,50 +58,65 @@ function CustomerCard({customer}: {customer: CustomerDetail}) {
     });
   };
 
-  return <div className="space-y-6">
-    <div className="flex flex-wrap items-center gap-4">
-      <PersonAvatar person={customer} className="size-16 text-xl" />
-      <div className="min-w-0 flex-1">
-        <h1 className="text-3xl font-semibold">{customer.fullName}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-          <StatusBadge status={customer.status} label={t(`statuses.${customer.status}`)} />
-          {customer.createdAt ? <span>{t("registeredAt", {date: date(customer.createdAt)})}</span> : null}
+  const facts = [
+    {icon: Mail, label: t("email"), value: customer.email},
+    {icon: Phone, label: t("phone"), value: customer.phone},
+    {icon: User, label: t("gender"), value: customer.gender ? t(`genders.${customer.gender}`) : "—"},
+    {icon: Cake, label: t("birthday"), value: customer.birthday ? date(customer.birthday) : "—"},
+  ];
+
+  return <div className="space-y-5">
+    <Card className="p-5 sm:p-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <PersonAvatar person={customer} className="size-16 text-xl" />
+        <div className="min-w-0 flex-1">
+          <h1 className="break-words text-2xl font-semibold tracking-tight">{customer.fullName}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            <StatusBadge status={customer.status} label={t(`statuses.${customer.status}`)} />
+            {customer.createdAt ? <span>{t("registeredAt", {date: date(customer.createdAt)})}</span> : null}
+          </div>
         </div>
+        {locked ? null : <ConfirmAction
+          title={t("lockTitle")}
+          description={t("lockDescription", {name: customer.fullName})}
+          confirmLabel={t("lock")}
+          cancelLabel={t("cancel")}
+          onConfirm={lockCustomer}
+          variant="outline"
+          className="text-destructive"
+        ><Lock className="size-4" />{t("lock")}</ConfirmAction>}
       </div>
-      {locked ? null : <ConfirmAction
-        title={t("lockTitle")}
-        description={t("lockDescription", {name: customer.fullName})}
-        confirmLabel={t("lock")}
-        cancelLabel={t("cancel")}
-        onConfirm={lockCustomer}
-        variant="outline"
-      ><Lock className="size-4" />{t("lock")}</ConfirmAction>}
-    </div>
-    {lockError ? <ErrorMessage error={lockError} /> : null}
-    {locked ? <p role="status" className="rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">{t("lockedNotice")}</p> : null}
+      {lockError ? <div className="mt-4"><ErrorMessage error={lockError} /></div> : null}
+      {locked ? <p role="status" className="mt-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">{t("lockedNotice")}</p> : null}
+    </Card>
 
-    <div className="grid gap-6 lg:grid-cols-2">
-      <Card>
-        <CardHeader><CardTitle>{t("profileTitle")}</CardTitle></CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p><strong>{t("email")}:</strong> {customer.email}</p>
-          <p><strong>{t("phone")}:</strong> {customer.phone}</p>
-          <p><strong>{t("gender")}:</strong> {t(`genders.${customer.gender}`)}</p>
-          <p><strong>{t("birthday")}:</strong> {customer.birthday ? date(customer.birthday) : "—"}</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader><CardTitle>{t("addressesTitle")}</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          {customer.addresses.length ? customer.addresses.map((address) => <div key={address.id} className="rounded-lg border p-3 text-sm">
-            <p className="font-medium">{address.recipientName}{address.isDefault ? ` · ${t("defaultAddress")}` : ""}</p>
-            <p className="text-muted-foreground">{address.phone} · {address.addressLine}</p>
-          </div>) : <p className="text-sm text-muted-foreground">{t("noAddresses")}</p>}
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+      <div className="space-y-5">
+        <Card className="p-5">
+          <h2 className="text-base font-semibold">{t("profileTitle")}</h2>
+          <dl className="mt-4 space-y-4">
+            {facts.map(({icon: Icon, label, value}) => <div key={label} className="flex items-start gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Icon className="size-4" /></span>
+              <div className="min-w-0">
+                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dd className="break-words text-sm font-medium">{value || "—"}</dd>
+              </div>
+            </div>)}
+          </dl>
+        </Card>
+        <Card className="p-5">
+          <h2 className="text-base font-semibold">{t("addressesTitle")}</h2>
+          <div className="mt-4 space-y-3">
+            {customer.addresses.length ? customer.addresses.map((address) => <div key={address.id} className="rounded-xl border p-3 text-sm">
+              <p className="flex flex-wrap items-center gap-2 font-medium">{address.recipientName}{address.isDefault ? <Badge>{t("defaultAddress")}</Badge> : null}</p>
+              <p className="mt-1 text-muted-foreground">{address.phone}</p>
+              <p className="text-muted-foreground">{address.addressLine}</p>
+            </div>) : <p className="text-sm text-muted-foreground">{t("noAddresses")}</p>}
+          </div>
+        </Card>
+      </div>
+      <CustomerOrders customerId={customer.accountId} />
     </div>
-
-    <CustomerOrders customerId={customer.accountId} />
   </div>;
 }
 
@@ -112,17 +128,17 @@ function CustomerOrders({customerId}: {customerId: string}) {
   const orders = useAdminOrders({customerId, page: pageNumber, size: ORDERS_PAGE_SIZE});
   const page = orders.data;
 
-  return <Card>
-    <CardHeader>
-      <CardTitle>{t("ordersTitle")}</CardTitle>
-      <CardDescription>{page ? t("totalOrders", {count: page.totalElements}) : null}</CardDescription>
-    </CardHeader>
-    <CardContent>
+  return <Card className="p-5">
+    <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 className="text-base font-semibold">{t("ordersTitle")}</h2>
+      {page ? <p className="text-sm text-muted-foreground">{t("totalOrders", {count: page.totalElements})}</p> : null}
+    </div>
+    <div className="mt-4">
       {orders.isPending ? <Skeleton className="h-24 rounded-xl" /> : orders.isError ? <ErrorMessage error={orders.error} /> : page && page.items.length ? <>
-        <ul className="space-y-3">
+        <ul className="divide-y overflow-hidden rounded-xl border">
           {page.items.map((order) => <li key={order.id}>
-            <Link href={`/admin/orders/${order.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3 text-sm transition hover:bg-muted">
-              <span className="min-w-0">
+            <Link href={`/admin/orders/${order.id}`} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm transition hover:bg-muted/30">
+              <span className="min-w-0 max-w-full">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-semibold">{order.invoiceNumber}</span>
                   <StatusBadge status={order.status} />
@@ -140,7 +156,7 @@ function CustomerOrders({customerId}: {customerId: string}) {
           <p className="text-xs text-muted-foreground">{t("pageOf", {page: page.page + 1, total: page.totalPages})}</p>
           <AdminPagination hasPrev={page.page > 0} hasNext={!page.last} onPrev={() => setPageNumber((current) => Math.max(0, current - 1))} onNext={() => setPageNumber((current) => current + 1)} />
         </div> : null}
-      </> : <p className="text-sm text-muted-foreground">{t("noOrders")}</p>}
-    </CardContent>
+      </> : <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{t("noOrders")}</p>}
+    </div>
   </Card>;
 }

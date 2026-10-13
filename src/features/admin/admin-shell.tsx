@@ -22,7 +22,6 @@ import {
   Package,
   ShieldAlert,
   SlidersHorizontal,
-  Truck,
   Users,
   UserCog,
   X,
@@ -73,6 +72,7 @@ const navGroups = [
         ],
       },
       { key: "categories", href: "/admin/categories", icon: FolderTree, employeeOnly: true },
+      { key: "catalogSettings", href: "/admin/options", icon: SlidersHorizontal, employeeOnly: true },
       { key: "brands", href: "/admin/brands", icon: Building2, employeeOnly: true },
       {
         key: "discounts",
@@ -83,11 +83,6 @@ const navGroups = [
           { key: "discountList", href: "/admin/discounts" },
           { key: "discountCreate", href: "/admin/discounts/new" },
         ],
-      },
-      {
-        key: "catalogSettings",
-        href: "/admin/options",
-        icon: SlidersHorizontal, employeeOnly: true,
       },
     ],
   },
@@ -107,7 +102,6 @@ const navGroups = [
     items: [
       { key: "customers", href: "/admin/customers", icon: Users, employeeOnly: true },
       { key: "employees", href: "/admin/employees", icon: UserCog, adminOnly: true },
-      { key: "suppliers", href: "/admin/suppliers", icon: Truck, employeeOnly: true },
       { key: "reviews", href: "/admin/reviews", icon: MessageSquareQuote, employeeOnly: true },
     ],
   },

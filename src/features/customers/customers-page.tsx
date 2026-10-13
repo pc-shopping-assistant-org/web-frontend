@@ -1,11 +1,11 @@
 "use client";
 
 import {Search} from "lucide-react";
-import {useTranslations} from "next-intl";
+import {useLocale, useTranslations} from "next-intl";
 import {useState} from "react";
 
 import {Button} from "@/components/ui/button";
-import {Card, CardContent} from "@/components/ui/card";
+import {Card} from "@/components/ui/card";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Input} from "@/components/ui/input";
 import {PersonAvatar} from "@/components/ui/person-avatar";
@@ -36,6 +36,7 @@ export function CustomersPage() {
 
 function Customers() {
   const t = useTranslations("customers");
+  const locale = useLocale();
   const [draft, setDraft] = useState(EMPTY_FILTERS);
   const [applied, setApplied] = useState(EMPTY_FILTERS);
   const [pageNumber, setPageNumber] = useState(0);
@@ -68,71 +69,74 @@ function Customers() {
     setPageNumber(0);
   };
 
-  return <div>
-    <div className="mb-8 flex flex-col gap-2 border-b border-border/70 pb-6">
-      <p className="eyebrow">{t("eyebrow")}</p>
-      <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("title")}</h1>
-      <p className="max-w-3xl text-muted-foreground">{t("description")}</p>
+  const dateFormat = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-US", {day: "2-digit", month: "2-digit", year: "numeric"});
+  const filtered = Boolean(applied.keyword || applied.status || applied.fromDate || applied.toDate);
+
+  return <div className="space-y-5">
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+      <p className="mt-1 text-sm text-muted-foreground">{t("description")}</p>
     </div>
 
-    <Card className="mb-6">
-      <CardContent className="p-4">
-        <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); apply(); }}>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" aria-label={t("searchLabel")} value={draft.keyword} placeholder={t("searchPlaceholder")} onChange={(event) => set("keyword", event.target.value)} />
-            </div>
-            <div className="flex gap-2">
-              <Button type="submit" size="field"><Search className="size-4" />{t("search")}</Button>
-              <Button type="button" size="field" variant="outline" onClick={reset}>{t("clearFilters")}</Button>
-            </div>
+    <Card className="p-4 sm:p-5">
+      <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); apply(); }}>
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_12rem] xl:grid-cols-[minmax(0,1fr)_12rem_10rem_10rem]">
+          <div className="relative min-w-0">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input className="pl-9" aria-label={t("searchLabel")} value={draft.keyword} placeholder={t("searchPlaceholder")} onChange={(event) => set("keyword", event.target.value)} />
           </div>
-          <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="space-y-1.5 text-sm">
-              <span className="font-medium text-muted-foreground">{t("status")}</span>
-              <Select id="customer-status-filter" value={draft.status} onChange={(event) => set("status", event.target.value)}>
-                <option value="">{t("allStatuses")}</option>
-                {CUSTOMER_STATUSES.map((status) => <option key={status} value={status}>{t(`statuses.${status}`)}</option>)}
-              </Select>
-            </label>
-            <label className="space-y-1.5 text-sm">
-              <span className="font-medium text-muted-foreground">{t("fromDate")}</span>
-              <Input id="customer-from" type="date" value={draft.fromDate} onChange={(event) => set("fromDate", event.target.value)} />
-            </label>
-            <label className="space-y-1.5 text-sm">
-              <span className="font-medium text-muted-foreground">{t("toDate")}</span>
-              <Input id="customer-to" type="date" value={draft.toDate} onChange={(event) => set("toDate", event.target.value)} />
-            </label>
-          </div>
-          {rangeError ? <p role="alert" className="text-sm text-destructive">{t("rangeError")}</p> : null}
-        </form>
-      </CardContent>
+          <Select id="customer-status-filter" aria-label={t("status")} value={draft.status} onChange={(event) => set("status", event.target.value)}>
+            <option value="">{t("allStatuses")}</option>
+            {CUSTOMER_STATUSES.map((status) => <option key={status} value={status}>{t(`statuses.${status}`)}</option>)}
+          </Select>
+          <Input id="customer-from" type="date" aria-label={t("fromDate")} title={t("fromDate")} value={draft.fromDate} onChange={(event) => set("fromDate", event.target.value)} />
+          <Input id="customer-to" type="date" aria-label={t("toDate")} title={t("toDate")} value={draft.toDate} onChange={(event) => set("toDate", event.target.value)} />
+        </div>
+        {rangeError ? <p role="alert" className="text-sm text-destructive">{t("rangeError")}</p> : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="submit"><Search className="size-4" />{t("search")}</Button>
+          <Button type="button" variant="outline" onClick={reset}>{t("clearFilters")}</Button>
+        </div>
+      </form>
     </Card>
 
-    {query.isPending ? <Skeleton className="h-64 rounded-2xl" /> : query.isError ? <ErrorMessage error={query.error} /> : <>
-      {page && page.items.length ? <ul className="space-y-3">
-        {page.items.map((customer) => <li key={customer.accountId}>
-          <Link href={`/admin/customers/${customer.accountId}`} className="block">
-            <Card className="transition hover:border-primary/30 hover:shadow-md">
-              <CardContent className="flex items-center gap-4 p-4 sm:p-5">
-                <PersonAvatar person={customer} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold">{customer.fullName}</p>
-                    <StatusBadge status={customer.status} label={t(`statuses.${customer.status}`)} />
-                  </div>
-                  <p className="mt-1 truncate text-sm text-muted-foreground">{customer.email} · {customer.phone}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </li>)}
-      </ul> : <div className="rounded-2xl border border-dashed bg-card p-12 text-center text-sm text-muted-foreground">{t("noResults")}</div>}
-      {page && page.totalPages > 1 ? <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">{t("pageOf", {page: page.page + 1, total: page.totalPages})} · {t("totalCustomers", {count: page.totalElements})}</p>
-        <AdminPagination hasPrev={page.page > 0} hasNext={!page.last} onPrev={() => setPageNumber((current) => Math.max(0, current - 1))} onNext={() => setPageNumber((current) => current + 1)} />
+    <Card className="p-4 sm:p-5">
+      {query.isPending ? <Skeleton className="h-64 rounded-xl" /> : query.isError ? <ErrorMessage error={query.error} /> : page && page.items.length ? <div className="overflow-x-auto rounded-xl border">
+        <table className="w-full min-w-[46rem] border-collapse text-sm">
+          <thead className="bg-muted/50 text-left text-muted-foreground">
+            <tr>
+              <th scope="col" className="px-4 py-3 font-medium">{t("columnCustomer")}</th>
+              <th scope="col" className="px-4 py-3 font-medium">{t("phone")}</th>
+              <th scope="col" className="px-4 py-3 font-medium">{t("status")}</th>
+              <th scope="col" className="px-4 py-3 font-medium">{t("columnRegistered")}</th>
+              <th scope="col" className="relative px-4 py-3 font-medium"><span className="sr-only">{t("view")}</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {page.items.map((customer) => <tr key={customer.accountId} className="border-t transition hover:bg-muted/20">
+              <td className="px-4 py-3">
+                <Link href={`/admin/customers/${customer.accountId}`} className="group flex min-w-0 items-center gap-3">
+                  <PersonAvatar person={customer} className="size-10" />
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium group-hover:text-primary group-hover:underline">{customer.fullName}</span>
+                    <span className="block truncate text-xs text-muted-foreground">{customer.email}</span>
+                  </span>
+                </Link>
+              </td>
+              <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{customer.phone || "—"}</td>
+              <td className="px-4 py-3"><StatusBadge status={customer.status} label={t(`statuses.${customer.status}`)} /></td>
+              <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{customer.createdAt ? dateFormat.format(new Date(customer.createdAt)) : "—"}</td>
+              <td className="px-4 py-3 text-right">
+                <Link href={`/admin/customers/${customer.accountId}`} className="text-sm font-medium text-primary hover:underline">{t("view")}</Link>
+              </td>
+            </tr>)}
+          </tbody>
+        </table>
+      </div> : <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">{filtered ? t("noResults") : t("empty")}</div>}
+      {page && page.items.length ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">{t("totalCustomers", {count: page.totalElements})}{page.totalPages > 1 ? ` · ${t("pageOf", {page: page.page + 1, total: page.totalPages})}` : ""}</p>
+        {page.totalPages > 1 ? <AdminPagination hasPrev={page.page > 0} hasNext={!page.last} onPrev={() => setPageNumber((current) => Math.max(0, current - 1))} onNext={() => setPageNumber((current) => current + 1)} /> : null}
       </div> : null}
-    </>}
+    </Card>
   </div>;
 }

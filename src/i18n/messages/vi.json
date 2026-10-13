@@ -1250,7 +1250,6 @@
     }
   },
   "customers": {
-    "eyebrow": "Quản lý cửa hàng",
     "title": "Khách hàng",
     "description": "Tìm khách hàng, xem hồ sơ và đơn hàng của họ, hoặc khóa tài khoản.",
     "employeeOnlyTitle": "Chỉ dành cho nhân viên cửa hàng",
@@ -1296,7 +1295,11 @@
     "lock": "Khóa tài khoản",
     "lockTitle": "Khóa tài khoản khách hàng?",
     "lockDescription": "{name} sẽ bị đăng xuất và không đăng nhập được nữa. Đơn hàng đang xử lý vẫn tiếp tục. Không có chức năng mở khóa.",
-    "lockedNotice": "Tài khoản này đã bị khóa. Khách không đăng nhập được; hồ sơ và đơn hàng vẫn giữ nguyên."
+    "lockedNotice": "Tài khoản này đã bị khóa. Khách không đăng nhập được; hồ sơ và đơn hàng vẫn giữ nguyên.",
+    "columnCustomer": "Khách hàng",
+    "columnRegistered": "Ngày đăng ký",
+    "view": "Xem",
+    "empty": "Chưa có khách hàng nào."
   },
   "dashboard": {
     "eyebrow": "Tổng quan",
