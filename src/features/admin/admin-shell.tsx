@@ -30,13 +30,14 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { ErrorMessage } from "@/components/ui/error-message";
 import { AdminPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useLogout, useProfile } from "@/features/auth/queries";
 import { isAdminRole, isEmployeeRole, isStaffRole } from "@/lib/auth/roles";
+import { ApiClientError } from "@/lib/api/envelope";
 import { cn } from "@/lib/utils";
 
 const navGroups = [
@@ -73,7 +74,16 @@ const navGroups = [
       },
       { key: "categories", href: "/admin/categories", icon: FolderTree, employeeOnly: true },
       { key: "brands", href: "/admin/brands", icon: Building2, employeeOnly: true },
-      { key: "discounts", href: "/admin/discounts", icon: BadgePercent, employeeOnly: true },
+      {
+        key: "discounts",
+        href: "/admin/discounts",
+        icon: BadgePercent,
+        employeeOnly: true,
+        children: [
+          { key: "discountList", href: "/admin/discounts" },
+          { key: "discountCreate", href: "/admin/discounts/new" },
+        ],
+      },
       {
         key: "catalogSettings",
         href: "/admin/options",
@@ -116,7 +126,14 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
 
-  if (profile.isPending) return <AdminPageSkeleton />;
+  const signedOut = profile.error instanceof ApiClientError && profile.error.status === 401;
+  const {mutate: endSession} = logout;
+  useEffect(() => {
+    // The token cookie is still there but no longer works; drop it, or the proxy sends /login straight back here.
+    if (signedOut) endSession(undefined, {onSettled: () => router.replace("/login")});
+  }, [signedOut, endSession, router]);
+
+  if (profile.isPending || signedOut) return <AdminPageSkeleton />;
   if (profile.isError)
     return (
       <div className="page-wrap py-16">

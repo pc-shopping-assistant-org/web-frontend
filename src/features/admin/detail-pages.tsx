@@ -20,7 +20,6 @@ import { ErrorMessage } from "@/components/ui/error-message";
 import { AdminPageSkeleton } from "@/components/ui/loading-skeletons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MultiSelectList } from "@/components/ui/multi-select-list";
 import { Select } from "@/components/ui/select";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,16 +29,10 @@ import type {
   ProductDetail,
 } from "@/features/catalog/contracts/responses";
 import type {
-  DiscountDetail,
-} from "@/features/admin/contracts/responses";
-import type {
   UpdateSupplierRequest,
 } from "@/features/admin/contracts/requests";
 import { formatMoney } from "@/lib/format";
 import {
-  DiscountScope,
-  DiscountStatus,
-  DiscountType,
   OrderStatus,
 } from "@/lib/domain/commerce-enums";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
@@ -54,6 +47,7 @@ import {
 } from "./product-fields";
 import { SpecificationsEditor } from "./specifications-editor";
 import { StatusSelect } from "./status-select";
+import { DiscountForm } from "./discount-create";
 import { ProductVariantsSection } from "./variant-table";
 
 import { useBrands, useCategories } from "@/features/catalog/queries";
@@ -62,11 +56,8 @@ import {
   useAdminProduct,
   useAdminProductStatus,
   useAdminSupplier,
-  useAdminDiscountStatus,
-  useDeleteAdminDiscount,
   useDeleteAdminProduct,
   useDeleteAdminSupplier,
-  useUpdateAdminDiscount,
   useUpdateAdminProduct,
   useUpdateAdminSupplier,
 } from "./queries";
@@ -127,30 +118,6 @@ function Field({
     </div>
   );
 }
-function DateTimeField({
-  id,
-  label,
-  value,
-  onChange,
-  required,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-}) {
-  return (
-    <Field
-      id={id}
-      label={label}
-      type="datetime-local"
-      value={value}
-      onChange={onChange}
-      required={required}
-    />
-  );
-}
 function FormError({
   error,
   formError,
@@ -183,17 +150,6 @@ function flatten(
     ...flatten(category.children ?? [], depth + 1),
   ]);
 }
-/** The backend sends UTC instants; a datetime-local input shows (and `toIso` reads) the browser's local time. */
-function toDateTimeInput(value?: string) {
-  if (!value) return "";
-  const date = new Date(value);
-  const pad = (part: number) => String(part).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-function toIso(value: string) {
-  return value ? new Date(value).toISOString() : new Date().toISOString();
-}
-
 export function AdminProductDetailPage({ productId }: { productId: string }) {
   const t = useTranslations("admin");
   const router = useRouter();
@@ -418,7 +374,6 @@ export function AdminDiscountDetailPage({
   discountId: string;
 }) {
   const t = useTranslations("admin");
-  const router = useRouter();
   const discount = useAdminDiscount(discountId);
   if (discount.isPending) return <Loading />;
   if (discount.isError || !discount.data)
@@ -431,242 +386,12 @@ export function AdminDiscountDetailPage({
   return (
     <div>
       <BackLink href="/admin/discounts">{t("back")}</BackLink>
-      <h1 className="mb-8 text-3xl font-semibold">{t("discountDetail")}</h1>
-      <DiscountForm
-        discount={discount.data}
-        onDeleted={() => router.push("/admin/discounts")}
-      />
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight">{t("editDiscount")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{discount.data.title}</p>
+      </div>
+      <DiscountForm discount={discount.data} />
     </div>
-  );
-}
-
-function DiscountForm({
-  discount,
-  create = false,
-  onDeleted,
-}: {
-  discount?: DiscountDetail;
-  create?: boolean;
-  onDeleted?: () => void;
-}) {
-  const t = useTranslations("admin");
-  const categories = useCategories();
-  const update = useUpdateAdminDiscount();
-  const remove = useDeleteAdminDiscount();
-  const status = useAdminDiscountStatus();
-  const defaults = useMemo(
-    () => ({
-      title: discount?.title ?? "",
-      code: discount?.code ?? "",
-      discountType: (discount?.discountType as DiscountType | undefined) ?? DiscountType.Percent,
-      value: String(discount?.value ?? 10),
-      applicationScope: (discount?.applicationScope as DiscountScope | undefined) ?? DiscountScope.Order,
-      minOrderAmount: String(discount?.minOrderAmount ?? 0),
-      startAt: toDateTimeInput(discount?.startAt),
-      endAt: toDateTimeInput(discount?.endAt),
-      description: discount?.description ?? "",
-      categoryIds: discount?.categoryIds ?? [],
-    }),
-    [discount],
-  );
-  const [form, setForm] = useState<typeof defaults | null>(null);
-  const [formError, setFormError] = useState("");
-  const value = form ?? defaults;
-  function set<K extends keyof typeof defaults>(
-    key: K,
-    next: (typeof defaults)[K],
-  ) {
-    setForm((current) => ({ ...(current ?? defaults), [key]: next }));
-  }
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    setFormError("");
-    if (
-      value.applicationScope === DiscountScope.Category &&
-      value.categoryIds.length === 0
-    ) {
-      setFormError(t("discountTargetRequired"));
-      return;
-    }
-    const request = {
-      title: value.title.trim(),
-      code:
-        value.applicationScope === DiscountScope.Order
-          ? value.code.trim() || undefined
-          : undefined,
-      discountType: value.discountType,
-      value: Number(value.value),
-      startAt: toIso(value.startAt),
-      endAt: toIso(value.endAt),
-      applicationScope: value.applicationScope,
-      minOrderAmount: Number(value.minOrderAmount),
-      description: value.description.trim() || undefined,
-      categoryIds:
-        value.applicationScope === DiscountScope.Category ? value.categoryIds : [],
-    };
-    if (!discount?.id) return;
-    try {
-      const saved = await update.mutateAsync({ id: discount.id, request });
-      setForm({ ...value, startAt: toDateTimeInput(saved.startAt), endAt: toDateTimeInput(saved.endAt) });
-    } catch {
-      // the failed mutation shows its own error
-    }
-  }
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {create ? t("createDiscount") : t("editDiscount")}
-        </CardTitle>
-        <CardDescription>{t("discountTargetDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form
-          className="grid gap-4 sm:grid-cols-2"
-          onSubmit={(event) => void submit(event)}
-        >
-          <Field
-            id="discount-title"
-            label={t("titleField")}
-            value={value.title}
-            onChange={(next) => set("title", next)}
-            required
-          />
-          <Field
-            id="discount-code"
-            label={t("code")}
-            value={value.code}
-            onChange={(next) => set("code", next)}
-            disabled={value.applicationScope !== DiscountScope.Order}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="discount-type">{t("discountType")}</Label>
-            <Select
-              id="discount-type"
-              value={value.discountType}
-              onChange={(event) => set("discountType", event.target.value as DiscountType)}
-            >
-              <option value={DiscountType.Percent}>{t("discountTypeValues.PERCENT")}</option>
-              <option value={DiscountType.Fixed}>{t("discountTypeValues.FIXED")}</option>
-            </Select>
-          </div>
-          <Field
-            id="discount-value"
-            label={t("value")}
-            type="number"
-            value={value.value}
-            onChange={(next) => set("value", next)}
-            required
-          />
-          <DateTimeField
-            id="discount-start"
-            label={t("startAt")}
-            value={value.startAt}
-            onChange={(next) => set("startAt", next)}
-            required
-          />
-          <DateTimeField
-            id="discount-end"
-            label={t("endAt")}
-            value={value.endAt}
-            onChange={(next) => set("endAt", next)}
-            required
-          />
-          <Field
-            id="discount-min"
-            label={t("minOrderAmount")}
-            type="number"
-            value={value.minOrderAmount}
-            onChange={(next) => set("minOrderAmount", next)}
-          />
-          <div className="space-y-2">
-            <Label htmlFor="discount-scope">{t("applicationScope")}</Label>
-            <Select
-              id="discount-scope"
-              value={value.applicationScope}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...(current ?? defaults),
-                  applicationScope: event.target.value as DiscountScope,
-                  code:
-                    event.target.value === DiscountScope.Order ? current?.code ?? "" : "",
-                }))
-              }
-            >
-              <option value={DiscountScope.Order}>{t("scopeValues.ORDER")}</option>
-              <option value={DiscountScope.AllItems}>{t("scopeValues.ALL_ITEMS")}</option>
-              <option value={DiscountScope.Category}>{t("scopeValues.CATEGORY")}</option>
-            </Select>
-          </div>
-          {value.applicationScope === DiscountScope.Category ? (
-            <MultiSelectList
-              id="discount-categories"
-              label={t("targetCategories")}
-              hint={t("targetCategoriesHint")}
-              options={flatten(categories.data ?? []).map((category) => ({
-                value: category.id,
-                label: category.label,
-              }))}
-              value={value.categoryIds}
-              onChange={(next) => set("categoryIds", next)}
-              selectedLabel={t("selectedCount", {count: value.categoryIds.length})}
-              emptyLabel={t("noCategories")}
-              className="sm:col-span-2"
-            />
-          ) : null}
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="discount-description">{t("description")}</Label>
-            <Textarea
-              id="discount-description"
-              value={value.description}
-              onChange={(event) => set("description", event.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 sm:col-span-2">
-            <Button type="submit" disabled={update.isPending || !discount}>
-              <Save className="size-4" />
-              {t("save")}
-            </Button>
-            {discount?.id ? (
-              <>
-                <StatusSelect
-                  currentStatus={discount.status ?? DiscountStatus.Active}
-                  options={[DiscountStatus.Active, DiscountStatus.Inactive]}
-                  label={t("status")}
-                  onStatus={(nextStatus) =>
-                    status.mutateAsync({
-                      id: discount.id!,
-                      status: nextStatus,
-                    })
-                  }
-                  className="w-36"
-                  disabled={status.isPending}
-                />
-                <ConfirmAction
-                  title={t("confirmDelete")}
-                  confirmLabel={t("delete")}
-                  cancelLabel={t("cancel")}
-                  onConfirm={() =>
-                    remove.mutateAsync(discount.id!).then(() => {
-                      onDeleted?.();
-                    })
-                  }
-                  size="default"
-                  variant="destructive"
-                >
-                  <Trash2 className="size-4" />
-                  {t("delete")}
-                </ConfirmAction>
-              </>
-            ) : null}
-          </div>
-          <FormError
-            error={update.error ?? status.error}
-            formError={formError}
-          />
-        </form>
-      </CardContent>
-    </Card>
   );
 }
 

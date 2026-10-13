@@ -13,9 +13,11 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Link } from "@/i18n/navigation";
+import { DiscountCreateForm } from "./discount-create";
+import { DiscountListPage } from "./discount-list";
 import { formatMoney } from "@/lib/format";
 import {AccountStatus} from "@/lib/domain/account-enums";
-import {DiscountStatus, DiscountState, DiscountType, OrderStatus, PaymentMethodCode, PaymentStatus} from "@/lib/domain/commerce-enums";
+import {DiscountStatus, OrderStatus, PaymentMethodCode, PaymentStatus} from "@/lib/domain/commerce-enums";
 import {ResourceStatus, ReviewStatus} from "@/lib/domain/catalog-enums";
 import type {Review} from "@/features/catalog/contracts/responses";
 
@@ -25,12 +27,9 @@ import { ProductListPage } from "./product-list";
 import { ConfirmAction } from "./confirm-action";
 import { StatusSelect } from "./status-select";
 import {
-  DiscountCreateForm,
   SupplierCreateForm,
 } from "./management-forms";
 import {
-  useAdminDiscountStatus,
-  useAdminDiscounts,
   useAdminReviewStatus,
   useAdminReviews,
   useAdminSuppliers,
@@ -48,6 +47,7 @@ import { useAdminOrders } from "@/features/orders/queries";
 export type AdminResource =
   | "products"
   | "product-create"
+  | "discount-create"
   | "orders"
   | "discounts"
   | "suppliers"
@@ -61,10 +61,12 @@ export function AdminResourcePage({ resource }: { resource: AdminResource }) {
       return <ProductListPage />;
     case "product-create":
       return <ProductCreate />;
+    case "discount-create":
+      return <DiscountCreate />;
     case "orders":
       return <Orders />;
     case "discounts":
-      return <Discounts />;
+      return <DiscountListPage />;
     case "suppliers":
       return <Suppliers />;
     case "payments":
@@ -81,6 +83,16 @@ function ProductCreate() {
   return (
     <Shell title={t("createProduct")} description={t("productCreateDescription")}>
       <ProductCreateForm />
+    </Shell>
+  );
+}
+
+function DiscountCreate() {
+  const t = useTranslations("admin");
+  const td = useTranslations("admin.discountCreate");
+  return (
+    <Shell title={t("createDiscount")} description={td("pageDescription")}>
+      <DiscountCreateForm />
     </Shell>
   );
 }
@@ -495,142 +507,6 @@ function Orders() {
           ) : null}
         </>
       )}
-    </Shell>
-  );
-}
-
-const DISCOUNT_STATES = [DiscountState.Running, DiscountState.Scheduled, DiscountState.Expired, DiscountState.Locked];
-
-function Discounts() {
-  const t = useTranslations("admin");
-  const locale = useLocale();
-  const [state, setState] = useState("");
-  const [pageNumber, setPageNumber] = useState(0);
-  const query = useAdminDiscounts({ page: pageNumber, size: 20, state: state || undefined });
-  const mutation = useAdminDiscountStatus();
-  const page = query.data;
-  return (
-    <Shell
-      title={t("resource.discounts")}
-      description={t("resource.discountsDescription")}
-    >
-      <DiscountCreateForm />
-      <Card className="mb-6">
-        <CardContent className="flex flex-wrap items-end gap-3 p-4">
-          <div className="w-full sm:w-64">
-            <FilterSelect
-              id="discount-state"
-              label={t("discountState")}
-              value={state}
-              onChange={(value) => {
-                setState(value);
-                setPageNumber(0);
-              }}
-            >
-              <option value="">{t("allStates")}</option>
-              {DISCOUNT_STATES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`statusValues.${value}`)}
-                </option>
-              ))}
-            </FilterSelect>
-          </div>
-          <Button
-            type="button"
-            size="field"
-            variant="outline"
-            onClick={() => {
-              setState("");
-              setPageNumber(0);
-            }}
-          >
-            {t("clearFilters")}
-          </Button>
-        </CardContent>
-      </Card>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} />
-      ) : (
-        <>
-          {(page?.items ?? []).length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="space-y-3">
-              {(page?.items ?? []).map((discount) => (
-                <Card
-                  key={discount.id}
-                  className="transition hover:border-primary/30 hover:shadow-md"
-                >
-                  <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Link
-                          href={`/admin/discounts/${discount.id}`}
-                          className="font-semibold hover:text-primary hover:underline"
-                        >
-                          {discount.code ?? discount.title}
-                        </Link>
-                        <StatusBadge status={discount.state} />
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {discount.title} · {t(`scopeValues.${discount.applicationScope}`)} ·{" "}
-                        {discount.discountType === DiscountType.Percent
-                          ? `${discount.value}%`
-                          : formatMoney(discount.value, locale)}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {new Date(discount.startAt ?? "").toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US")}
-                        {" – "}
-                        {new Date(discount.endAt ?? "").toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US")}
-                        {" · "}
-                        {t("minOrderAmount")} {formatMoney(discount.minOrderAmount, locale)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/admin/discounts/${discount.id}`}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-                      >
-                        <Eye className="size-3.5" />
-                        <span className="hidden sm:inline">{t("view")}</span>
-                      </Link>
-                      <StatusSelect
-                        currentStatus={discount.status}
-                        options={[DiscountStatus.Active, DiscountStatus.Inactive]}
-                        label={t("status")}
-                        onStatus={(status) =>
-                          mutation.mutateAsync({ id: discount.id, status })
-                        }
-                        disabled={mutation.isPending}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-          {page && page.totalPages > 1 ? (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-muted-foreground">
-                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
-              </p>
-              <AdminPagination
-                hasPrev={page.page > 0}
-                hasNext={!page.last}
-                onPrev={() => setPageNumber((current) => Math.max(0, current - 1))}
-                onNext={() => setPageNumber((current) => current + 1)}
-              />
-            </div>
-          ) : null}
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
     </Shell>
   );
 }

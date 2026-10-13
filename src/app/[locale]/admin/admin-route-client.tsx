@@ -22,11 +22,11 @@ const CatalogSettingsPage = dynamic(
   {loading: () => <AdminPageSkeleton />},
 );
 const CategoryManagement = dynamic(
-  () => import("@/features/admin/catalog-management").then((module) => module.CategoryManagement),
+  () => import("@/features/admin/category-management").then((module) => module.CategoryManagement),
   {loading: () => <AdminPageSkeleton />},
 );
 const BrandManagement = dynamic(
-  () => import("@/features/admin/catalog-management").then((module) => module.BrandManagement),
+  () => import("@/features/admin/brand-management").then((module) => module.BrandManagement),
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminProductDetailPage = dynamic(
