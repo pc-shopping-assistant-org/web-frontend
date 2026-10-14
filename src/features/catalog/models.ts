@@ -80,6 +80,8 @@ export type ProductSummary = {
   imageUrl?: string;
   maxPrice: number;
   minPrice: number;
+  variantCount?: number;
+  totalQuantity?: number;
   /** Not served by catalog-service yet; stays 0 until the review summary is wired in. */
   ratingAverage: number;
   reviewCount: number;

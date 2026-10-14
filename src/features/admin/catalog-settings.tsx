@@ -1,1412 +1,636 @@
 "use client";
 
-import {
-  ChevronDown,
-  ChevronUp,
-  Pencil,
-  Plus,
-  Save,
-  SlidersHorizontal,
-  Trash2,
-  X,
-} from "lucide-react";
-import { useTranslations } from "next-intl";
-import {
-  useMemo,
-  useState,
-  type Dispatch,
-  type FormEvent,
-  type ReactNode,
-  type SetStateAction,
-} from "react";
+import {ChevronDown, ChevronUp, Plus, Search, Trash2, X} from "lucide-react";
+import {useTranslations} from "next-intl";
+import {useId, useMemo, useState, type FormEvent} from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ErrorMessage } from "@/components/ui/error-message";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/ui/status-badge";
-import {AttributeDataType, ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
-import type {
-  UpdateAttributeDefinitionRequest,
-  UpdateOptionRequest,
-  CreateAttributeDefinitionRequest,
-} from "@/features/admin/contracts/requests";
-import type {
-  AttributeDefinition,
-  GroupSchemaItem,
-  Option,
-} from "@/features/admin/contracts/responses";
+import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
+import {Card} from "@/components/ui/card";
+import {ConfirmAction} from "@/components/ui/confirm-action";
+import {Dialog} from "@/components/ui/dialog";
+import {ErrorMessage} from "@/components/ui/error-message";
+import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
+import {Select} from "@/components/ui/select";
+import {Skeleton} from "@/components/ui/skeleton";
+import {Textarea} from "@/components/ui/textarea";
+import type {AttributeDefinition} from "@/features/admin/contracts/responses";
+import {useCategories} from "@/features/catalog/queries";
 import type {CategoryTree} from "@/features/catalog/contracts/responses";
+import {ATTRIBUTE_DATA_TYPE_VALUES, AttributeDataType} from "@/lib/domain/catalog-enums";
+import {cn} from "@/lib/utils";
 
-import { useCategories } from "@/features/catalog/queries";
-import { ConfirmAction } from "./confirm-action";
 import {
   useAttributes,
-  useAssignAdminCategoryAttribute,
   useCategorySpecsSchema,
-  useCreateAdminCategoryAttributeGroup,
   useCreateAdminAttribute,
-  useCreateAdminOption,
   useDeleteAdminAttribute,
-  useDeleteAdminCategoryAttribute,
-  useDeleteAdminOption,
-  useUpdateAdminCategoryAttributeGroup,
-  useOptions,
+  useReplaceAdminCategorySpecs,
   useUpdateAdminAttribute,
-  useUpdateAdminOption,
 } from "./queries";
 
-type Attribute = AttributeDefinition;
-type Mode = "options" | "attributes" | "category-schema";
+type Mode = "attributes" | "specs";
 
+const KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
+const MAX_CHIPS = 4;
+
+/** The tint of a data type's badge: the type is the first thing to read in a row of attributes. */
+const TYPE_TONE: Record<string, string> = {
+  [AttributeDataType.Number]: "border-sky-200 bg-sky-50 text-sky-700",
+  [AttributeDataType.String]: "border-slate-200 bg-slate-50 text-slate-700",
+  [AttributeDataType.Enum]: "border-violet-200 bg-violet-50 text-violet-700",
+  [AttributeDataType.Boolean]: "border-emerald-200 bg-emerald-50 text-emerald-700",
+};
+
+/**
+ * What a shop sets up before it lists products: the technical attributes it knows (RAM size, socket, …) and,
+ * per category, the form of specifications a product in it fills in.
+ */
 export function CatalogSettingsPage() {
   const t = useTranslations("admin");
-  const [mode, setMode] = useState<Mode>("options");
+  const tc = useTranslations("admin.catalogConfig");
+  const [mode, setMode] = useState<Mode>("attributes");
+  const tabs: {value: Mode; label: string}[] = [
+    {value: "attributes", label: tc("tabAttributes")},
+    {value: "specs", label: tc("tabSpecs")},
+  ];
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-5 border-b border-border/70 pb-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="eyebrow">{t("label")}</p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-            {t("catalogSettingsTitle")}
-          </h1>
-          <p className="mt-2 max-w-3xl text-muted-foreground">
-            {t("catalogSettingsDescription")}
-          </p>
-        </div>
-        <div className="flex w-full rounded-xl border bg-card p-1 sm:w-auto">
-          <TabButton
-            active={mode === "options"}
-            onClick={() => setMode("options")}
-          >
-            {t("skuOptions")}
-          </TabButton>
-          <TabButton
-            active={mode === "attributes"}
-            onClick={() => setMode("attributes")}
-          >
-            {t("attributeDefinitions")}
-          </TabButton>
-          <TabButton
-            active={mode === "category-schema"}
-            onClick={() => setMode("category-schema")}
-          >
-            {t("categorySchema")}
-          </TabButton>
-        </div>
-      </header>
+    <section className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("catalogSettingsTitle")}</h1>
+        <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{t("catalogSettingsDescription")}</p>
+      </div>
 
-      {mode === "options" ? (
-        <OptionsPanel />
-      ) : mode === "attributes" ? (
-        <AttributesPanel />
+      <div role="tablist" aria-label={t("catalogSettingsTitle")} className="flex gap-6 overflow-x-auto overflow-y-hidden border-b">
+        {tabs.map((tab) => (
+          <button
+            key={tab.value}
+            type="button"
+            role="tab"
+            aria-selected={mode === tab.value}
+            onClick={() => setMode(tab.value)}
+            className={cn(
+              "-mb-px shrink-0 border-b-2 px-1 pb-3 text-sm transition",
+              mode === tab.value ? "border-primary font-medium text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === "attributes" ? <AttributesPanel /> : <SpecsPanel onGoAttributes={() => setMode("attributes")} />}
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ attributes */
+
+type AttributeDialogState = {mode: "create"} | {mode: "edit"; attribute: AttributeDefinition};
+
+function AttributesPanel() {
+  const t = useTranslations("admin");
+  const tc = useTranslations("admin.catalogConfig");
+  const attributes = useAttributes();
+  const remove = useDeleteAdminAttribute();
+  const [keyword, setKeyword] = useState("");
+  const [type, setType] = useState("");
+  const [dialog, setDialog] = useState<AttributeDialogState | null>(null);
+  const all = attributes.data ?? [];
+  const needle = keyword.trim().toLowerCase();
+  const rows = all.filter(
+    (attribute) =>
+      (!type || attribute.dataType === type) &&
+      (!needle || attribute.displayName.toLowerCase().includes(needle) || attribute.key.toLowerCase().includes(needle)),
+  );
+
+  return (
+    <Card className="p-4 sm:p-5">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative min-w-56 flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-9"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder={tc("searchPlaceholder")}
+            aria-label={tc("searchPlaceholder")}
+          />
+        </div>
+        <Select className="w-full sm:w-48" aria-label={tc("type")} value={type} onChange={(event) => setType(event.target.value)}>
+          <option value="">{tc("allTypes")}</option>
+          {ATTRIBUTE_DATA_TYPE_VALUES.map((value) => (
+            <option key={value} value={value}>{tc(`dataTypes.${value}`)}</option>
+          ))}
+        </Select>
+        <Button type="button" size="lg" onClick={() => setDialog({mode: "create"})}>
+          <Plus className="size-4" />
+          {tc("add")}
+        </Button>
+      </div>
+
+      <div className="mt-4">
+        {attributes.isPending ? (
+          <Skeleton className="h-64 rounded-xl" />
+        ) : attributes.isError ? (
+          <ErrorMessage error={attributes.error} />
+        ) : rows.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
+            {all.length === 0 ? tc("empty") : tc("emptyFiltered")}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border">
+            <table className="w-full min-w-[52rem] border-collapse text-sm">
+              <thead className="bg-muted/50 text-left text-muted-foreground">
+                <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">{tc("attribute")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">{tc("type")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">{tc("values")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">{tc("usage")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">{tc("actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((attribute) => (
+                  <tr key={attribute.id} className="border-t align-top transition hover:bg-muted/20">
+                    <td className="max-w-xs px-4 py-3">
+                      <p className="font-medium">{attribute.displayName}</p>
+                      <span className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{attribute.key}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge className={TYPE_TONE[attribute.dataType ?? ""] ?? TYPE_TONE[AttributeDataType.String]}>
+                          {attribute.dataType ? tc(`dataTypes.${attribute.dataType}`) : "—"}
+                        </Badge>
+                        {attribute.unit ? <span className="text-xs text-muted-foreground">{attribute.unit}</span> : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <ValueChips values={attribute.allowedValues} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {attribute.filterable ? <Badge className="border-primary/30 bg-primary/5 text-primary">{tc("filterable")}</Badge> : null}
+                        {attribute.comparable ? <Badge className="border-primary/30 bg-primary/5 text-primary">{tc("comparable")}</Badge> : null}
+                        {!attribute.filterable && !attribute.comparable ? <span className="text-muted-foreground">—</span> : null}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" onClick={() => setDialog({mode: "edit", attribute})}>
+                          {tc("edit")}
+                        </Button>
+                        <ConfirmAction
+                          title={tc("deleteTitle")}
+                          description={tc("deleteDescription")}
+                          confirmLabel={t("delete")}
+                          cancelLabel={t("cancel")}
+                          onConfirm={() => remove.mutateAsync(attribute.id)}
+                          variant="link"
+                          size="xs"
+                          className="h-auto p-0 text-sm font-medium text-destructive"
+                        >
+                          {t("delete")}
+                        </ConfirmAction>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {attributes.data && rows.length > 0 ? <p className="mt-3 text-xs text-muted-foreground">{tc("count", {count: rows.length})}</p> : null}
+      </div>
+
+      {dialog ? <AttributeDialog key={dialog.mode === "edit" ? dialog.attribute.id : "new"} state={dialog} onClose={() => setDialog(null)} /> : null}
+    </Card>
+  );
+}
+
+function ValueChips({values}: {values: string[]}) {
+  const tc = useTranslations("admin.catalogConfig");
+  if (values.length === 0) return <span className="text-muted-foreground">—</span>;
+  return (
+    <div className="flex max-w-sm flex-wrap gap-1.5">
+      {values.slice(0, MAX_CHIPS).map((value) => (
+        <span key={value} className="rounded-md bg-muted px-2 py-0.5 text-xs">{value}</span>
+      ))}
+      {values.length > MAX_CHIPS ? <span className="px-1 py-0.5 text-xs text-muted-foreground">{tc("more", {count: values.length - MAX_CHIPS})}</span> : null}
+    </div>
+  );
+}
+
+function lines(value: string) {
+  return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+}
+
+function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose: () => void}) {
+  const t = useTranslations("admin");
+  const tc = useTranslations("admin.catalogConfig");
+  const formId = useId();
+  const create = useCreateAdminAttribute();
+  const update = useUpdateAdminAttribute();
+  const editing = state.mode === "edit" ? state.attribute : null;
+  const mutation = editing ? update : create;
+  const [form, setForm] = useState({
+    displayName: editing?.displayName ?? "",
+    key: editing?.key ?? "",
+    dataType: (editing?.dataType as AttributeDataType | undefined) ?? AttributeDataType.String,
+    unit: editing?.unit ?? "",
+    allowedValues: (editing?.allowedValues ?? []).join("\n"),
+    aliases: (editing?.aliases ?? []).join(", "),
+    filterable: editing?.filterable ?? false,
+    comparable: editing?.comparable ?? false,
+  });
+  const [problem, setProblem] = useState<string | null>(null);
+  const set = (patch: Partial<typeof form>) => setForm((current) => ({...current, ...patch}));
+  const isEnum = form.dataType === AttributeDataType.Enum;
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const allowedValues = isEnum ? lines(form.allowedValues) : [];
+    if (!editing && !KEY_PATTERN.test(form.key.trim())) return setProblem(tc("keyInvalid"));
+    if (isEnum && allowedValues.length === 0) return setProblem(tc("allowedRequired"));
+    setProblem(null);
+    const body = {
+      displayName: form.displayName.trim(),
+      unit: form.unit.trim() || undefined,
+      allowedValues,
+      aliases: form.aliases.split(",").map((item) => item.trim()).filter(Boolean),
+      filterable: form.filterable,
+      comparable: form.comparable,
+    };
+    try {
+      if (editing) await update.mutateAsync({id: editing.id, request: body});
+      else await create.mutateAsync({...body, key: form.key.trim(), dataType: form.dataType});
+    } catch {
+      return;
+    }
+    onClose();
+  }
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      busy={mutation.isPending}
+      closeLabel={t("close")}
+      title={editing ? tc("editTitle") : tc("addTitle")}
+      description={editing ? undefined : tc("addDescription")}
+      footer={
+        <>
+          <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>{t("cancel")}</Button>
+          <Button type="submit" form={formId} disabled={mutation.isPending || !form.displayName.trim() || (!editing && !form.key.trim())}>
+            {editing ? t("save") : tc("create")}
+          </Button>
+        </>
+      }
+    >
+      <form id={formId} className="grid grid-cols-[minmax(0,1fr)] gap-4" noValidate onSubmit={(event) => void submit(event)}>
+        <div className="space-y-2">
+          <Label htmlFor={`${formId}-name`}>{tc("displayName")} <span className="text-destructive">*</span></Label>
+          <Input id={`${formId}-name`} data-autofocus value={form.displayName} maxLength={255} onChange={(event) => set({displayName: event.target.value})} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-key`}>{tc("key")} {editing ? null : <span className="text-destructive">*</span>}</Label>
+            <Input
+              id={`${formId}-key`}
+              className="font-mono"
+              value={form.key}
+              maxLength={100}
+              disabled={Boolean(editing)}
+              placeholder="ram_capacity"
+              onChange={(event) => set({key: event.target.value})}
+            />
+            {editing ? null : <p className="text-xs text-muted-foreground">{tc("keyHint")}</p>}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-type`}>{tc("dataType")}</Label>
+            <Select
+              id={`${formId}-type`}
+              value={form.dataType}
+              disabled={Boolean(editing)}
+              onChange={(event) => set({dataType: event.target.value as AttributeDataType})}
+            >
+              {ATTRIBUTE_DATA_TYPE_VALUES.map((value) => (
+                <option key={value} value={value}>{tc(`dataTypes.${value}`)}</option>
+              ))}
+            </Select>
+            {editing ? <p className="text-xs text-muted-foreground">{tc("lockedHint")}</p> : null}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${formId}-unit`}>{tc("unit")}</Label>
+          <Input id={`${formId}-unit`} value={form.unit} maxLength={50} onChange={(event) => set({unit: event.target.value})} />
+          <p className="text-xs text-muted-foreground">{tc("unitHint")}</p>
+        </div>
+        {isEnum ? (
+          <div className="space-y-2">
+            <Label htmlFor={`${formId}-values`}>{tc("allowedValues")} <span className="text-destructive">*</span></Label>
+            <Textarea id={`${formId}-values`} rows={4} value={form.allowedValues} onChange={(event) => set({allowedValues: event.target.value})} />
+            <p className="text-xs text-muted-foreground">{tc("allowedValuesHint")}</p>
+          </div>
+        ) : null}
+        <div className="space-y-2">
+          <Label htmlFor={`${formId}-aliases`}>{tc("aliases")}</Label>
+          <Input id={`${formId}-aliases`} value={form.aliases} onChange={(event) => set({aliases: event.target.value})} />
+          <p className="text-xs text-muted-foreground">{tc("aliasesHint")}</p>
+        </div>
+        <div className="space-y-2.5">
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+            <input type="checkbox" className="size-4 accent-primary" checked={form.filterable} onChange={(event) => set({filterable: event.target.checked})} />
+            {tc("filterableLabel")}
+          </label>
+          <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+            <input type="checkbox" className="size-4 accent-primary" checked={form.comparable} onChange={(event) => set({comparable: event.target.checked})} />
+            {tc("comparableLabel")}
+          </label>
+        </div>
+        {problem ? <p role="alert" className="text-sm text-destructive">{problem}</p> : null}
+        {mutation.isError ? <ErrorMessage error={mutation.error} /> : null}
+      </form>
+    </Dialog>
+  );
+}
+
+/* ----------------------------------------------------------------- specs form */
+
+type CategoryRow = {id: string; name: string; depth: number};
+
+function categoryRows(nodes: CategoryTree[], depth = 0): CategoryRow[] {
+  return nodes.flatMap((node) => [
+    ...(node.id ? [{id: node.id, name: node.name ?? "", depth}] : []),
+    ...categoryRows(node.children ?? [], depth + 1),
+  ]);
+}
+
+function SpecsPanel({onGoAttributes}: {onGoAttributes: () => void}) {
+  const tc = useTranslations("admin.catalogConfig");
+  const categories = useCategories();
+  const [categoryId, setCategoryId] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const rows = useMemo(() => categoryRows(categories.data ?? []), [categories.data]);
+  const needle = keyword.trim().toLowerCase();
+  const visible = needle ? rows.filter((row) => row.name.toLowerCase().includes(needle)) : rows;
+  const selected = rows.find((row) => row.id === categoryId);
+
+  return (
+    <div className="grid gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]">
+      <Card className="p-3 lg:self-start">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-9" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder={tc("searchCategory")} aria-label={tc("searchCategory")} />
+        </div>
+        <ul className="mt-3 max-h-[28rem] space-y-0.5 overflow-y-auto" aria-label={tc("category")}>
+          {categories.isPending ? <li><Skeleton className="h-40 rounded-lg" /></li> : null}
+          {visible.map((row) => (
+            <li key={row.id}>
+              <button
+                type="button"
+                aria-current={row.id === categoryId}
+                onClick={() => setCategoryId(row.id)}
+                style={{paddingLeft: `${0.75 + (needle ? 0 : row.depth) * 1}rem`}}
+                className={cn(
+                  "w-full truncate rounded-lg py-2 pr-3 text-left text-sm transition",
+                  row.id === categoryId ? "bg-primary/10 font-medium text-primary" : "text-foreground/80 hover:bg-muted",
+                  !needle && row.depth === 0 && row.id !== categoryId && "font-medium",
+                )}
+              >
+                {row.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      {selected ? (
+        <TemplateEditor key={selected.id} categoryId={selected.id} categoryName={selected.name} onGoAttributes={onGoAttributes} />
       ) : (
-        <CategorySchemaPanel />
+        <Card className="flex min-h-64 items-center justify-center p-8 text-center text-sm text-muted-foreground">{tc("noCategory")}</Card>
       )}
     </div>
   );
 }
 
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      className={
-        "rounded-lg px-3 py-2 text-sm font-medium transition sm:px-4 " +
-        (active
-          ? "bg-slate-950 text-white shadow-sm"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground")
-      }
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
+type DraftItem = {uid: string; attributeId: string; required: boolean};
+type DraftGroup = {uid: string; name: string; items: DraftItem[]};
+
+let draftSeq = 0;
+const uid = () => `d${++draftSeq}`;
+
+function move<T>(list: T[], index: number, delta: number): T[] {
+  const target = index + delta;
+  if (target < 0 || target >= list.length) return list;
+  const next = [...list];
+  [next[index], next[target]] = [next[target], next[index]];
+  return next;
 }
 
-function DisclosureHeader({
-  title,
-  description,
-  open,
-  onToggle,
-}: {
-  title: string;
-  description: string;
-  open: boolean;
-  onToggle: () => void;
-}) {
-  const t = useTranslations("admin");
-  return (
-    <CardHeader className="flex-row items-center justify-between gap-4">
-      <div className="min-w-0">
-        <CardTitle>{title}</CardTitle>
-        <CardDescription className="mt-1">{description}</CardDescription>
-      </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={onToggle}
-        aria-expanded={open}
-      >
-        {open ? (
-          <ChevronUp className="size-4" />
-        ) : (
-          <ChevronDown className="size-4" />
-        )}
-        {open ? t("hideCreate") : t("openCreate")}
-      </Button>
-    </CardHeader>
-  );
+/** The part of a draft that is sent: what "has anything changed" compares. */
+function plain(groups: DraftGroup[]) {
+  return JSON.stringify(groups.map((group) => ({n: group.name.trim(), i: group.items.map((item) => [item.attributeId, item.required])})));
 }
 
-function OptionsPanel() {
-  const t = useTranslations("admin");
-  const query = useOptions();
-  const create = useCreateAdminOption();
-  const update = useUpdateAdminOption();
-  const remove = useDeleteAdminOption();
-  const [open, setOpen] = useState(false);
-  const [keyword, setKeyword] = useState("");
-  const [type, setType] = useState("");
-  const [editing, setEditing] = useState<Option | null>(null);
-  const [form, setForm] = useState({ type: "", name: "", value: "" });
+function TemplateEditor({categoryId, categoryName, onGoAttributes}: {categoryId: string; categoryName: string; onGoAttributes: () => void}) {
+  const specs = useCategorySpecsSchema(categoryId);
+  // The save lives here: the form below is rebuilt from the saved data, and its own state would be lost with it.
+  const save = useReplaceAdminCategorySpecs();
+  if (specs.isPending) return <Skeleton className="h-72 rounded-2xl" />;
+  if (specs.isError) return <ErrorMessage error={specs.error} />;
+  const initial: DraftGroup[] = specs.data.groups.map((group) => ({
+    uid: uid(),
+    name: group.groupName,
+    items: group.attributes.map((attribute) => ({uid: uid(), attributeId: attribute.attributeId, required: attribute.required})),
+  }));
+  return <TemplateForm key={`${categoryId}-${specs.dataUpdatedAt}`} categoryId={categoryId} categoryName={categoryName} initial={initial} save={save} onGoAttributes={onGoAttributes} />;
+}
 
-  const types = useMemo(
-    () =>
-      Array.from(
-        new Set((query.data ?? []).map((item) => item.type).filter(Boolean)),
-      ).sort(),
-    [query.data],
-  );
-  const items = useMemo(() => {
-    const needle = keyword.trim().toLowerCase();
-    return (query.data ?? []).filter((item) => {
-      const matchesType = !type || item.type === type;
-      const matchesKeyword =
-        !needle ||
-        [item.type, item.name, item.value]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(needle));
-      return matchesType && matchesKeyword;
-    });
-  }, [keyword, query.data, type]);
+function TemplateForm({
+  categoryId,
+  categoryName,
+  initial,
+  save,
+  onGoAttributes,
+}: {
+  categoryId: string;
+  categoryName: string;
+  initial: DraftGroup[];
+  save: ReturnType<typeof useReplaceAdminCategorySpecs>;
+  onGoAttributes: () => void;
+}) {
+  const tc = useTranslations("admin.catalogConfig");
+  const definitions = useAttributes();
+  const [groups, setGroups] = useState(initial);
+  const [problem, setProblem] = useState<string | null>(null);
+  const baseline = useMemo(() => plain(initial), [initial]);
+  const dirty = plain(groups) !== baseline;
+  const defs = definitions.data ?? [];
+  const byId = new Map(defs.map((definition) => [definition.id, definition]));
+  const used = new Set(groups.flatMap((group) => group.items.map((item) => item.attributeId)).filter(Boolean));
+  const itemCount = groups.reduce((sum, group) => sum + group.items.length, 0);
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    await create.mutateAsync({
-      type: form.type.trim(),
-      name: form.name.trim(),
-      value: form.value.trim(),
-    });
-    setForm({ type: "", name: "", value: "" });
+  const patchGroup = (index: number, patch: Partial<DraftGroup>) =>
+    setGroups((current) => current.map((group, at) => (at === index ? {...group, ...patch} : group)));
+
+  function validate(): string | null {
+    const names = groups.map((group) => group.name.trim().toLowerCase());
+    if (names.some((name) => !name)) return tc("problem.groupName");
+    if (new Set(names).size !== names.length) return tc("problem.groupDuplicate");
+    const chosen = groups.flatMap((group) => group.items.map((item) => item.attributeId));
+    if (chosen.some((id) => !id)) return tc("problem.attributeMissing");
+    if (new Set(chosen).size !== chosen.length) return tc("problem.attributeDuplicate");
+    return null;
+  }
+
+  async function submit() {
+    const found = validate();
+    setProblem(found);
+    if (found) return;
+    try {
+      await save.mutateAsync({
+        categoryId,
+        request: {
+          groups: groups.map((group, groupIndex) => ({
+            name: group.name.trim(),
+            displayOrder: groupIndex,
+            attributes: group.items.map((item, itemIndex) => ({attributeId: item.attributeId, required: item.required, displayOrder: itemIndex})),
+          })),
+        },
+      });
+    } catch {
+      // the failed mutation shows its own error
+    }
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <DisclosureHeader
-          title={t("createSkuOption")}
-          description={t("createSkuOptionDescription")}
-          open={open}
-          onToggle={() => setOpen((value) => !value)}
-        />
-        {open ? (
-          <CardContent>
-            <form
-              className="grid gap-4 sm:grid-cols-3"
-              onSubmit={(event) => void submit(event)}
-            >
-              <TextField
-                id="new-option-type"
-                label={t("optionType")}
-                value={form.type}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, type: value }))
-                }
-                required
-              />
-              <TextField
-                id="new-option-name"
-                label={t("optionName")}
-                value={form.name}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, name: value }))
-                }
-                required
-              />
-              <TextField
-                id="new-option-value"
-                label={t("optionValue")}
-                value={form.value}
-                onChange={(value) =>
-                  setForm((current) => ({ ...current, value: value }))
-                }
-                required
-              />
-              <div className="flex flex-wrap items-center gap-3 sm:col-span-3">
-                <Button
-                  type="submit"
-                  disabled={
-                    create.isPending ||
-                    !form.type.trim() ||
-                    !form.name.trim() ||
-                    !form.value.trim()
-                  }
-                >
-                  <Plus className="size-4" />
-                  {t("create")}
-                </Button>
-                {create.isError ? <ErrorMessage error={create.error} /> : null}
-              </div>
-            </form>
-          </CardContent>
-        ) : null}
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <SlidersHorizontal className="size-5 text-primary" />
-            {t("skuOptions")}
-          </CardTitle>
-          <CardDescription>{t("skuOptionsDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]">
-            <TextField
-              id="option-search"
-              label={t("searchOptions")}
-              value={keyword}
-              onChange={setKeyword}
-            />
-            <label className="space-y-1.5 text-sm">
-              <span className="font-medium text-muted-foreground">
-                {t("optionType")}
-              </span>
-              <Select
-                value={type}
-                onChange={(event) => setType(event.target.value)}
-              >
-                <option value="">{t("allOptionTypes")}</option>
-                {types.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </Select>
-            </label>
-          </div>
-          {query.isPending ? (
-            <Loading />
-          ) : query.isError ? (
-            <ErrorMessage error={query.error} />
-          ) : items.length === 0 ? (
-            <Empty title={t("noOptions")} />
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {items.map((item, index) => (
-                <OptionCard
-                  key={item.id ?? index}
-                  option={item}
-                  onEdit={() => setEditing(item)}
-                  onDelete={() =>
-                    item.id ? remove.mutateAsync(item.id) : undefined
-                  }
-                />
-              ))}
-            </div>
-          )}
-          {remove.isError ? <ErrorMessage error={remove.error} /> : null}
-        </CardContent>
-      </Card>
-
-      {editing ? (
-        <OptionEditCard
-          option={editing}
-          onClose={() => setEditing(null)}
-          onSave={(request) => update.mutateAsync({ id: editing.id!, request })}
-          loading={update.isPending}
-          error={update.error}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function OptionCard({
-  option,
-  onEdit,
-  onDelete,
-}: {
-  option: Option;
-  onEdit: () => void;
-  onDelete: () => Promise<unknown> | unknown;
-}) {
-  const t = useTranslations("admin");
-  return (
-    <Card className="group transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
-      <CardContent className="flex h-full flex-col justify-between gap-4 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              {option.type ?? "—"}
-            </p>
-            <p className="mt-2 truncate text-lg font-semibold">
-              {option.name ?? "—"}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {option.value ?? "—"}
-            </p>
-          </div>
-          <StatusBadge status={option.status} />
+    <Card className="p-4 sm:p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-lg font-semibold">{tc("editorTitle", {name: categoryName})}</h2>
+          <p className="mt-0.5 text-sm text-muted-foreground">{tc("summary", {groups: groups.length, items: itemCount})}</p>
         </div>
-        <div className="flex items-center justify-end gap-1 border-t pt-3 opacity-100 sm:opacity-70 sm:transition sm:group-hover:opacity-100">
-          <Button type="button" size="sm" variant="ghost" onClick={onEdit}>
-            <Pencil className="size-3.5" />
-            {t("edit")}
-          </Button>
-          <ConfirmAction
-            title={t("confirmDelete")}
-            confirmLabel={t("delete")}
-            cancelLabel={t("cancel")}
-            onConfirm={onDelete}
-            size="icon-sm"
-            variant="ghost"
-            className="text-destructive hover:text-destructive"
-            ariaLabel={t("delete")}
-          >
-            <Trash2 className="size-4" />
-          </ConfirmAction>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function OptionEditCard({
-  option,
-  onClose,
-  onSave,
-  loading,
-  error,
-}: {
-  option: Option;
-  onClose: () => void;
-  onSave: (request: UpdateOptionRequest) => Promise<unknown>;
-  loading: boolean;
-  error: unknown;
-}) {
-  const t = useTranslations("admin");
-  const [form, setForm] = useState({
-    type: option.type ?? "",
-    name: option.name ?? "",
-    value: option.value ?? "",
-    status: (option.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
-  });
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    await onSave({
-      type: form.type.trim(),
-      name: form.name.trim(),
-      value: form.value.trim(),
-      status: form.status,
-    });
-    onClose();
-  }
-  return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between gap-4">
-        <div>
-          <CardTitle>{t("editSkuOption")}</CardTitle>
-          <CardDescription className="mt-1">
-            {t("editSkuOptionDescription")}
-          </CardDescription>
-        </div>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          onClick={onClose}
-          aria-label={t("close")}
-        >
-          <X className="size-4" />
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <form
-          className="grid gap-4 sm:grid-cols-4"
-          onSubmit={(event) => void submit(event)}
-        >
-          <TextField
-            id="edit-option-type"
-            label={t("optionType")}
-            value={form.type}
-            onChange={(value) =>
-              setForm((current) => ({ ...current, type: value }))
-            }
-            required
-          />
-          <TextField
-            id="edit-option-name"
-            label={t("optionName")}
-            value={form.name}
-            onChange={(value) =>
-              setForm((current) => ({ ...current, name: value }))
-            }
-            required
-          />
-          <TextField
-            id="edit-option-value"
-            label={t("optionValue")}
-            value={form.value}
-            onChange={(value) =>
-              setForm((current) => ({ ...current, value: value }))
-            }
-            required
-          />
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {t("status")}
-            </span>
-            <Select
-              value={form.status}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  status: event.target.value as EditableResourceStatus,
-                }))
-              }
-            >
-              <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
-              <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
-            </Select>
-          </label>
-          <div className="flex gap-2 sm:col-span-4">
-            <Button type="submit" disabled={loading}>
-              {t("save")}
-            </Button>
-            <Button type="button" variant="outline" onClick={onClose}>
-              {t("cancel")}
-            </Button>
-          </div>
-          {error ? (
-            <div className="sm:col-span-4">
-              <ErrorMessage error={error} />
-            </div>
-          ) : null}
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function AttributesPanel() {
-  const t = useTranslations("admin");
-  const query = useAttributes();
-  const create = useCreateAdminAttribute();
-  const update = useUpdateAdminAttribute();
-  const remove = useDeleteAdminAttribute();
-  const [open, setOpen] = useState(false);
-  const [keyword, setKeyword] = useState("");
-  const [editing, setEditing] = useState<Attribute | null>(null);
-  const [form, setForm] = useState(attributeForm());
-  const items = useMemo(() => {
-    const needle = keyword.trim().toLowerCase();
-    return (query.data ?? []).filter(
-      (item) =>
-        !needle ||
-        [item.key, item.displayName, item.dataType, item.unit]
-          .filter(Boolean)
-          .some((value) => value!.toLowerCase().includes(needle)),
-    );
-  }, [keyword, query.data]);
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    await create.mutateAsync(attributeRequest(form));
-    setForm(attributeForm());
-  }
-  return (
-    <div className="space-y-6">
-      <Card>
-        <DisclosureHeader
-          title={t("createAttribute")}
-          description={t("createAttributeDescription")}
-          open={open}
-          onToggle={() => setOpen((value) => !value)}
-        />
-        {open ? (
-          <CardContent>
-            <AttributeFields
-              form={form}
-              onChange={setForm}
-              onSubmit={(event) => void submit(event)}
-              submitLabel={t("create")}
-              disabled={create.isPending}
-              error={create.error}
-            />
-          </CardContent>
-        ) : null}
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("attributeDefinitions")}</CardTitle>
-          <CardDescription>
-            {t("attributeDefinitionsDescription")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <TextField
-            id="attribute-search"
-            label={t("searchAttributes")}
-            value={keyword}
-            onChange={setKeyword}
-          />
-          {query.isPending ? (
-            <Loading />
-          ) : query.isError ? (
-            <ErrorMessage error={query.error} />
-          ) : items.length === 0 ? (
-            <Empty title={t("noAttributes")} />
-          ) : (
-            <div className="divide-y rounded-xl border">
-              {items.map((item, index) => (
-                <AttributeRow
-                  key={item.id ?? index}
-                  attribute={item}
-                  onEdit={() => setEditing(item)}
-                  onDelete={() =>
-                    item.id ? remove.mutateAsync(item.id) : undefined
-                  }
-                />
-              ))}
-            </div>
-          )}
-          {remove.isError ? <ErrorMessage error={remove.error} /> : null}
-        </CardContent>
-      </Card>
-      {editing ? (
-        <Card>
-          <CardHeader className="flex-row items-center justify-between gap-4">
-            <div>
-              <CardTitle>{t("editAttribute")}</CardTitle>
-              <CardDescription className="mt-1">
-                {t("editAttributeDescription")}
-              </CardDescription>
-            </div>
-            <Button
-              type="button"
-              size="icon-sm"
-              variant="ghost"
-              onClick={() => setEditing(null)}
-              aria-label={t("close")}
-            >
-              <X className="size-4" />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <AttributeEditForm
-              attribute={editing}
-              onClose={() => setEditing(null)}
-              onSave={(request) =>
-                update.mutateAsync({ id: editing.id!, request })
-              }
-              loading={update.isPending}
-              error={update.error}
-            />
-          </CardContent>
-        </Card>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * A category's technical-specification schema is assembled from groups and
- * attribute assignments. Keeping this workflow beside option/attribute
- * definitions means an operator can configure a fresh catalog without
- * touching the database directly.
- */
-function CategorySchemaPanel() {
-  const t = useTranslations("admin");
-  const categories = useCategories();
-  const attributes = useAttributes();
-  const createGroup = useCreateAdminCategoryAttributeGroup();
-  const [categoryId, setCategoryId] = useState("");
-  const [groupOpen, setGroupOpen] = useState(false);
-  const [groupForm, setGroupForm] = useState({ name: "", displayOrder: "0" });
-  const categoryItems = useMemo(
-    () => flattenCategories(categories.data ?? []),
-    [categories.data],
-  );
-  const selectedCategoryId = categoryId || categoryItems[0]?.id || "";
-  const schema = useCategorySpecsSchema(selectedCategoryId);
-
-  async function submitGroup(event: FormEvent) {
-    event.preventDefault();
-    if (!selectedCategoryId || !groupForm.name.trim()) return;
-    await createGroup.mutateAsync({
-      categoryId: selectedCategoryId,
-      name: groupForm.name.trim(),
-      displayOrder: Number(groupForm.displayOrder) || 0,
-    });
-    setGroupForm({ name: "", displayOrder: "0" });
-    setGroupOpen(false);
-  }
-
-  const selectedCategory = categoryItems.find(
-    (category) => category.id === selectedCategoryId,
-  );
-  const groups = schema.data?.groups ?? [];
-
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("categorySchema")}</CardTitle>
-          <CardDescription>{t("categorySchemaDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <label className="space-y-1.5 text-sm">
-              <span className="font-medium text-muted-foreground">
-                {t("categoryForSchema")}
-              </span>
-              <Select
-                value={selectedCategoryId}
-                onChange={(event) => setCategoryId(event.target.value)}
-                disabled={categories.isPending || categoryItems.length === 0}
-              >
-                {categoryItems.length === 0 ? (
-                  <option value="">{t("noCategories")}</option>
-                ) : null}
-                {categoryItems.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </Select>
-            </label>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setGroupOpen((value) => !value)}
-              disabled={!selectedCategoryId}
-            >
-              {groupOpen ? (
-                <ChevronUp className="size-4" />
-              ) : (
-                <Plus className="size-4" />
-              )}
-              {groupOpen ? t("hideCreate") : t("createAttributeGroup")}
-            </Button>
-          </div>
-          {selectedCategory ? (
-            <div className="rounded-xl border bg-muted/30 px-4 py-3 text-sm">
-              <span className="text-muted-foreground">
-                {t("selectedCategory")}:
-              </span>{" "}
-              <span className="font-medium">{selectedCategory.label}</span>
-            </div>
-          ) : null}
-          {groupOpen ? (
-            <form
-              className="grid gap-4 rounded-xl border bg-muted/20 p-4 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end"
-              onSubmit={(event) => void submitGroup(event)}
-            >
-              <div className="space-y-1.5 text-sm">
-                <Label htmlFor="new-attribute-group-name">
-                  {t("groupName")}
-                </Label>
-                <Input
-                  id="new-attribute-group-name"
-                  value={groupForm.name}
-                  onChange={(event) =>
-                    setGroupForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
-              <div className="space-y-1.5 text-sm">
-                <Label htmlFor="new-attribute-group-order">
-                  {t("displayOrder")}
-                </Label>
-                <Input
-                  id="new-attribute-group-order"
-                  type="number"
-                  min="0"
-                  value={groupForm.displayOrder}
-                  onChange={(event) =>
-                    setGroupForm((current) => ({
-                      ...current,
-                      displayOrder: event.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <Button
-                type="submit"
-                disabled={createGroup.isPending || !groupForm.name.trim()}
-              >
-                <Plus className="size-4" />
-                {t("create")}
-              </Button>
-              {createGroup.isError ? (
-                <div className="sm:col-span-3">
-                  <ErrorMessage error={createGroup.error} />
-                </div>
-              ) : null}
-            </form>
-          ) : null}
-          {categories.isPending || schema.isPending ? (
-            <Loading />
-          ) : categories.isError ? (
-            <ErrorMessage error={categories.error} />
-          ) : schema.isError ? (
-            <ErrorMessage error={schema.error} />
-          ) : groups.length === 0 ? (
-            <Empty title={t("noAttributeGroups")} />
-          ) : (
-            <div className="grid gap-4 xl:grid-cols-2">
-              {groups.map((group, index) => (
-                <CategoryGroupCard
-                  key={group.groupId ?? index}
-                  group={group}
-                  attributes={attributes.data ?? []}
-                />
-              ))}
-            </div>
-          )}
-          {attributes.isError ? <ErrorMessage error={attributes.error} /> : null}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-function CategoryGroupCard({
-  group,
-  attributes,
-}: {
-  group: GroupSchemaItem;
-  attributes: AttributeDefinition[];
-}) {
-  const t = useTranslations("admin");
-  const update = useUpdateAdminCategoryAttributeGroup();
-  const assign = useAssignAdminCategoryAttribute();
-  const remove = useDeleteAdminCategoryAttribute();
-  const [editing, setEditing] = useState(false);
-  const [groupForm, setGroupForm] = useState({
-    name: group.groupName ?? "",
-    displayOrder: String(group.displayOrder ?? 0),
-  });
-  const [attributeId, setAttributeId] = useState("");
-  const [required, setRequired] = useState(false);
-  const [displayOrder, setDisplayOrder] = useState("0");
-  const assigned = group.attributes ?? [];
-  const assignedIds = new Set(
-    assigned.map((attribute) => attribute.attributeId).filter(Boolean),
-  );
-  const availableAttributes = attributes.filter(
-    (attribute) =>
-      attribute.id &&
-      attribute.status === ResourceStatus.Active &&
-      !assignedIds.has(attribute.id),
-  );
-
-  async function saveGroup(event: FormEvent) {
-    event.preventDefault();
-    if (!group.groupId || !groupForm.name.trim()) return;
-    await update.mutateAsync({
-      id: group.groupId,
-      request: {
-        name: groupForm.name.trim(),
-        displayOrder: Number(groupForm.displayOrder) || 0,
-      },
-    });
-    setEditing(false);
-  }
-
-  async function addAttribute(event: FormEvent) {
-    event.preventDefault();
-    if (!group.groupId || !attributeId) return;
-    await assign.mutateAsync({
-      categoryGroupId: group.groupId,
-      attributeId,
-      required,
-      displayOrder: Number(displayOrder) || 0,
-    });
-    setAttributeId("");
-    setRequired(false);
-    setDisplayOrder("0");
-  }
-
-  return (
-    <Card className="overflow-hidden">
-      <CardHeader className="border-b bg-muted/20 pb-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <CardTitle className="truncate">
-              {group.groupName ?? t("groupName")}
-            </CardTitle>
-            <CardDescription className="mt-1">
-              {assigned.length} {t("assignedAttributesCount")}
-            </CardDescription>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={() => setEditing((value) => !value)}
-            aria-label={editing ? t("close") : t("edit")}
-          >
-            {editing ? <X className="size-4" /> : <Pencil className="size-4" />}
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-5">
-        {editing ? (
-          <form
-            className="grid gap-3 rounded-xl border bg-muted/20 p-3 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end"
-            onSubmit={(event) => void saveGroup(event)}
-          >
-            <div className="space-y-1.5 text-sm">
-              <Label htmlFor={`group-name-${group.groupId}`}>
-                {t("groupName")}
-              </Label>
-              <Input
-                id={`group-name-${group.groupId}`}
-                value={groupForm.name}
-                onChange={(event) =>
-                  setGroupForm((current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
-                }
-                required
-              />
-            </div>
-            <div className="space-y-1.5 text-sm">
-              <Label htmlFor={`group-order-${group.groupId}`}>
-                {t("displayOrder")}
-              </Label>
-              <Input
-                id={`group-order-${group.groupId}`}
-                type="number"
-                min="0"
-                value={groupForm.displayOrder}
-                onChange={(event) =>
-                  setGroupForm((current) => ({
-                    ...current,
-                    displayOrder: event.target.value,
-                  }))
-                }
-              />
-            </div>
-            <Button type="submit" size="sm" disabled={update.isPending}>
-              <Save className="size-3.5" />
-              {t("save")}
-            </Button>
-            {update.isError ? (
-              <div className="sm:col-span-3">
-                <ErrorMessage error={update.error} />
-              </div>
-            ) : null}
-          </form>
-        ) : null}
-
-        {assigned.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            {t("noAssignedAttributes")}
-          </p>
-        ) : (
-          <div className="space-y-2">
-            {assigned.map((attribute, index) => (
-              <div
-                key={attribute.assignmentId ?? attribute.attributeId ?? index}
-                className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2.5 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {attribute.displayName ?? attribute.key ?? "—"}
-                  </p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {attribute.key ?? "—"}
-                    {attribute.required ? ` · ${t("requiredAttribute")}` : ""}
-                    {attribute.unit ? ` · ${attribute.unit}` : ""}
-                  </p>
-                </div>
-                {attribute.assignmentId ? (
-                  <ConfirmAction
-                    title={t("removeAssignment")}
-                    confirmLabel={t("delete")}
-                    cancelLabel={t("cancel")}
-                    onConfirm={() => remove.mutateAsync(attribute.assignmentId!)}
-                    size="icon-sm"
-                    variant="ghost"
-                    className="shrink-0 text-destructive hover:text-destructive"
-                    ariaLabel={t("removeAssignment")}
-                  >
-                    <Trash2 className="size-4" />
-                  </ConfirmAction>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        )}
-
-        <form
-          className="grid gap-3 border-t pt-4 sm:grid-cols-[minmax(0,1fr)_8rem_auto_auto] sm:items-end"
-          onSubmit={(event) => void addAttribute(event)}
-        >
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {t("selectAttribute")}
-            </span>
-            <Select
-              value={attributeId}
-              onChange={(event) => setAttributeId(event.target.value)}
-              disabled={availableAttributes.length === 0}
-            >
-              <option value="">
-                {availableAttributes.length === 0
-                  ? t("allAttributesAssigned")
-                  : t("chooseAttribute")}
-              </option>
-              {availableAttributes.map((attribute) => (
-                <option key={attribute.id} value={attribute.id}>
-                  {attribute.displayName ?? attribute.key}
-                </option>
-              ))}
-            </Select>
-          </label>
-          <div className="space-y-1.5 text-sm">
-            <Label htmlFor={`attribute-order-${group.groupId}`}>
-              {t("displayOrder")}
-            </Label>
-            <Input
-              id={`attribute-order-${group.groupId}`}
-              type="number"
-              min="0"
-              value={displayOrder}
-              onChange={(event) => setDisplayOrder(event.target.value)}
-            />
-          </div>
-          <label className="flex h-10 items-center gap-2 whitespace-nowrap text-sm">
-            <input
-              type="checkbox"
-              checked={required}
-              onChange={(event) => setRequired(event.target.checked)}
-            />
-            {t("requiredAttribute")}
-          </label>
-          <Button
-            type="submit"
-            size="sm"
-            disabled={assign.isPending || !attributeId}
-          >
-            <Plus className="size-4" />
-            {t("assignAttribute")}
-          </Button>
-          {assign.isError || remove.isError ? (
-            <div className="sm:col-span-4">
-              <ErrorMessage error={assign.error ?? remove.error} />
-            </div>
-          ) : null}
-        </form>
-      </CardContent>
-    </Card>
-  );
-}
-
-function AttributeRow({
-  attribute,
-  onEdit,
-  onDelete,
-}: {
-  attribute: Attribute;
-  onEdit: () => void;
-  onDelete: () => Promise<unknown> | unknown;
-}) {
-  const t = useTranslations("admin");
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-4 p-4">
-      <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <code className="rounded bg-muted px-2 py-1 text-xs">
-            {attribute.key ?? "—"}
-          </code>
-          <span className="font-medium">{attribute.displayName ?? "—"}</span>
-          <StatusBadge status={attribute.status} />
+          {dirty ? <span className="text-xs text-amber-600">{tc("unsaved")}</span> : save.isSuccess ? <span className="text-xs text-emerald-600">{tc("saved")}</span> : null}
+          {dirty ? (
+            <Button type="button" variant="outline" disabled={save.isPending} onClick={() => { setGroups(initial); setProblem(null); }}>
+              {tc("revert")}
+            </Button>
+          ) : null}
+          <Button type="button" disabled={!dirty || save.isPending} onClick={() => void submit()}>
+            {tc("save")}
+          </Button>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {attribute.dataType ?? "—"}
-          {attribute.unit ? ` · ${attribute.unit}` : ""}
-          {attribute.filterable ? ` · ${t("filterable")}` : ""}
-          {attribute.comparable ? ` · ${t("comparable")}` : ""}
-        </p>
-        {attribute.allowedValues?.length ? (
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {t("allowedValues")}: {attribute.allowedValues.join(", ")}
-          </p>
+      </div>
+
+      {definitions.isSuccess && defs.length === 0 ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          {tc("noDefinitions")}
+          <Button type="button" size="sm" variant="outline" onClick={onGoAttributes}>{tc("goAttributes")}</Button>
+        </div>
+      ) : null}
+
+      <div className="mt-5 space-y-4">
+        {groups.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-10 text-center">
+            <p className="font-medium">{tc("emptyTemplate")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{tc("emptyTemplateHint")}</p>
+          </div>
         ) : null}
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <Button type="button" size="sm" variant="ghost" onClick={onEdit}>
-          <Pencil className="size-3.5" />
-          {t("edit")}
-        </Button>
-        <ConfirmAction
-          title={t("confirmDelete")}
-          confirmLabel={t("delete")}
-          cancelLabel={t("cancel")}
-          onConfirm={onDelete}
-          size="icon-sm"
-          variant="ghost"
-          className="text-destructive hover:text-destructive"
-          ariaLabel={t("delete")}
-        >
-          <Trash2 className="size-4" />
-        </ConfirmAction>
-      </div>
-    </div>
-  );
-}
 
-type AttributeFormValue = {
-  key: string;
-  displayName: string;
-  dataType: AttributeDataType;
-  unit: string;
-  allowedValues: string;
-  aliases: string;
-  filterable: boolean;
-  comparable: boolean;
-  status: EditableResourceStatus;
-};
+        {groups.map((group, groupIndex) => (
+          <div key={group.uid} className="rounded-xl border">
+            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-3 py-2.5">
+              <div className="flex">
+                <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("moveUp")} disabled={groupIndex === 0} onClick={() => setGroups((current) => move(current, groupIndex, -1))}>
+                  <ChevronUp className="size-4" />
+                </Button>
+                <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("moveDown")} disabled={groupIndex === groups.length - 1} onClick={() => setGroups((current) => move(current, groupIndex, 1))}>
+                  <ChevronDown className="size-4" />
+                </Button>
+              </div>
+              <Input
+                className="h-9 min-w-40 flex-1 bg-background font-medium"
+                value={group.name}
+                maxLength={100}
+                placeholder={tc("groupNamePlaceholder")}
+                aria-label={tc("groupName")}
+                onChange={(event) => patchGroup(groupIndex, {name: event.target.value})}
+              />
+              <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setGroups((current) => current.filter((_, at) => at !== groupIndex))}>
+                <Trash2 className="size-4" />
+                {tc("removeGroup")}
+              </Button>
+            </div>
 
-function attributeForm(attribute?: Attribute): AttributeFormValue {
-  return {
-    key: attribute?.key ?? "",
-    displayName: attribute?.displayName ?? "",
-    dataType: (attribute?.dataType as AttributeDataType | undefined) ?? AttributeDataType.String,
-    unit: attribute?.unit ?? "",
-    allowedValues: attribute?.allowedValues?.join(", ") ?? "",
-    aliases: attribute?.aliases?.join(", ") ?? "",
-    filterable: Boolean(attribute?.filterable),
-    comparable: Boolean(attribute?.comparable),
-    status: (attribute?.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
-  };
-}
-function attributeRequest(
-  form: AttributeFormValue,
-): CreateAttributeDefinitionRequest {
-  return {
-    key: form.key.trim(),
-    displayName: form.displayName.trim(),
-    dataType: form.dataType,
-    unit: form.unit.trim() || undefined,
-    allowedValues: splitValues(form.allowedValues),
-    aliases: splitValues(form.aliases),
-    filterable: form.filterable,
-    comparable: form.comparable,
-  };
-}
-function attributeUpdateRequest(
-  form: AttributeFormValue,
-): UpdateAttributeDefinitionRequest {
-  return {
-    displayName: form.displayName.trim(),
-    dataType: form.dataType,
-    unit: form.unit.trim() || undefined,
-    allowedValues: splitValues(form.allowedValues),
-    aliases: splitValues(form.aliases),
-    filterable: form.filterable,
-    comparable: form.comparable,
-    status: form.status,
-  };
-}
-function splitValues(value: string) {
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
+            <ul className="divide-y">
+              {group.items.map((item, itemIndex) => {
+                const definition = byId.get(item.attributeId);
+                const setItem = (patch: Partial<DraftItem>) =>
+                  patchGroup(groupIndex, {items: group.items.map((current, at) => (at === itemIndex ? {...current, ...patch} : current))});
+                return (
+                  <li key={item.uid} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
+                    <div className="flex">
+                      <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("moveUp")} disabled={itemIndex === 0} onClick={() => patchGroup(groupIndex, {items: move(group.items, itemIndex, -1)})}>
+                        <ChevronUp className="size-4" />
+                      </Button>
+                      <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("moveDown")} disabled={itemIndex === group.items.length - 1} onClick={() => patchGroup(groupIndex, {items: move(group.items, itemIndex, 1)})}>
+                        <ChevronDown className="size-4" />
+                      </Button>
+                    </div>
+                    <Select className="h-9 min-w-52 flex-1" aria-label={tc("pickAttribute")} value={item.attributeId} onChange={(event) => setItem({attributeId: event.target.value})}>
+                      <option value="">{tc("pickAttribute")}</option>
+                      {defs
+                        .filter((definition) => definition.id === item.attributeId || !used.has(definition.id))
+                        .map((definition) => (
+                          <option key={definition.id} value={definition.id}>{definition.displayName} ({definition.key})</option>
+                        ))}
+                    </Select>
+                    <span className="flex w-28 items-center gap-1.5 text-xs text-muted-foreground">
+                      {definition?.dataType ? <Badge className={cn("px-2 py-0", TYPE_TONE[definition.dataType])}>{tc(`dataTypes.${definition.dataType}`)}</Badge> : null}
+                      {definition?.unit}
+                    </span>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <input type="checkbox" className="size-4 accent-primary" checked={item.required} onChange={(event) => setItem({required: event.target.checked})} />
+                      {tc("required")}
+                    </label>
+                    <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("removeItem")} onClick={() => patchGroup(groupIndex, {items: group.items.filter((_, at) => at !== itemIndex)})}>
+                      <X className="size-4" />
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
 
-function AttributeFields({
-  form,
-  onChange,
-  onSubmit,
-  submitLabel,
-  disabled,
-  error,
-  keyReadOnly = false,
-}: {
-  form: AttributeFormValue;
-  onChange: Dispatch<SetStateAction<AttributeFormValue>>;
-  onSubmit: (event: FormEvent) => void;
-  submitLabel: string;
-  disabled: boolean;
-  error: unknown;
-  keyReadOnly?: boolean;
-}) {
-  const t = useTranslations("admin");
-  return (
-    <form
-      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-      onSubmit={onSubmit}
-    >
-      <TextField
-        id="attribute-key"
-        label={t("attributeKey")}
-        value={form.key}
-        onChange={(value) =>
-          onChange((current) => ({ ...current, key: value }))
-        }
-        required
-        readOnly={keyReadOnly}
-      />
-      <TextField
-        id="attribute-display"
-        label={t("attributeDisplayName")}
-        value={form.displayName}
-        onChange={(value) =>
-          onChange((current) => ({ ...current, displayName: value }))
-        }
-        required
-      />
-      <label className="space-y-1.5 text-sm">
-        <span className="font-medium text-muted-foreground">
-          {t("dataType")}
-        </span>
-        <Select
-          value={form.dataType}
-          onChange={(event) =>
-            onChange((current) => ({
-              ...current,
-              dataType: event.target.value as AttributeDataType,
-            }))
-          }
-        >
-          <option value={AttributeDataType.String}>{AttributeDataType.String}</option>
-          <option value={AttributeDataType.Number}>{AttributeDataType.Number}</option>
-          <option value={AttributeDataType.Enum}>{AttributeDataType.Enum}</option>
-          <option value={AttributeDataType.Boolean}>{AttributeDataType.Boolean}</option>
-        </Select>
-      </label>
-      <TextField
-        id="attribute-unit"
-        label={t("unit")}
-        value={form.unit}
-        onChange={(value) =>
-          onChange((current) => ({ ...current, unit: value }))
-        }
-      />
-      <TextField
-        id="attribute-values"
-        label={t("allowedValues")}
-        value={form.allowedValues}
-        onChange={(value) =>
-          onChange((current) => ({ ...current, allowedValues: value }))
-        }
-      />
-      <TextField
-        id="attribute-aliases"
-        label={t("aliases")}
-        value={form.aliases}
-        onChange={(value) =>
-          onChange((current) => ({ ...current, aliases: value }))
-        }
-      />
-      <div className="flex flex-wrap items-center gap-4 sm:col-span-2 lg:col-span-2">
-        <CheckField
-          label={t("filterable")}
-          checked={form.filterable}
-          onChange={(checked) =>
-            onChange((current) => ({ ...current, filterable: checked }))
-          }
-        />
-        <CheckField
-          label={t("comparable")}
-          checked={form.comparable}
-          onChange={(checked) =>
-            onChange((current) => ({ ...current, comparable: checked }))
-          }
-        />
-      </div>
-      <div className="flex gap-2 sm:col-span-2 lg:col-span-4">
-        <Button
-          type="submit"
-          disabled={disabled || !form.key.trim() || !form.displayName.trim()}
-        >
+            <div className="border-t px-3 py-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-primary hover:text-primary"
+                onClick={() => patchGroup(groupIndex, {items: [...group.items, {uid: uid(), attributeId: "", required: false}]})}
+              >
+                <Plus className="size-4" />
+                {tc("addAttribute")}
+              </Button>
+            </div>
+          </div>
+        ))}
+
+        <Button type="button" variant="outline" onClick={() => setGroups((current) => [...current, {uid: uid(), name: "", items: []}])}>
           <Plus className="size-4" />
-          {submitLabel}
-        </Button>
-        {error ? <ErrorMessage error={error} /> : null}
-      </div>
-    </form>
-  );
-}
-
-function AttributeEditForm({
-  attribute,
-  onClose,
-  onSave,
-  loading,
-  error,
-}: {
-  attribute: Attribute;
-  onClose: () => void;
-  onSave: (
-    request: UpdateAttributeDefinitionRequest,
-  ) => Promise<unknown>;
-  loading: boolean;
-  error: unknown;
-}) {
-  const t = useTranslations("admin");
-  const [form, setForm] = useState(attributeForm(attribute));
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    await onSave(attributeUpdateRequest(form));
-    onClose();
-  }
-  return (
-    <div className="space-y-4">
-      <div className="rounded-lg border bg-muted/30 p-3 text-sm">
-        <span className="text-muted-foreground">{t("attributeKey")}: </span>
-        <code>{attribute.key}</code>
-      </div>
-      <AttributeFields
-        form={form}
-        onChange={setForm}
-        onSubmit={(event) => void submit(event)}
-        submitLabel={t("save")}
-        disabled={loading}
-        error={error}
-        keyReadOnly
-      />
-      <div className="flex items-center gap-3">
-        <label className="space-y-1.5 text-sm">
-          <span className="font-medium text-muted-foreground">
-            {t("status")}
-          </span>
-          <Select
-            value={form.status}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, status: event.target.value as EditableResourceStatus }))
-            }
-          >
-            <option value={ResourceStatus.Active}>{t("statusValues.ACTIVE")}</option>
-            <option value={ResourceStatus.Inactive}>{t("statusValues.INACTIVE")}</option>
-          </Select>
-        </label>
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-6"
-          onClick={onClose}
-        >
-          {t("cancel")}
+          {tc("addGroup")}
         </Button>
       </div>
-    </div>
-  );
-}
 
-function TextField({
-  id,
-  label,
-  value,
-  onChange,
-  required = false,
-  readOnly = false,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  readOnly?: boolean;
-}) {
-  return (
-    <div className="space-y-1.5 text-sm">
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        className={readOnly ? "bg-muted/50 text-muted-foreground" : undefined}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        required={required}
-        readOnly={readOnly}
-      />
-    </div>
+      {problem || save.isError ? (
+        <div role="alert" className="mt-4 rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+          {problem ?? <ErrorMessage error={save.error} />}
+        </div>
+      ) : null}
+    </Card>
   );
-}
-function CheckField({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-      />
-      {label}
-    </label>
-  );
-}
-function Loading() {
-  return <Skeleton className="h-40 rounded-2xl" />;
-}
-function Empty({ title }: { title: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-      {title}
-    </div>
-  );
-}
-
-function flattenCategories(
-  categories: CategoryTree[],
-  depth = 0,
-): { id: string; label: string }[] {
-  return categories.flatMap((category) => [
-    ...(category.id && category.status !== ResourceStatus.Deleted
-      ? [
-          {
-            id: category.id,
-            label: `${"— ".repeat(depth)}${category.name ?? ""}`,
-          },
-        ]
-      : []),
-    ...flattenCategories(category.children ?? [], depth + 1),
-  ]);
 }

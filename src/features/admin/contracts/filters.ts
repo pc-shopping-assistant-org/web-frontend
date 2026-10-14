@@ -19,7 +19,6 @@ export type CustomerFilter = {
   sanitizedLimit?: number;
 };
 
-export type EmployeeFilter = CustomerFilter & {roleName?: string};
 export type SupplierFilter = CustomerFilter;
 
 /** promotion-service lists by zero-based page and filters only by state. */

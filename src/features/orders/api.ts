@@ -79,6 +79,8 @@ export async function cancelOrder(orderId: string, reason?: string) {
 export type AdminOrderFilters = {
   page?: number;
   size?: number;
+  /** Only the orders of this customer. */
+  customerId?: string;
   keyword?: string;
   status?: string;
   createdFrom?: string;

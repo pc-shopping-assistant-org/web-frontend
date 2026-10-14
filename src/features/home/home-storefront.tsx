@@ -3,29 +3,23 @@
 import {
   IconArrowRight,
   IconArrowUpRight,
-  IconArrowsLeftRight,
   IconChevronRight,
   IconCircleCheck,
-  IconClipboardList,
   IconCpu,
   IconDeviceGamepad2,
   IconDeviceLaptop,
   IconDesk,
   IconLayoutGrid,
-  IconLayoutDashboard,
   IconMessageCircle,
   IconRobot,
-  IconSearch,
-  IconShoppingCart,
   IconSparkles,
   IconTags,
   IconTruckDelivery,
-  IconUserCircle,
 } from "@tabler/icons-react";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import {useSyncExternalStore} from "react";
+import {useState} from "react";
 
 import {Badge} from "@/components/ui/badge";
 import {Card, CardContent} from "@/components/ui/card";
@@ -34,10 +28,8 @@ import {Link} from "@/i18n/navigation";
 import type {CategoryTree, ProductSummary} from "@/features/catalog/contracts/responses";
 import {formatMoney, formatRating} from "@/lib/format";
 import {cn} from "@/lib/utils";
-import {isStaffRole} from "@/lib/auth/roles";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-import {useProfile} from "@/features/auth/queries";
 import {useCategories, useProducts} from "@/features/catalog/queries";
 import {CatalogCategoryIcon} from "@/features/catalog/components/catalog-category-icon";
 import {FeaturedProductsSkeleton} from "@/components/ui/loading-skeletons";
@@ -51,33 +43,22 @@ const FeaturedProducts = dynamic(
   {loading: () => <FeaturedProductsSkeleton />},
 );
 
-const subscribeToHydration = () => () => {};
-const getHydratedSnapshot = () => true;
-const getServerHydrationSnapshot = () => false;
-
 export function HomeStorefront() {
   const t = useTranslations("home");
-  const profile = useProfile();
   const categories = useCategories();
   const products = useProducts({limit: 100});
-  // The profile query can already be populated in the browser (for example
-  // after logging in and navigating back home) while the server-rendered RSC
-  // tree has no profile data. Keep role-dependent links on the guest shape
-  // until hydration has completed so both trees produce identical markup.
-  const hasMounted = useSyncExternalStore(
-    subscribeToHydration,
-    getHydratedSnapshot,
-    getServerHydrationSnapshot,
-  );
-  const isStaff = hasMounted && isStaffRole(profile.data?.role);
-  const categoryLinks = getActiveCategories(categories.data ?? []);
+  const categoryTree = getActiveCategoryTree(categories.data ?? []);
   const featuredProducts = products.data?.items ?? [];
   const categoryCounts = getCategoryCounts(featuredProducts, categories.data ?? []);
+  // Only the top-level categories that have products, the fullest first: every category as a chip is a wall of tags
+  const topCategories = categoryTree
+    .filter((category) => (categoryCounts.get(category.id) ?? 0) > 0)
+    .sort((left, right) => (categoryCounts.get(right.id) ?? 0) - (categoryCounts.get(left.id) ?? 0))
+    .slice(0, TOP_CATEGORY_COUNT);
 
   return (
     <section className="border-b bg-[radial-gradient(circle_at_10%_0%,rgba(34,211,238,.11),transparent_28rem),radial-gradient(circle_at_92%_8%,rgba(99,102,241,.09),transparent_30rem)]">
       <div className="storefront-wrap py-8 sm:py-12">
-        <HomeUtilityNav isStaff={isStaff} />
         <div className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl space-y-3">
             <Badge className="gap-2 border-primary/20 bg-primary/5 px-3 py-1.5 text-primary">
@@ -89,33 +70,14 @@ export function HomeStorefront() {
           </div>
           <div className="w-full xl:max-w-2xl 2xl:max-w-3xl">
             <HomeSearch />
+            <HeroCategoryChips categories={topCategories} counts={categoryCounts} pending={categories.isPending || products.isPending} />
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[clamp(17rem,19vw,22rem)_minmax(0,1fr)] xl:grid-cols-[clamp(17rem,19vw,22rem)_minmax(0,1fr)_clamp(17rem,20vw,22rem)]">
-          <CategoryMenu categories={categoryLinks} counts={categoryCounts} pending={categories.isPending} error={categories.isError} />
+        <div className="grid gap-4 lg:grid-cols-[clamp(17rem,19vw,22rem)_minmax(0,1fr)]">
+          <CategoryMenu categories={categoryTree} counts={categoryCounts} pending={categories.isPending} error={categories.isError} />
           <FeaturedSpotlight product={featuredProducts[0]} pending={products.isPending} unavailable={products.isError} />
-          <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2 xl:col-span-1 xl:grid-cols-1">
-            {products.isPending ? (
-              Array.from({length: 2}, (_, index) => <Skeleton key={index} className="min-h-36 rounded-2xl" />)
-            ) : featuredProducts.slice(1, 3).map((product, index) => <SideProductCard key={product.id ?? index} product={product} index={index} />)}
-            {!products.isPending && featuredProducts.length <= 1 ? <CatalogFallback unavailable={products.isError} /> : null}
-            <div className="sm:col-span-2 xl:col-span-1"><AssistantTile /></div>
-          </div>
         </div>
-
-        <PopularProductRail
-          products={featuredProducts.slice(0, 4)}
-          pending={products.isPending}
-          unavailable={products.isError}
-        />
-
-        {/* Keep the decision path above the long catalog so the primary
-            compare/consult/cart use cases are visible before the customer
-            starts browsing a large result set. */}
-        <FinderFlow isStaff={isStaff} />
-
-        <StorefrontQuickActions isStaff={isStaff} />
 
         <section className="mt-12 border-t border-border/60 pt-10" aria-labelledby="featured-products-title">
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -136,7 +98,6 @@ export function HomeStorefront() {
           />
         </section>
 
-        <CategoryExplorer categories={categoryLinks} counts={categoryCounts} pending={categories.isPending} error={categories.isError} />
         <ShopByGoal />
 
         <div className="mt-4 grid gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-4">
@@ -147,6 +108,28 @@ export function HomeStorefront() {
         </div>
       </div>
     </section>
+  );
+}
+
+/** The fullest top-level categories under the search box: where most people start. The whole tree is in the menu below. */
+function HeroCategoryChips({categories, counts, pending}: {categories: HomeCategoryNode[]; counts: Map<string, number>; pending: boolean}) {
+  const t = useTranslations("home");
+  if (!pending && categories.length === 0) return null;
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2" aria-label={t("categoryTitle")}>
+      {pending
+        ? Array.from({length: 5}, (_, index) => <Skeleton key={index} className="h-8 w-28 rounded-full" />)
+        : categories.map((category) => (
+          <Link
+            key={category.id}
+            href={`/products?categoryId=${encodeURIComponent(category.id)}`}
+            className="inline-flex max-w-48 items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+          >
+            <span className="truncate" title={category.name}>{category.name}</span>
+            <span className="tabular-nums text-muted-foreground">{counts.get(category.id) ?? 0}</span>
+          </Link>
+        ))}
+    </div>
   );
 }
 
@@ -194,232 +177,14 @@ function ShopByGoal() {
   );
 }
 
-function FinderFlow({isStaff}: {isStaff: boolean}) {
+function CategoryMenu({categories, counts, pending, error}: {categories: HomeCategoryNode[]; counts: Map<string, number>; pending: boolean; error: boolean}) {
   const t = useTranslations("home");
-  const steps = [
-    {icon: IconSearch, title: t("finderStepSearch"), href: "/products" as const},
-    {icon: IconArrowsLeftRight, title: t("finderStepCompare"), href: "/assistant" as const},
-    isStaff
-      ? {icon: IconClipboardList, title: t("finderStepAdminOrders"), href: "/admin/orders" as const}
-      : {icon: IconShoppingCart, title: t("finderStepOrder"), href: "/cart" as const},
-  ];
-
-  return (
-    <section className="relative mt-9 overflow-hidden rounded-[2rem] bg-slate-950 p-5 text-white shadow-xl shadow-slate-950/10 sm:p-7" aria-labelledby="finder-flow-title">
-      <div className="pointer-events-none absolute -right-20 -top-24 size-72 rounded-full bg-blue-500/20 blur-3xl" />
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-2xl space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{t("finderEyebrow")}</p>
-          <h2 id="finder-flow-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("finderTitle")}</h2>
-          <p className="text-sm leading-6 text-slate-300">{t("finderDescription")}</p>
-        </div>
-        <Link href="/assistant" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">
-          {t("finderCta")}
-          <IconArrowRight className="size-4" aria-hidden="true" />
-        </Link>
-      </div>
-      <div className="relative mt-6 grid gap-3 md:grid-cols-3">
-        {steps.map(({icon: Icon, title, href}, index) => (
-          <Link key={href} href={href} className="group rounded-2xl border border-white/10 bg-white/7 p-4 transition hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/12">
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-cyan-200"><Icon className="size-5" aria-hidden="true" /></span>
-              <span className="text-xs font-semibold tracking-[0.16em] text-slate-500">0{index + 1}</span>
-            </div>
-            <p className="mt-5 text-sm font-semibold leading-5 text-white">{title}</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-cyan-200">{t("exploreCategory")}<IconArrowUpRight className="size-3.5 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function StorefrontQuickActions({isStaff}: {isStaff: boolean}) {
-  const t = useTranslations("home");
-  const actions = [
-    {
-      href: "/products" as const,
-      icon: IconLayoutGrid,
-      title: t("quickAction.catalogTitle"),
-      description: t("quickAction.catalogDescription"),
-      tone: "bg-sky-50 text-sky-700",
-    },
-    {
-      href: "/assistant" as const,
-      icon: IconSearch,
-      title: t("quickAction.searchTitle"),
-      description: t("quickAction.searchDescription"),
-      tone: "bg-cyan-50 text-cyan-700",
-    },
-    {
-      href: "/assistant" as const,
-      icon: IconArrowsLeftRight,
-      title: t("quickAction.compareTitle"),
-      description: t("quickAction.compareDescription"),
-      tone: "bg-violet-50 text-violet-700",
-    },
-    {
-      href: "/assistant" as const,
-      icon: IconRobot,
-      title: t("quickAction.assistantTitle"),
-      description: t("quickAction.assistantDescription"),
-      tone: "bg-emerald-50 text-emerald-700",
-    },
-    isStaff
-      ? {
-          href: "/admin/orders" as const,
-          icon: IconLayoutDashboard,
-          title: t("quickAction.adminOrdersTitle"),
-          description: t("quickAction.adminOrdersDescription"),
-          tone: "bg-amber-50 text-amber-700",
-        }
-      : {
-          href: "/orders" as const,
-          icon: IconClipboardList,
-          title: t("quickAction.ordersTitle"),
-          description: t("quickAction.ordersDescription"),
-          tone: "bg-amber-50 text-amber-700",
-        },
-    {
-      href: "/account" as const,
-      icon: IconUserCircle,
-      title: t("quickAction.accountTitle"),
-      description: t("quickAction.accountDescription"),
-      tone: "bg-rose-50 text-rose-700",
-    },
-  ];
-
-  return (
-    <section className="mt-6" aria-label={t("quickActionsTitle")}>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {actions.map(({href, icon: Icon, title, description, tone}) => (
-          <Link key={href} href={href} className="group">
-            <Card className="h-full rounded-2xl border-border/70 bg-background/80 transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
-              <CardContent className="flex items-center gap-3 p-4">
-                <span className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl", tone)}>
-                  <Icon className="size-5" strokeWidth={1.8} aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">{title}</span>
-                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">{description}</span>
-                </span>
-                <IconArrowUpRight className="size-4 shrink-0 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function PopularProductRail({
-  products,
-  pending,
-  unavailable,
-}: {
-  products: ProductSummary[];
-  pending: boolean;
-  unavailable: boolean;
-}) {
-  const t = useTranslations("home");
-  const locale = useLocale();
-
-  if (pending) {
-    return (
-      <section className="mt-9" aria-label={t("popularTitle")}>
-        <Skeleton className="mb-4 h-8 w-64 rounded-lg" />
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({length: 4}, (_, index) => <Skeleton key={index} className="h-28 rounded-2xl" />)}
-        </div>
-      </section>
-    );
-  }
-  if (unavailable || products.length === 0) return null;
-
-  return (
-    <section className="mt-9" aria-labelledby="popular-products-title">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="eyebrow">{t("popularEyebrow")}</p>
-          <h2 id="popular-products-title" className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">{t("popularTitle")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("popularDescription")}</p>
-        </div>
-        <Link href="/products" className="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
-          {t("browseAllProducts")}
-          <IconArrowRight className="size-4" aria-hidden="true" />
-        </Link>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {products.map((product, index) => {
-          const name = product.name ?? t("productUnavailable");
-          const href = product.seoName ? `/products/${encodeURIComponent(product.seoName)}` : "/products";
-          return (
-            <Link key={product.id ?? product.seoName ?? index} href={href} className="group">
-              <Card className="h-full rounded-2xl border-border/70 bg-background transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
-                <CardContent className="flex items-center gap-3 p-3.5">
-                  <div className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-muted/50 p-1">
-                    <ProductArtwork product={product} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{product.brandName ?? product.categoryName ?? "gearPC"}</p>
-                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-5 group-hover:text-primary">{name}</h3>
-                    <p className="mt-2 text-sm font-semibold">{formatMoney(product.minPrice ?? product.maxPrice, locale)}</p>
-                  </div>
-                  <IconArrowUpRight className="size-4 shrink-0 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
-                </CardContent>
-              </Card>
-            </Link>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function CategoryExplorer({categories, counts, pending, error}: {categories: {id: string; name: string}[]; counts: Map<string, number>; pending: boolean; error: boolean}) {
-  const t = useTranslations("home");
-
-  if (error || (!pending && categories.length === 0)) return null;
-
-  return (
-    <section className="mt-8" aria-labelledby="category-explorer-title">
-      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-2xl space-y-1">
-          <p className="eyebrow">{t("categoryEyebrow")}</p>
-          <h2 id="category-explorer-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("categoryTitle")}</h2>
-          <p className="text-sm leading-6 text-muted-foreground">{t("categoryDescription")}</p>
-        </div>
-        <Link href="/products" className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary hover:underline">
-          {t("browseAllProducts")}
-          <IconArrowRight className="size-4" aria-hidden="true" />
-        </Link>
-      </div>
-
-      {pending ? (
-        <div className="flex flex-wrap gap-2 rounded-2xl border border-border/70 bg-card/60 p-3">
-          {Array.from({length: 12}, (_, index) => <Skeleton key={index} className="h-10 w-36 rounded-xl" />)}
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2 rounded-2xl border border-border/70 bg-card/60 p-3">
-          {categories.map((category) => (
-            <Link key={category.id} href={`/products?categoryId=${encodeURIComponent(category.id)}`} className="group inline-flex min-w-0 items-center gap-2 rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm font-medium transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:text-primary">
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-primary-foreground">
-                <CatalogCategoryIcon categoryName={category.name} className="size-4" strokeWidth={1.7} />
-              </span>
-              <span className="max-w-48 truncate" title={category.name}>{category.name}</span>
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground group-hover:text-primary/70">{counts.get(category.id) ?? 0}</span>
-              <IconArrowUpRight className="size-3.5 shrink-0 text-muted-foreground transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden="true" />
-            </Link>
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function CategoryMenu({categories, counts, pending, error}: {categories: HomeCategoryLink[]; counts: Map<string, number>; pending: boolean; error: boolean}) {
-  const t = useTranslations("home");
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (id: string) => setExpanded((current) => {
+    const next = new Set(current);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  });
 
   return (
     <Card className="h-full rounded-2xl border-border/70 shadow-sm">
@@ -440,25 +205,37 @@ function CategoryMenu({categories, counts, pending, error}: {categories: HomeCat
             {Array.from({length: 5}, (_, index) => <Skeleton key={index} className="h-8" />)}
           </div>
         ) : categories.length > 0 ? (
-          <div className="max-h-[22rem] space-y-0.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+          <ul className="max-h-[22rem] space-y-0.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
             {categories.map((category) => {
+              const open = expanded.has(category.id);
+              const hasChildren = category.children.length > 0;
               return (
-                <Link
-                  key={category.id}
-                  href={`/products?categoryId=${encodeURIComponent(category.id)}`}
-                  className="group flex items-center gap-2.5 rounded-xl px-2 py-2 text-sm transition hover:bg-primary/5 hover:text-primary"
-                  style={{paddingLeft: `${0.5 + Math.min(category.depth, 2) * 0.65}rem`}}
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted/80 text-muted-foreground transition group-hover:bg-primary/10 group-hover:text-primary">
-                    <CatalogCategoryIcon categoryName={category.name} className="size-4.5" strokeWidth={1.8} />
-                  </span>
-                  <span className="min-w-0 flex-1 truncate" title={category.name}>{category.name}</span>
-                  <span className="shrink-0 text-[0.7rem] tabular-nums text-muted-foreground/70">{counts.get(category.id) ?? 0}</span>
-                  <IconChevronRight className="size-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />
-                </Link>
+                <li key={category.id}>
+                  <div className="group flex items-center rounded-xl transition hover:bg-primary/5">
+                    <Link
+                      href={`/products?categoryId=${encodeURIComponent(category.id)}`}
+                      className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition group-hover:text-primary"
+                    >
+                      <span className="min-w-0 flex-1 truncate font-medium" title={category.name}>{category.name}</span>
+                      <span className="shrink-0 text-[0.7rem] tabular-nums text-muted-foreground/70">{counts.get(category.id) ?? 0}</span>
+                    </Link>
+                    {hasChildren ? (
+                      <button
+                        type="button"
+                        onClick={() => toggle(category.id)}
+                        aria-expanded={open}
+                        aria-label={t(open ? "collapseCategory" : "expandCategory", {name: category.name})}
+                        className="mr-1 flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+                      >
+                        <IconChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} aria-hidden="true" />
+                      </button>
+                    ) : <span className="mr-1 size-7 shrink-0" aria-hidden="true" />}
+                  </div>
+                  {hasChildren && open ? <CategoryBranch nodes={category.children} counts={counts} /> : null}
+                </li>
               );
             })}
-          </div>
+          </ul>
         ) : (
           <p className="p-2 text-xs leading-5 text-muted-foreground">{error ? t("catalogUnavailable") : t("noCategories")}</p>
         )}
@@ -473,6 +250,26 @@ function CategoryMenu({categories, counts, pending, error}: {categories: HomeCat
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/** The sub-categories of one category: a guide line down the left, no icon box, so they read as part of their parent. */
+function CategoryBranch({nodes, counts}: {nodes: HomeCategoryNode[]; counts: Map<string, number>}) {
+  return (
+    <ul className="ml-6 mt-0.5 space-y-0.5 border-l border-border/80 pl-2">
+      {nodes.map((node) => (
+        <li key={node.id}>
+          <Link
+            href={`/products?categoryId=${encodeURIComponent(node.id)}`}
+            className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-[0.82rem] text-muted-foreground transition hover:bg-primary/5 hover:text-primary"
+          >
+            <span className="min-w-0 flex-1 truncate" title={node.name}>{node.name}</span>
+            <span className="shrink-0 text-[0.7rem] tabular-nums text-muted-foreground/70">{counts.get(node.id) ?? 0}</span>
+          </Link>
+          {node.children.length > 0 ? <CategoryBranch nodes={node.children} counts={counts} /> : null}
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -521,85 +318,6 @@ function FeaturedSpotlight({product, pending, unavailable}: {product?: ProductSu
         </div>
       </CardContent>
     </Card>
-  );
-}
-
-function SideProductCard({product, index}: {product: ProductSummary; index: number}) {
-  const t = useTranslations("home");
-  const locale = useLocale();
-  const name = product.name ?? t("productUnavailable");
-  const slug = product.seoName
-    ? encodeURIComponent(product.seoName)
-    : undefined;
-  const artworkBackgrounds = [
-    "bg-[radial-gradient(circle_at_75%_30%,rgba(14,165,233,0.26),transparent_42%),#eff6ff]",
-    "bg-[radial-gradient(circle_at_75%_30%,rgba(245,158,11,0.3),transparent_42%),#fffbeb]",
-  ];
-
-  const content = (
-    <Card className="group overflow-hidden rounded-2xl border-border/70 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-      <CardContent className="flex min-h-36 gap-3 p-3">
-        <div className={`flex size-[5.25rem] shrink-0 items-center justify-center overflow-hidden rounded-xl px-2 ${artworkBackgrounds[index % artworkBackgrounds.length]}`}>
-          <ProductArtwork product={product} />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5 py-0.5">
-          <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-xs font-medium uppercase tracking-wider text-muted-foreground">{product.brandName ?? product.categoryName ?? "PC"}</p>
-            <Badge className="shrink-0 border-primary/15 bg-background/80 px-1.5 py-0 text-xs text-muted-foreground">{t("featuredBadge")}</Badge>
-          </div>
-          <h3 className="line-clamp-2 text-sm font-semibold leading-5">{name}</h3>
-          <div className="mt-auto flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold">{formatMoney(product.minPrice ?? product.maxPrice, locale)}</span>
-            {slug ? <span className="inline-flex items-center gap-1 text-xs font-medium text-primary" aria-hidden="true"><IconArrowRight className="size-4 transition group-hover:translate-x-0.5" /></span> : null}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-  return slug ? <Link href={`/products/${slug}`} prefetch={false} className="block" aria-label={`${t("viewProduct")}: ${name}`}>{content}</Link> : content;
-}
-
-function AssistantTile() {
-  const t = useTranslations("home");
-  return (
-    <Link href="/assistant" className="group relative flex min-h-28 flex-col justify-between overflow-hidden rounded-2xl bg-primary p-4 text-primary-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-      <div className="pointer-events-none absolute -right-8 -top-10 size-32 rounded-full bg-white/15 blur-2xl" />
-      <div className="relative flex items-center justify-between gap-3">
-        <IconRobot className="size-5" aria-hidden="true" />
-        <Badge className="border-white/20 bg-white/10 text-xs text-white">{t("assistantBadge")}</Badge>
-      </div>
-      <div className="relative mt-4">
-        <p className="text-sm font-semibold">{t("assistantTileTitle")}</p>
-        <span className="mt-1.5 inline-flex items-center gap-1 text-xs text-primary-foreground/75 group-hover:underline">{t("assistantTileCta")}<IconArrowRight className="size-3.5 transition group-hover:translate-x-0.5" aria-hidden="true" /></span>
-      </div>
-    </Link>
-  );
-}
-
-function HomeUtilityNav({isStaff}: {isStaff: boolean}) {
-  const t = useTranslations("home");
-  const nav = useTranslations("nav");
-  const links = [
-    {href: "/products" as const, label: t("utilityCatalog"), icon: IconLayoutGrid},
-    {href: "/assistant" as const, label: t("utilityAssistant"), icon: IconRobot},
-    ...(isStaff
-      ? [{href: "/admin/orders" as const, label: nav("adminOrders"), icon: IconLayoutDashboard}]
-      : [
-          {href: "/cart" as const, label: nav("cart"), icon: IconShoppingCart},
-          {href: "/orders" as const, label: nav("orders"), icon: IconClipboardList},
-        ]),
-    {href: "/account" as const, label: nav("account"), icon: IconUserCircle},
-  ];
-
-  return (
-    <nav className="mb-7 flex items-center gap-2 overflow-x-auto border-b pb-3" aria-label={t("utilityNavLabel")}>
-      {links.map(({href, label, icon: Icon}, index) => (
-        <Link key={href} href={href} className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-background hover:text-primary ${index === 0 ? "bg-background text-primary shadow-sm" : "text-muted-foreground"}`}>
-          <Icon className="size-4" aria-hidden="true" />
-          {label}
-        </Link>
-      ))}
-    </nav>
   );
 }
 
@@ -701,13 +419,17 @@ function TrustItem({icon: Icon, title, description}: {icon: typeof IconCircleChe
   );
 }
 
-type HomeCategoryLink = {id: string; name: string; depth: number};
+/** Most category chips on the home page; the full tree is one tap away in the menu. */
+const TOP_CATEGORY_COUNT = 8;
 
-function getActiveCategories(categories: CategoryTree[], depth = 0): HomeCategoryLink[] {
+type HomeCategoryNode = {id: string; name: string; children: HomeCategoryNode[]};
+
+/** The active categories as a tree, for the menu that folds a category's children under it. */
+function getActiveCategoryTree(categories: CategoryTree[]): HomeCategoryNode[] {
   return categories.flatMap((category) => {
     if (category.status === ResourceStatus.Inactive || category.status === ResourceStatus.Deleted) return [];
-    const current = category.id && category.name ? [{id: category.id, name: category.name, depth}] : [];
-    return [...current, ...getActiveCategories(category.children ?? [], depth + 1)];
+    const children = getActiveCategoryTree(category.children ?? []);
+    return category.id && category.name ? [{id: category.id, name: category.name, children}] : children;
   });
 }
 

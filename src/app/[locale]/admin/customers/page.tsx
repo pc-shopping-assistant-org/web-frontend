@@ -1,2 +1,3 @@
-import {AdminResourceRouteClient} from "../admin-route-client";
-export default function AdminCustomersRoute() { return <AdminResourceRouteClient resource="customers" />; }
+import {CustomersRouteClient} from "../admin-route-client";
+
+export default function AdminCustomersRoute() { return <CustomersRouteClient />; }

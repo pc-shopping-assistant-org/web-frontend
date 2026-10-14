@@ -19,7 +19,6 @@ import {ApiMessageKey} from "@/lib/domain/message-keys";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 import {useBrands, useCategories, useProducts} from "../queries";
-import {CatalogCategoryIcon} from "./catalog-category-icon";
 import {ProductGrid} from "./product-grid";
 
 // Never changes after mount, so the store never needs to notify.
@@ -168,7 +167,6 @@ export function CatalogPage({
             <Link href="/products" className={cn("shrink-0 rounded-xl px-3 py-2 text-sm font-medium transition", !filters.categoryId ? "bg-primary text-primary-foreground shadow-sm" : "bg-background hover:bg-primary/5 hover:text-primary")}>{t("allProducts")}</Link>
             {quickCategories(categories.data).map((category) => (
               <Link key={category.id} href={`/products?categoryId=${encodeURIComponent(category.id ?? "")}`} className={cn("inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium transition", filters.categoryId === category.id ? "bg-primary text-primary-foreground shadow-sm" : "bg-background hover:bg-primary/5 hover:text-primary")}>
-                <span className="flex size-5 items-center justify-center"><CatalogCategoryIcon categoryName={category.name} className="size-4" strokeWidth={1.8} /></span>
                 {category.name}
               </Link>
             ))}

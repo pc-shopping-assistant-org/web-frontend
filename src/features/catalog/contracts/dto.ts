@@ -16,6 +16,9 @@ export type ProductSummaryDto = {
   categoryName?: string | null;
   minPrice?: number | null;
   maxPrice?: number | null;
+  /** Variants the listing counted and their stock added up (the admin list shows both). */
+  variantCount?: number | null;
+  totalQuantity?: number | null;
   mainImageUrl?: string | null;
   status: string;
   createdAt?: string;

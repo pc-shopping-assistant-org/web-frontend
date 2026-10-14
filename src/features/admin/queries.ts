@@ -3,30 +3,21 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
-  assignCategoryAttribute,
   createBrand,
   createCategory,
-  createCategoryAttributeGroup,
   createDiscount,
-  createEmployee,
   createAttribute,
-  createOption,
   createProduct,
   createSupplier,
   createVariant,
   deleteBrand,
-  deleteCategoryAttributeAssignment,
   deleteCategory,
   deleteDiscount,
   deleteProduct,
   deleteSupplier,
   deleteVariant,
   deleteAttribute,
-  deleteOption,
-  getAdminCustomer,
-  getAdminCustomerOrders,
   getAdminDiscount,
-  getAdminEmployee,
   getAdminProducts,
   getAdminReviews,
   getAdminSupplier,
@@ -34,31 +25,19 @@ import {
   getAdminBrands,
   getAdminCategories,
   getCategorySpecsSchema,
-  getCustomers,
-  getDashboardOverview,
   getDiscounts,
-  getEmployees,
-  getOptions,
-  getOrderStatusStats,
   getAdminProductById,
-  getRevenueChart,
-  getRoles,
   getSuppliers,
-  getTopSelling,
   updateBrand,
-  updateCategoryAttributeGroup,
   updateCategory,
   updateDiscount,
-  updateEmployee,
   updateAttribute,
-  updateOption,
   updateProduct,
   updateSupplier,
   updateVariant,
-  updateCustomerStatus,
   updateDiscountStatus,
-  updateEmployeeStatus,
   updateProductStatus,
+  replaceCategorySpecs,
   updateReviewStatus,
   uploadAdminFile,
 } from "./api";
@@ -67,63 +46,12 @@ export const adminKeys = {
   all: ["admin"] as const,
   dashboard: ["admin", "dashboard"] as const,
 };
-export function useDashboardOverview() {
-  return useQuery({
-    queryKey: adminKeys.dashboard,
-    queryFn: getDashboardOverview,
-    retry: false,
-  });
-}
-export function useOrderStatusStats() {
-  return useQuery({
-    queryKey: ["admin", "order-status"],
-    queryFn: getOrderStatusStats,
-    retry: false,
-  });
-}
-export function useRevenueChart(
-  filter: Parameters<typeof getRevenueChart>[0] = {},
-) {
-  return useQuery({
-    queryKey: ["admin", "revenue-chart", filter],
-    queryFn: () => getRevenueChart(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
-  });
-}
-export function useTopSelling(limit = 5, fromDate?: string, toDate?: string) {
-  return useQuery({
-    queryKey: ["admin", "top-selling", limit, fromDate, toDate],
-    queryFn: () => getTopSelling(limit, fromDate, toDate),
-    retry: false,
-  });
-}
 export function useAdminProducts(
   filter: Parameters<typeof getAdminProducts>[0] = {},
 ) {
   return useQuery({
     queryKey: ["admin", "products", filter],
     queryFn: () => getAdminProducts(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
-  });
-}
-export function useAdminCustomers(
-  filter: Parameters<typeof getCustomers>[0] = {},
-) {
-  return useQuery({
-    queryKey: ["admin", "customers", filter],
-    queryFn: () => getCustomers(filter),
-    retry: false,
-    placeholderData: keepPreviousData,
-  });
-}
-export function useAdminEmployees(
-  filter: Parameters<typeof getEmployees>[0] = {},
-) {
-  return useQuery({
-    queryKey: ["admin", "employees", filter],
-    queryFn: () => getEmployees(filter),
     retry: false,
     placeholderData: keepPreviousData,
   });
@@ -158,30 +86,6 @@ export function useAdminReviews(
     placeholderData: keepPreviousData,
   });
 }
-export function useAdminCustomer(id: string) {
-  return useQuery({
-    queryKey: ["admin", "customer", id],
-    queryFn: () => getAdminCustomer(id),
-    enabled: Boolean(id),
-    retry: false,
-  });
-}
-export function useAdminCustomerOrders(id: string) {
-  return useQuery({
-    queryKey: ["admin", "customer-orders", id],
-    queryFn: () => getAdminCustomerOrders(id),
-    enabled: Boolean(id),
-    retry: false,
-  });
-}
-export function useAdminEmployee(id: string) {
-  return useQuery({
-    queryKey: ["admin", "employee", id],
-    queryFn: () => getAdminEmployee(id),
-    enabled: Boolean(id),
-    retry: false,
-  });
-}
 export function useAdminDiscount(id: string) {
   return useQuery({
     queryKey: ["admin", "discount", id],
@@ -198,27 +102,11 @@ export function useAdminSupplier(id: string) {
     retry: false,
   });
 }
-export function useRoles() {
-  return useQuery({
-    queryKey: ["admin", "roles"],
-    queryFn: getRoles,
-    staleTime: 300_000,
-    retry: false,
-  });
-}
 export function useAdminProduct(id: string) {
   return useQuery({
     queryKey: ["admin", "product", id],
     queryFn: () => getAdminProductById(id),
     enabled: Boolean(id),
-    retry: false,
-  });
-}
-export function useOptions(type?: string) {
-  return useQuery({
-    queryKey: ["admin", "options", type],
-    queryFn: () => getOptions(type),
-    staleTime: 300_000,
     retry: false,
   });
 }
@@ -257,18 +145,6 @@ export function useAdminProductStatus() {
       updateProductStatus(id, status),
   );
 }
-export function useAdminCustomerStatus() {
-  return useStatusMutation(
-    ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
-      updateCustomerStatus(id, status, reason),
-  );
-}
-export function useAdminEmployeeStatus() {
-  return useStatusMutation(
-    ({ id, status, reason }: { id: string; status: string; reason?: string }) =>
-      updateEmployeeStatus(id, status, reason),
-  );
-}
 export function useAdminDiscountStatus() {
   return useStatusMutation(
     ({ id, status }: { id: string; status: string }) =>
@@ -303,42 +179,11 @@ export function useAdminBrands() {
 export function useCreateAdminCategory() {
   return useAdminMutation(createCategory);
 }
-export function useCreateAdminCategoryAttributeGroup() {
-  return useAdminMutation(createCategoryAttributeGroup);
-}
-export function useUpdateAdminCategoryAttributeGroup() {
+export function useReplaceAdminCategorySpecs() {
   return useAdminMutation(
-    ({
-      id,
-      request,
-    }: {
-      id: string;
-      request: Parameters<typeof updateCategoryAttributeGroup>[1];
-    }) => updateCategoryAttributeGroup(id, request),
+    ({ categoryId, request }: { categoryId: string; request: Parameters<typeof replaceCategorySpecs>[1] }) =>
+      replaceCategorySpecs(categoryId, request),
   );
-}
-export function useAssignAdminCategoryAttribute() {
-  return useAdminMutation(assignCategoryAttribute);
-}
-export function useDeleteAdminCategoryAttribute() {
-  return useAdminMutation(deleteCategoryAttributeAssignment);
-}
-export function useCreateAdminOption() {
-  return useAdminMutation(createOption);
-}
-export function useUpdateAdminOption() {
-  return useAdminMutation(
-    ({
-      id,
-      request,
-    }: {
-      id: string;
-      request: Parameters<typeof updateOption>[1];
-    }) => updateOption(id, request),
-  );
-}
-export function useDeleteAdminOption() {
-  return useAdminMutation(deleteOption);
 }
 export function useCreateAdminAttribute() {
   return useAdminMutation(createAttribute);
@@ -448,20 +293,6 @@ export function useUpdateAdminDiscount() {
 }
 export function useDeleteAdminDiscount() {
   return useAdminMutation(deleteDiscount);
-}
-export function useCreateAdminEmployee() {
-  return useAdminMutation(createEmployee);
-}
-export function useUpdateAdminEmployee() {
-  return useAdminMutation(
-    ({
-      id,
-      request,
-    }: {
-      id: string;
-      request: Parameters<typeof updateEmployee>[1];
-    }) => updateEmployee(id, request),
-  );
 }
 export function useCreateAdminSupplier() {
   return useAdminMutation(createSupplier);

@@ -1,8 +1,6 @@
 "use client";
 
-import { useCursorTrail } from "@/lib/hooks/use-cursor-trail";
-import Image from "next/image";
-import { CreditCard, Eye, Search, Star, Trash2 } from "lucide-react";
+import { CreditCard, Eye, Search, Star } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { useState, type ReactNode } from "react";
@@ -15,36 +13,26 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Link } from "@/i18n/navigation";
+import { DiscountCreateForm } from "./discount-create";
+import { DiscountListPage } from "./discount-list";
 import { formatMoney } from "@/lib/format";
 import {AccountStatus} from "@/lib/domain/account-enums";
-import {DiscountStatus, DiscountState, DiscountType, OrderStatus, PaymentMethodCode, PaymentStatus} from "@/lib/domain/commerce-enums";
+import {DiscountStatus, OrderStatus, PaymentMethodCode, PaymentStatus} from "@/lib/domain/commerce-enums";
 import {ResourceStatus, ReviewStatus} from "@/lib/domain/catalog-enums";
-import type {CategoryTree, Review} from "@/features/catalog/contracts/responses";
+import type {Review} from "@/features/catalog/contracts/responses";
 
-import { useBrands, useCategories } from "@/features/catalog/queries";
-import { CatalogCategoryIcon } from "@/features/catalog/components/catalog-category-icon";
 import { ProductCreateForm } from "./catalog-management";
+import { toNumber } from "./list-helpers";
+import { ProductListPage } from "./product-list";
 import { ConfirmAction } from "./confirm-action";
 import { StatusSelect } from "./status-select";
 import {
-  DiscountCreateForm,
-  EmployeeCreateForm,
   SupplierCreateForm,
 } from "./management-forms";
 import {
-  useAdminCustomerStatus,
-  useAdminCustomers,
-  useAdminDiscountStatus,
-  useAdminDiscounts,
-  useAdminEmployeeStatus,
-  useAdminEmployees,
-  useAdminProductStatus,
-  useAdminProducts,
   useAdminReviewStatus,
   useAdminReviews,
   useAdminSuppliers,
-  useDeleteAdminProduct,
-  useRoles,
 } from "./queries";
 import { AdminPagination } from "./admin-pagination";
 import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
@@ -58,9 +46,9 @@ import { useAdminOrders } from "@/features/orders/queries";
 
 export type AdminResource =
   | "products"
+  | "product-create"
+  | "discount-create"
   | "orders"
-  | "customers"
-  | "employees"
   | "discounts"
   | "suppliers"
   | "payments"
@@ -70,15 +58,15 @@ export type AdminResource =
 export function AdminResourcePage({ resource }: { resource: AdminResource }) {
   switch (resource) {
     case "products":
-      return <Products />;
+      return <ProductListPage />;
+    case "product-create":
+      return <ProductCreate />;
+    case "discount-create":
+      return <DiscountCreate />;
     case "orders":
       return <Orders />;
-    case "customers":
-      return <Customers />;
-    case "employees":
-      return <Employees />;
     case "discounts":
-      return <Discounts />;
+      return <DiscountListPage />;
     case "suppliers":
       return <Suppliers />;
     case "payments":
@@ -88,6 +76,25 @@ export function AdminResourcePage({ resource }: { resource: AdminResource }) {
     case "reviews":
       return <Reviews />;
   }
+}
+
+function ProductCreate() {
+  const t = useTranslations("admin");
+  return (
+    <Shell title={t("createProduct")} description={t("productCreateDescription")}>
+      <ProductCreateForm />
+    </Shell>
+  );
+}
+
+function DiscountCreate() {
+  const t = useTranslations("admin");
+  const td = useTranslations("admin.discountCreate");
+  return (
+    <Shell title={t("createDiscount")} description={td("pageDescription")}>
+      <DiscountCreateForm />
+    </Shell>
+  );
 }
 
 function Heading({
@@ -338,276 +345,6 @@ function StatusOptions({
 
 const ORDER_STATUSES = Object.values(OrderStatus);
 
-function Products() {
-  const t = useTranslations("admin");
-  const locale = useLocale();
-  const categories = useCategories();
-  const brands = useBrands();
-  const [draft, setDraft] = useState({
-    keyword: "",
-    status: "",
-    categoryId: "",
-    brandId: "",
-    minPrice: "",
-    maxPrice: "",
-  });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
-  const query = useAdminProducts({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
-    status: applied.status || undefined,
-    categoryId: applied.categoryId || undefined,
-    brandId: applied.brandId || undefined,
-    minPrice: toNumber(applied.minPrice),
-    maxPrice: toNumber(applied.maxPrice),
-  });
-  const trail = useCursorTrail(JSON.stringify({ ...applied, cursor: undefined }));
-  const mutation = useAdminProductStatus();
-  const remove = useDeleteAdminProduct();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
-  const reset = () => {
-    const empty = {
-      keyword: "",
-      status: "",
-      categoryId: "",
-      brandId: "",
-      minPrice: "",
-      maxPrice: "",
-    };
-    setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
-  };
-  const page = query.data
-    ? { ...query.data, hasPrev: trail.hasPrev, prevCursor: trail.prevCursor }
-    : undefined;
-  return (
-    <Shell
-      title={t("resource.products")}
-      description={t("resource.productsDescription")}
-    >
-      <ProductCreateForm />
-      <FilterBar
-        value={draft.keyword}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
-        }
-        placeholder={t("searchProducts")}
-        onSubmit={apply}
-        onReset={reset}
-      >
-        <FilterSelect
-          id="product-status"
-          label={t("status")}
-          value={draft.status}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, status: value }))
-          }
-        >
-          <StatusOptions kind="product" />
-        </FilterSelect>
-        <FilterSelect
-          id="product-category-filter"
-          label={t("category")}
-          value={draft.categoryId}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, categoryId: value }))
-          }
-        >
-          <option value="">{t("allCategories")}</option>
-          {flattenCategories(categories.data ?? []).map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.label}
-            </option>
-          ))}
-        </FilterSelect>
-        <FilterSelect
-          id="product-brand-filter"
-          label={t("brand")}
-          value={draft.brandId}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, brandId: value }))
-          }
-        >
-          <option value="">{t("allBrands")}</option>
-          {(brands.data ?? [])
-            .filter((brand) => brand.status === ResourceStatus.Active)
-            .map((brand) => (
-              <option key={brand.id} value={brand.id}>
-                {brand.name}
-              </option>
-            ))}
-        </FilterSelect>
-        <div className="grid grid-cols-2 gap-2">
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {t("minPrice")}
-            </span>
-            <Input
-              type="number"
-              min={0}
-              value={draft.minPrice}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  minPrice: event.target.value,
-                }))
-              }
-            />
-          </label>
-          <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-muted-foreground">
-              {t("maxPrice")}
-            </span>
-            <Input
-              type="number"
-              min={0}
-              value={draft.maxPrice}
-              onChange={(event) =>
-                setDraft((current) => ({
-                  ...current,
-                  maxPrice: event.target.value,
-                }))
-              }
-            />
-          </label>
-        </div>
-      </FilterBar>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} />
-      ) : (
-        <>
-          {(page?.items ?? []).length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="space-y-3">
-              {(page?.items ?? []).map((product, index) => (
-                <Card
-                  key={product.id ?? index}
-                  className="transition hover:border-primary/30 hover:shadow-md"
-                >
-                  <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
-                    <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-muted/60">
-                      {product.imageUrl ? (
-                        <Image
-                          src={product.imageUrl}
-                          alt={product.name ?? ""}
-                          fill
-                          sizes="64px"
-                          unoptimized
-                          className="object-cover"
-                        />
-                      ) : (
-                        <span className="flex size-full items-center justify-center text-primary/45">
-                          <CatalogCategoryIcon
-                            categoryName={product.categoryName ?? product.name}
-                            className="size-8"
-                            strokeWidth={1.45}
-                          />
-                        </span>
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {product.id ? (
-                          <Link
-                            href={`/admin/products/${product.id}`}
-                            className="font-semibold hover:text-primary hover:underline"
-                          >
-                            {product.name}
-                          </Link>
-                        ) : (
-                          <p className="font-semibold">{product.name}</p>
-                        )}
-                        <StatusBadge status={product.status} />
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {product.brandName ?? t("noBrand")} ·{" "}
-                        {product.categoryName ?? t("uncategorized")}
-                      </p>
-                      <p className="mt-1 text-sm font-medium">
-                        {formatMoney(product.minPrice, locale)}
-                        {product.maxPrice &&
-                        product.maxPrice !== product.minPrice
-                          ? ` – ${formatMoney(product.maxPrice, locale)}`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {product.id ? (
-                        <Link
-                          href={`/admin/products/${product.id}`}
-                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-                        >
-                          <Eye className="size-3.5" />
-                          <span className="hidden sm:inline">{t("view")}</span>
-                        </Link>
-                      ) : null}
-                      <StatusSelect
-                        currentStatus={product.status}
-                        options={[ResourceStatus.Active, ResourceStatus.Inactive]}
-                        label={t("status")}
-                        onStatus={(status) =>
-                          mutation.mutateAsync({
-                            id: product.id ?? "",
-                            status,
-                          })
-                        }
-                        className="h-9 w-32"
-                        disabled={!product.id || mutation.isPending}
-                      />
-                      {product.id ? (
-                        <ConfirmAction
-                          title={t("delete")}
-                          description={t("confirmDelete")}
-                          confirmLabel={t("delete")}
-                          cancelLabel={t("cancel")}
-                          onConfirm={() => remove.mutateAsync(product.id!)}
-                          size="icon-sm"
-                          className="text-destructive hover:text-destructive"
-                          ariaLabel={t("delete")}
-                        >
-                          <Trash2 className="size-4" />
-                        </ConfirmAction>
-                      ) : null}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-          <ListFooter
-            page={page}
-            onPrev={() => {
-              const cursor = trail.prevCursor;
-              trail.pop();
-              setApplied((current) => ({ ...current, cursor }));
-            }}
-            onNext={() => {
-              trail.push(applied.cursor);
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }));
-            }}
-          />
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
-    </Shell>
-  );
-}
-
 function Orders() {
   const t = useTranslations("admin");
   const locale = useLocale();
@@ -770,354 +507,6 @@ function Orders() {
           ) : null}
         </>
       )}
-    </Shell>
-  );
-}
-
-function Customers() {
-  const t = useTranslations("admin");
-  const locale = useLocale();
-  const [draft, setDraft] = useState({ keyword: "", status: "" });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
-  const query = useAdminCustomers({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
-    status: applied.status || undefined,
-  });
-  const mutation = useAdminCustomerStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
-  const reset = () => {
-    const empty = { keyword: "", status: "" };
-    setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
-  };
-  const page = query.data;
-  return (
-    <Shell
-      title={t("resource.customers")}
-      description={t("resource.customersDescription")}
-    >
-      <FilterBar
-        value={draft.keyword}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
-        }
-        placeholder={t("searchCustomers")}
-        onSubmit={apply}
-        onReset={reset}
-      >
-        <FilterSelect
-          id="customer-status"
-          label={t("status")}
-          value={draft.status}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, status: value }))
-          }
-        >
-          <StatusOptions kind="account" />
-        </FilterSelect>
-      </FilterBar>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} />
-      ) : (
-        <>
-          <ListRows
-            rows={(page?.items ?? []).map((customer) => ({
-              id: customer.accountId ?? customer.id,
-              title: customer.fullName ?? "—",
-              meta: `${customer.email ?? "—"} · ${customer.phone ?? "—"} · ${customer.totalOrders ?? 0} ${t("ordersShort")} · ${formatMoney(customer.totalSpent, locale)}`,
-              status: customer.status,
-              href:
-                (customer.accountId ?? customer.id)
-                  ? `/admin/customers/${customer.accountId ?? customer.id}`
-                  : undefined,
-            }))}
-            onStatus={(id, value) =>
-              mutation.mutateAsync({ id, status: value })
-            }
-            kind="account"
-          />
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
-    </Shell>
-  );
-}
-
-function Employees() {
-  const t = useTranslations("admin");
-  const locale = useLocale();
-  const roles = useRoles();
-  const [draft, setDraft] = useState({ keyword: "", status: "", roleName: "" });
-  const [applied, setApplied] = useState({
-    ...draft,
-    cursor: undefined as string | undefined,
-  });
-  const query = useAdminEmployees({
-    limit: 20,
-    cursor: applied.cursor,
-    keyword: applied.keyword || undefined,
-    status: applied.status || undefined,
-    roleName: applied.roleName || undefined,
-  });
-  const mutation = useAdminEmployeeStatus();
-  const apply = () =>
-    setApplied({ ...draft, keyword: draft.keyword.trim(), cursor: undefined });
-  const reset = () => {
-    const empty = { keyword: "", status: "", roleName: "" };
-    setDraft(empty);
-    setApplied({ ...empty, cursor: undefined });
-  };
-  const page = query.data;
-  return (
-    <Shell
-      title={t("resource.employees")}
-      description={t("resource.employeesDescription")}
-    >
-      <EmployeeCreateForm />
-      <FilterBar
-        value={draft.keyword}
-        onChange={(value) =>
-          setDraft((current) => ({ ...current, keyword: value }))
-        }
-        placeholder={t("searchEmployees")}
-        onSubmit={apply}
-        onReset={reset}
-      >
-        <FilterSelect
-          id="employee-status"
-          label={t("status")}
-          value={draft.status}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, status: value }))
-          }
-        >
-          <StatusOptions kind="account" />
-        </FilterSelect>
-        <FilterSelect
-          id="employee-role-filter"
-          label={t("role")}
-          value={draft.roleName}
-          onChange={(value) =>
-            setDraft((current) => ({ ...current, roleName: value }))
-          }
-        >
-          <option value="">{t("allRoles")}</option>
-          {(roles.data ?? []).map((role) =>
-            role.name ? (
-              <option key={role.id} value={role.name}>
-                {role.name}
-              </option>
-            ) : null,
-          )}
-        </FilterSelect>
-      </FilterBar>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} />
-      ) : (
-        <>
-          <ListRows
-            rows={(page?.items ?? []).map((employee) => ({
-              id: employee.accountId ?? employee.id,
-              title: employee.fullName ?? "—",
-              meta: `${employee.roleName ?? "—"} · ${employee.email ?? "—"} · ${formatMoney(employee.salary, locale)}`,
-              status: employee.status,
-              href:
-                (employee.accountId ?? employee.id)
-                  ? `/admin/employees/${employee.accountId ?? employee.id}`
-                  : undefined,
-            }))}
-            onStatus={(id, value) =>
-              mutation.mutateAsync({ id, status: value })
-            }
-            kind="account"
-          />
-          <ListFooter
-            page={page}
-            onPrev={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.prevCursor,
-              }))
-            }
-            onNext={() =>
-              setApplied((current) => ({
-                ...current,
-                cursor: page?.nextCursor,
-              }))
-            }
-          />
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
-    </Shell>
-  );
-}
-
-const DISCOUNT_STATES = [DiscountState.Running, DiscountState.Scheduled, DiscountState.Expired, DiscountState.Locked];
-
-function Discounts() {
-  const t = useTranslations("admin");
-  const locale = useLocale();
-  const [state, setState] = useState("");
-  const [pageNumber, setPageNumber] = useState(0);
-  const query = useAdminDiscounts({ page: pageNumber, size: 20, state: state || undefined });
-  const mutation = useAdminDiscountStatus();
-  const page = query.data;
-  return (
-    <Shell
-      title={t("resource.discounts")}
-      description={t("resource.discountsDescription")}
-    >
-      <DiscountCreateForm />
-      <Card className="mb-6">
-        <CardContent className="flex flex-wrap items-end gap-3 p-4">
-          <div className="w-full sm:w-64">
-            <FilterSelect
-              id="discount-state"
-              label={t("discountState")}
-              value={state}
-              onChange={(value) => {
-                setState(value);
-                setPageNumber(0);
-              }}
-            >
-              <option value="">{t("allStates")}</option>
-              {DISCOUNT_STATES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`statusValues.${value}`)}
-                </option>
-              ))}
-            </FilterSelect>
-          </div>
-          <Button
-            type="button"
-            size="field"
-            variant="outline"
-            onClick={() => {
-              setState("");
-              setPageNumber(0);
-            }}
-          >
-            {t("clearFilters")}
-          </Button>
-        </CardContent>
-      </Card>
-      {query.isPending ? (
-        <Loading />
-      ) : query.isError ? (
-        <Failure error={query.error} />
-      ) : (
-        <>
-          {(page?.items ?? []).length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="space-y-3">
-              {(page?.items ?? []).map((discount) => (
-                <Card
-                  key={discount.id}
-                  className="transition hover:border-primary/30 hover:shadow-md"
-                >
-                  <CardContent className="flex flex-wrap items-center gap-4 p-4 sm:p-5">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Link
-                          href={`/admin/discounts/${discount.id}`}
-                          className="font-semibold hover:text-primary hover:underline"
-                        >
-                          {discount.code ?? discount.title}
-                        </Link>
-                        <StatusBadge status={discount.state} />
-                      </div>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {discount.title} · {t(`scopeValues.${discount.applicationScope}`)} ·{" "}
-                        {discount.discountType === DiscountType.Percent
-                          ? `${discount.value}%`
-                          : formatMoney(discount.value, locale)}
-                      </p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {new Date(discount.startAt ?? "").toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US")}
-                        {" – "}
-                        {new Date(discount.endAt ?? "").toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US")}
-                        {" · "}
-                        {t("minOrderAmount")} {formatMoney(discount.minOrderAmount, locale)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/admin/discounts/${discount.id}`}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-lg border bg-background px-3 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-                      >
-                        <Eye className="size-3.5" />
-                        <span className="hidden sm:inline">{t("view")}</span>
-                      </Link>
-                      <StatusSelect
-                        currentStatus={discount.status}
-                        options={[DiscountStatus.Active, DiscountStatus.Inactive]}
-                        label={t("status")}
-                        onStatus={(status) =>
-                          mutation.mutateAsync({ id: discount.id, status })
-                        }
-                        disabled={mutation.isPending}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-          {page && page.totalPages > 1 ? (
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs text-muted-foreground">
-                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
-              </p>
-              <AdminPagination
-                hasPrev={page.page > 0}
-                hasNext={!page.last}
-                onPrev={() => setPageNumber((current) => Math.max(0, current - 1))}
-                onNext={() => setPageNumber((current) => current + 1)}
-              />
-            </div>
-          ) : null}
-        </>
-      )}
-      {mutation.isError ? (
-        <div className="mt-4">
-          <Failure error={mutation.error} />
-        </div>
-      ) : null}
     </Shell>
   );
 }
@@ -1785,29 +1174,6 @@ function ListFooter({
       />
     </div>
   );
-}
-
-function flattenCategories(
-  categories: CategoryTree[],
-  depth = 0,
-): { id: string; label: string }[] {
-  return categories.flatMap((category) => [
-    ...(category.id
-      ? [
-          {
-            id: category.id,
-            label: `${"— ".repeat(depth)}${category.name ?? ""}`,
-          },
-        ]
-      : []),
-    ...flattenCategories(category.children ?? [], depth + 1),
-  ]);
-}
-
-function toNumber(value: string) {
-  if (!value.trim()) return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function dateParam(value: string, endOfDay: boolean) {
