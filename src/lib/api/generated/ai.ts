@@ -72,6 +72,126 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversations */
+        get: operations["list_conversations_api_v1_conversations_get"];
+        put?: never;
+        /** Create Conversation */
+        post: operations["create_conversation_api_v1_conversations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["get_conversation_api_v1_conversations__conversation_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Messages */
+        get: operations["list_messages_api_v1_conversations__conversation_id__messages_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit Run */
+        post: operations["submit_run_api_v1_conversations__conversation_id__runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_api_v1_conversations__conversation_id__runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Run */
+        post: operations["cancel_run_api_v1_conversations__conversation_id__runs__run_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/conversations/{conversation_id}/runs/{run_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Run Events */
+        get: operations["run_events_api_v1_conversations__conversation_id__runs__run_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/evaluate": {
         parameters: {
             query?: never;
@@ -127,6 +247,29 @@ export type paths = {
 export type webhooks = Record<string, never>;
 export type components = {
     schemas: {
+        /** AccessoryRequestV1 */
+        AccessoryRequestV1: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "OWNED" | "PINNED" | "RECOMMEND";
+            /**
+             * Quantity
+             * @default 1
+             * @constant
+             */
+            quantity: 1;
+            /** Variant Id */
+            variant_id?: string | null;
+        };
+        /**
+         * AccessoryType
+         * @enum {string}
+         */
+        AccessoryType: "MONITOR" | "MOUSE" | "KEYBOARD" | "HEADSET";
+        /** @enum {string} */
+        AnswerReason: "NO_RESULTS" | "SOURCE_UNAVAILABLE" | "DEPENDENCY_UNAVAILABLE" | "SCOPED_EXHAUSTION" | "INCOMPLETE_SEARCH" | "FACT_UNKNOWN" | "FACT_CONFLICT";
         /** ApiResponse[ChatData] */
         ApiResponse_ChatData_: {
             data?: components["schemas"]["ChatData"] | null;
@@ -151,9 +294,57 @@ export type components = {
              */
             message: components["schemas"]["ResponseMessage"];
         };
+        /** ApiResponse[ConversationViewV2] */
+        ApiResponse_ConversationViewV2_: {
+            data?: components["schemas"]["ConversationViewV2"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
         /** ApiResponse[HealthData] */
         ApiResponse_HealthData_: {
             data?: components["schemas"]["HealthData"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
+        /** ApiResponse[PageV1[ConversationViewV2]] */
+        ApiResponse_PageV1_ConversationViewV2__: {
+            data?: components["schemas"]["PageV1_ConversationViewV2_"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
+        /** ApiResponse[PageV1[MessageViewV1]] */
+        ApiResponse_PageV1_MessageViewV1__: {
+            data?: components["schemas"]["PageV1_MessageViewV1_"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
+        /** ApiResponse[RunViewV1] */
+        ApiResponse_RunViewV1_: {
+            data?: components["schemas"]["RunViewV1"] | null;
             /** Errors */
             errors?: components["schemas"]["ErrorDetail"][];
             /**
@@ -199,6 +390,23 @@ export type components = {
              */
             message: components["schemas"]["ResponseMessage"];
         };
+        /**
+         * AssistantIntent
+         * @description Validated capability branch selected by the planning graph.
+         * @enum {string}
+         */
+        AssistantIntent: "SEARCH" | "CONSULT" | "COMPARE" | "EVALUATE";
+        /**
+         * BudgetScope
+         * @enum {string}
+         */
+        BudgetScope: "BUILD_PC" | "FULL_SETUP";
+        /**
+         * BuildObjective
+         * @description Specific optimization objectives yielding distinct build variations.
+         * @enum {string}
+         */
+        BuildObjective: "PERFORMANCE" | "BALANCED" | "UPGRADE_FRIENDLY";
         /** ChatData */
         ChatData: {
             /** Answer */
@@ -208,8 +416,7 @@ export type components = {
              * Format: uuid
              */
             conversation_id: string;
-            /** Intent */
-            intent: string;
+            intent: components["schemas"]["AssistantIntent"];
             /** Products */
             products?: components["schemas"]["ProductCard"][];
         };
@@ -219,6 +426,51 @@ export type components = {
             conversation_id?: string | null;
             /** Message */
             message: string;
+        };
+        /** ClarificationItemV1 */
+        ClarificationItemV1: {
+            /** Item Index */
+            item_index: number;
+            /** Options */
+            options?: components["schemas"]["ClarificationOptionV1"][];
+            /** Quantity Amount */
+            quantity_amount?: number | null;
+            /** Reason */
+            reason: string;
+            /** Unit Options */
+            unit_options?: ("VND" | "GB" | "TB" | "GiB" | "TiB" | "W" | "FPS")[];
+        };
+        /** ClarificationOptionV1 */
+        ClarificationOptionV1: {
+            /** Name */
+            name: string;
+            /** Sku */
+            sku: string;
+            /**
+             * Variant Id
+             * Format: uuid
+             */
+            variant_id: string;
+        };
+        /** ClarificationReplyV1 */
+        ClarificationReplyV1: {
+            /**
+             * Pending Message Id
+             * Format: uuid
+             */
+            pending_message_id: string;
+            /** Selections */
+            selections: components["schemas"]["ClarificationSelectionV1"][];
+        };
+        /** ClarificationSelectionV1 */
+        ClarificationSelectionV1: {
+            /** Item Index */
+            item_index: number;
+            /**
+             * Variant Id
+             * Format: uuid
+             */
+            variant_id: string;
         };
         /** CompareData */
         CompareData: {
@@ -234,6 +486,11 @@ export type components = {
             /** Question */
             question?: string | null;
         };
+        /**
+         * ComponentCategory
+         * @enum {string}
+         */
+        ComponentCategory: "CPU" | "MAINBOARD" | "RAM" | "GPU" | "PSU" | "CASE" | "COOLER" | "STORAGE";
         /** ConsultData */
         ConsultData: {
             /** Answer */
@@ -253,6 +510,64 @@ export type components = {
             /** Query */
             query: string;
         };
+        /** ConversationCreateV1 */
+        ConversationCreateV1: {
+            /** Title */
+            title?: string | null;
+        };
+        /** ConversationViewV2 */
+        ConversationViewV2: {
+            build?: components["schemas"]["PublicBuildV1"] | null;
+            clarification?: components["schemas"]["PublicClarificationV1"] | null;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            flexible?: components["schemas"]["PublicFlexibleStateV2"] | null;
+            /**
+             * Readiness
+             * @enum {string}
+             */
+            readiness: "INITIALIZING" | "READY";
+            /** Revision */
+            revision: number;
+            /**
+             * Schema Version
+             * @default 2
+             * @constant
+             */
+            schema_version: 2;
+            state: components["schemas"]["PublicConsultationV1"];
+            task_clarification?: components["schemas"]["PublicTaskClarificationV1"] | null;
+            /** Title */
+            title: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DraftPendingCommandV2 */
+        DraftPendingCommandV2: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "REPLACE" | "DISCARD";
+            /** Constraints Revision */
+            constraints_revision: number;
+            /**
+             * Pending Message Id
+             * Format: uuid
+             */
+            pending_message_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            target: "CLARIFICATION" | "REQUIREMENTS" | "TASKS";
+        };
         /** ErrorDetail */
         ErrorDetail: {
             /** Code */
@@ -261,6 +576,19 @@ export type components = {
             field?: string | null;
             /** Message */
             message: string;
+        };
+        /** ErrorResponse */
+        ErrorResponse: {
+            /** Data */
+            data?: null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default INTERNAL_SERVER_ERROR
+             * @example VALIDATION_ERROR
+             */
+            message: components["schemas"]["ResponseMessage"];
         };
         /** EvaluateData */
         EvaluateData: {
@@ -278,6 +606,8 @@ export type components = {
             /** Question */
             question?: string | null;
         };
+        /** @enum {string} */
+        FinalOutcome: "ANSWERED" | "BUILT" | "INFEASIBLE" | "SEARCH_INCOMPLETE" | "INSUFFICIENT_EVIDENCE" | "DEPENDENCY_UNAVAILABLE";
         /** HealthData */
         HealthData: {
             /**
@@ -290,6 +620,70 @@ export type components = {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** MessageViewV1 */
+        MessageViewV1: {
+            /** Content */
+            content: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "user" | "assistant";
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Sequence */
+            sequence: number;
+        };
+        /** OwnedPartRefV1 */
+        OwnedPartRefV1: {
+            /**
+             * Exclude From Budget
+             * @default true
+             * @constant
+             */
+            exclude_from_budget: true;
+            /**
+             * Variant Id
+             * Format: uuid
+             */
+            variant_id: string;
+        };
+        /** PageV1[ConversationViewV2] */
+        PageV1_ConversationViewV2_: {
+            /** Items */
+            items: components["schemas"]["ConversationViewV2"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** PageV1[MessageViewV1] */
+        PageV1_MessageViewV1_: {
+            /** Items */
+            items: components["schemas"]["MessageViewV1"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        PendingCommandV2: components["schemas"]["DraftPendingCommandV2"] | components["schemas"]["ProposalPendingCommandV2"];
+        /** PinnedPartRefV1 */
+        PinnedPartRefV1: {
+            /**
+             * Variant Id
+             * Format: uuid
+             */
+            variant_id: string;
         };
         /** ProductCard */
         ProductCard: {
@@ -331,12 +725,295 @@ export type components = {
             /** Status */
             status?: string | null;
         };
+        /** ProposalConfirmation */
+        ProposalConfirmation: {
+            /** Base Requirements Hash */
+            base_requirements_hash: string;
+            /** Proposal Hash */
+            proposal_hash: string;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /**
+             * Schema Version
+             * @default 2
+             */
+            schema_version: number;
+            /** Target Revision */
+            target_revision: number;
+        };
+        /** ProposalPendingCommandV2 */
+        ProposalPendingCommandV2: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "REPLACE" | "DISCARD";
+            /** Base Requirements Hash */
+            base_requirements_hash: string;
+            /** Proposal Hash */
+            proposal_hash: string;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /**
+             * Schema Version
+             * @default 2
+             */
+            schema_version: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            target: "PROPOSAL";
+            /** Target Revision */
+            target_revision: number;
+        };
+        /** PublicBuildPartV1 */
+        PublicBuildPartV1: {
+            /**
+             * Is Owned
+             * @default false
+             */
+            is_owned: boolean;
+            /**
+             * Is Pinned
+             * @default false
+             */
+            is_pinned: boolean;
+            /** Name */
+            name: string;
+            /** Slot */
+            slot: components["schemas"]["ComponentCategory"] | components["schemas"]["AccessoryType"];
+            /** Spending Vnd */
+            spending_vnd: number;
+            /** Synthetic Kind */
+            synthetic_kind?: ("INTEGRATED_GPU" | "STOCK_COOLER") | null;
+            /** Variant Id */
+            variant_id: string | null;
+        };
+        /** PublicBuildV1 */
+        PublicBuildV1: {
+            objective: components["schemas"]["BuildObjective"];
+            /** Parts */
+            parts: components["schemas"]["PublicBuildPartV1"][];
+            /** Stale */
+            stale: boolean;
+            /** Total Spending Vnd */
+            total_spending_vnd: number;
+        };
+        /** PublicClarificationV1 */
+        PublicClarificationV1: {
+            /** Constraints Revision */
+            constraints_revision: number;
+            /** Items */
+            items: components["schemas"]["ClarificationItemV1"][];
+            /**
+             * Pending Message Id
+             * Format: uuid
+             */
+            pending_message_id: string;
+        };
+        /** PublicConsultationV1 */
+        PublicConsultationV1: {
+            /** Accessories */
+            accessories: {
+                [key: string]: components["schemas"]["AccessoryRequestV1"];
+            };
+            /** Accessory Budget Vnd */
+            accessory_budget_vnd: number | null;
+            budget_scope: components["schemas"]["BudgetScope"] | null;
+            /** Build Stale */
+            build_stale: boolean;
+            /** Form Factor Preference */
+            form_factor_preference: string | null;
+            /** Owned Parts */
+            owned_parts: {
+                [key: string]: components["schemas"]["OwnedPartRefV1"];
+            };
+            /** Pinned Parts */
+            pinned_parts: {
+                [key: string]: components["schemas"]["PinnedPartRefV1"];
+            };
+            /** Preferred Cpu Brand */
+            preferred_cpu_brand: string | null;
+            /** Preferred Gpu Brand */
+            preferred_gpu_brand: string | null;
+            /** Target Budget Vnd */
+            target_budget_vnd: number | null;
+            /** Target Fps */
+            target_fps: number | null;
+            target_resolution: components["schemas"]["ResolutionTier"] | null;
+            use_case: components["schemas"]["UseCaseProfile"] | null;
+        };
+        /** PublicFlexibleStateV2 */
+        PublicFlexibleStateV2: {
+            /** Answer */
+            answer: string;
+            clarification?: components["schemas"]["PublicClarificationV1"] | null;
+            /** Constraints Revision */
+            constraints_revision: number;
+            /** Missing Fields */
+            missing_fields?: string[];
+            proposal?: components["schemas"]["PublicProposalV2"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "COMPLETED" | "UNRESOLVED" | "WAITING_INPUT" | "DISCARDED";
+            task_clarification?: components["schemas"]["PublicTaskClarificationV1"] | null;
+            /** Task Message */
+            task_message: string;
+            /**
+             * Task Message Id
+             * Format: uuid
+             */
+            task_message_id: string;
+            /** Task Outcomes */
+            task_outcomes: components["schemas"]["PublicTaskOutcomeV2"][];
+        };
+        /** PublicProposalChangeV2 */
+        PublicProposalChangeV2: {
+            /**
+             * Item Id
+             * Format: uuid
+             */
+            item_id: string;
+            /**
+             * Operation
+             * @enum {string}
+             */
+            operation: "SET" | "CLEAR";
+            /** Operator */
+            operator?: ("EQ" | "GTE" | "LTE") | null;
+            /** Predicate */
+            predicate?: string | null;
+            /** Strength */
+            strength?: ("HARD" | "SOFT") | null;
+            /** Subject */
+            subject?: ("SETUP" | "WORKLOAD") | components["schemas"]["ComponentCategory"] | null;
+            /**
+             * Target
+             * @enum {string}
+             */
+            target: "REQUIREMENT" | "GOAL" | "RESOURCE";
+            /** Value */
+            value?: (components["schemas"]["QuantityValue"] | components["schemas"]["TextValue"] | components["schemas"]["ReferenceValue"]) | null;
+            /** Variant Id */
+            variant_id?: string | null;
+        };
+        /** PublicProposalV2 */
+        PublicProposalV2: {
+            /** Base Requirements Hash */
+            base_requirements_hash: string;
+            /** Changes */
+            changes: components["schemas"]["PublicProposalChangeV2"][];
+            /** Proposal Hash */
+            proposal_hash: string;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /** Target Revision */
+            target_revision: number;
+        };
+        /** PublicTaskClarificationV1 */
+        PublicTaskClarificationV1: {
+            /** Constraints Revision */
+            constraints_revision: number;
+            /** Items */
+            items: components["schemas"]["TaskClarificationItemV1"][];
+            /**
+             * Pending Message Id
+             * Format: uuid
+             */
+            pending_message_id: string;
+        };
+        /** PublicTaskOutcomeV2 */
+        PublicTaskOutcomeV2: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "BUILD" | "COMPARE" | "ANSWER" | "EXPLAIN_SAVED_BUILD";
+            outcome?: components["schemas"]["FinalOutcome"] | null;
+            reason?: components["schemas"]["AnswerReason"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "COMPLETED" | "UNRESOLVED";
+        };
+        /** QuantityValue */
+        QuantityValue: {
+            /** Amount */
+            amount: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "QUANTITY";
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "VND" | "GB" | "TB" | "GiB" | "TiB" | "W" | "FPS";
+        };
+        /** ReferenceValue */
+        ReferenceValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "REFERENCE";
+            /**
+             * Variant Id
+             * Format: uuid
+             */
+            variant_id: string;
+        };
+        /**
+         * ResolutionTier
+         * @enum {string}
+         */
+        ResolutionTier: "1080P" | "1440P" | "4K";
         /**
          * ResponseMessage
          * @description Stable top-level keys that the frontend maps to localized messages.
          * @enum {string}
          */
-        ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_CHAT_STREAM_STARTED" | "AI_CHAT_STREAM_DELTA" | "AI_CHAT_STREAM_COMPLETED" | "AI_CHAT_STREAM_FAILED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND";
+        ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_CHAT_STREAM_STARTED" | "AI_CHAT_STREAM_DELTA" | "AI_CHAT_STREAM_COMPLETED" | "AI_CHAT_STREAM_FAILED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND" | "AI_CONVERSATION_CREATED" | "AI_CONVERSATION_RETRIEVED" | "AI_CONVERSATIONS_LISTED" | "AI_CONVERSATION_DELETED" | "AI_MESSAGES_LISTED" | "AI_RUN_ACCEPTED" | "AI_RUN_RETRIEVED" | "AI_RUN_CANCEL_REQUESTED" | "AI_RUN_FAILED" | "AI_STREAM_INTERRUPTED" | "AI_UNAUTHENTICATED" | "AI_CONVERSATION_NOT_FOUND" | "AI_REVISION_CONFLICT" | "AI_REQUEST_CONFLICT" | "AI_REQUEST_VERSION_UNSUPPORTED" | "AI_CONVERSATION_BUSY" | "AI_CONVERSATION_NOT_READY" | "AI_INPUT_REQUIRED";
+        /**
+         * RunStatus
+         * @enum {string}
+         */
+        RunStatus: "PENDING" | "RUNNING" | "RECOVERING" | "WAITING_INPUT" | "COMPLETED" | "FAILED_RETRYABLE" | "FAILED_TERMINAL" | "CANCELLED";
+        /** RunViewV1 */
+        RunViewV1: {
+            /** Base Revision */
+            base_revision: number;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            status: components["schemas"]["RunStatus"];
+        };
         /** SearchData */
         SearchData: {
             /** Products */
@@ -354,6 +1031,123 @@ export type components = {
             /** Query */
             query: string;
         };
+        /** TaskClarificationItemV1 */
+        TaskClarificationItemV1: {
+            /** Mention */
+            mention: string;
+            /** Options */
+            options?: components["schemas"]["TaskProductOptionV1"][];
+            /** Reason */
+            reason: string;
+            /** Subject Index */
+            subject_index?: number | null;
+            /** Task Index */
+            task_index: number;
+        };
+        /** TaskClarificationReplyV1 */
+        TaskClarificationReplyV1: {
+            /** Constraints Revision */
+            constraints_revision: number;
+            /**
+             * Pending Message Id
+             * Format: uuid
+             */
+            pending_message_id: string;
+            /** Selections */
+            selections: components["schemas"]["TaskProductSelectionV1"][];
+        };
+        /** TaskProductOptionV1 */
+        TaskProductOptionV1: {
+            /** Name */
+            name: string;
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+        };
+        /** TaskProductSelectionV1 */
+        TaskProductSelectionV1: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Subject Index */
+            subject_index: number;
+            /** Task Index */
+            task_index: number;
+        };
+        /** TextValue */
+        TextValue: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "TEXT";
+            /** Text */
+            text: string;
+        };
+        /** TurnRequestV2Body */
+        TurnRequestV2Body: {
+            confirmation?: components["schemas"]["ProposalConfirmation"] | null;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /** Expected Revision */
+            expected_revision: number;
+            /** Message */
+            message: string;
+            pending_action?: components["schemas"]["PendingCommandV2"] | null;
+            reference_reply?: components["schemas"]["ClarificationReplyV1"] | null;
+            /**
+             * Request Id
+             * Format: uuid
+             */
+            request_id: string;
+            /** Schema Version */
+            schema_version: number;
+            /** Selected Product Ids */
+            selected_product_ids?: string[];
+            task_reply?: components["schemas"]["TaskClarificationReplyV1"] | null;
+            unit_reply?: components["schemas"]["UnitClarificationReplyV1"] | null;
+        };
+        /** UnitClarificationReplyV1 */
+        UnitClarificationReplyV1: {
+            /** Constraints Revision */
+            constraints_revision: number;
+            /**
+             * Pending Message Id
+             * Format: uuid
+             */
+            pending_message_id: string;
+            /** Selections */
+            selections: components["schemas"]["UnitSelectionV1"][];
+        };
+        /** UnitSelectionV1 */
+        UnitSelectionV1: {
+            /** End */
+            end: number;
+            /** Item Index */
+            item_index: number;
+            /** Quote */
+            quote: string;
+            /** Start */
+            start: number;
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "VND" | "GB" | "TB" | "GiB" | "TiB" | "W" | "FPS";
+        };
+        /**
+         * UseCaseProfile
+         * @description Calibrated use-case profiles for hardware weighting and envelope calculation.
+         * @enum {string}
+         */
+        UseCaseProfile: "GAMING_1080P" | "GAMING_1440P" | "GAMING_4K" | "CONTENT_CREATION_3D" | "AI_DATA_SCIENCE" | "OFFICE_BUDGET";
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -504,6 +1298,510 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_conversations_api_v1_conversations_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_PageV1_ConversationViewV2__"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    create_conversation_api_v1_conversations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationCreateV1"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ConversationViewV2_"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_conversation_api_v1_conversations__conversation_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_ConversationViewV2_"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Missing or non-owned conversation */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_messages_api_v1_conversations__conversation_id__messages_get: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_PageV1_MessageViewV1__"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    submit_run_api_v1_conversations__conversation_id__runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TurnRequestV2Body"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RunViewV1_"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_run_api_v1_conversations__conversation_id__runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RunViewV1_"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel_run_api_v1_conversations__conversation_id__runs__run_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_RunViewV1_"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    run_events_api_v1_conversations__conversation_id__runs__run_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };
