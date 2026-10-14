@@ -25,7 +25,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
 import type {
-  CategoryTree,
   ProductDetail,
 } from "@/features/catalog/contracts/responses";
 import type {
@@ -50,6 +49,7 @@ import { StatusSelect } from "./status-select";
 import { DiscountForm } from "./discount-create";
 import { ProductVariantsSection } from "./variant-table";
 
+import { CategoryPicker } from "./category-picker";
 import { useBrands, useCategories } from "@/features/catalog/queries";
 import {
   useAdminDiscount,
@@ -133,22 +133,6 @@ function FormError({
       {error ? <ErrorMessage error={error} /> : null}
     </div>
   ) : null;
-}
-function flatten(
-  categories: CategoryTree[],
-  depth = 0,
-): { id: string; label: string }[] {
-  return categories.flatMap((category) => [
-    ...(category.id
-      ? [
-          {
-            id: category.id,
-            label: `${"— ".repeat(depth)}${category.name ?? ""}`,
-          },
-        ]
-      : []),
-    ...flatten(category.children ?? [], depth + 1),
-  ]);
 }
 export function AdminProductDetailPage({ productId }: { productId: string }) {
   const t = useTranslations("admin");
@@ -290,19 +274,13 @@ function ProductEditor({ product }: { product: ProductDetail }) {
           />
           <div className="space-y-2">
             <Label htmlFor="admin-product-category">{t("category")}</Label>
-            <Select
+            <CategoryPicker
               id="admin-product-category"
               value={form.categoryId}
-              onChange={(event) => set("categoryId", event.target.value)}
-              required
-            >
-              <option value="">{t("chooseCategory")}</option>
-              {flatten(categories.data ?? []).map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
-              ))}
-            </Select>
+              onChange={(categoryId) => set("categoryId", categoryId)}
+              categories={categories.data ?? []}
+              loading={categories.isPending}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="admin-product-brand">{t("brand")}</Label>

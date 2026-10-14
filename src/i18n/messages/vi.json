@@ -1042,6 +1042,16 @@
         "attributeMissing": "Hãy chọn thuộc tính cho mọi dòng.",
         "attributeDuplicate": "Một thuộc tính chỉ dùng được một lần trong form."
       }
+    },
+    "categoryPicker": {
+      "placeholder": "Chọn danh mục",
+      "title": "Chọn danh mục",
+      "search": "Tìm danh mục",
+      "selected": "Đang chọn:",
+      "none": "Chưa chọn",
+      "confirm": "Xác nhận",
+      "noMatch": "Không có danh mục nào khớp.",
+      "level": "Danh mục cấp {level}"
     }
   },
   "errors": {

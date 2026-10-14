@@ -1042,6 +1042,16 @@
         "attributeMissing": "Pick an attribute for every row.",
         "attributeDuplicate": "An attribute can be used only once in the form."
       }
+    },
+    "categoryPicker": {
+      "placeholder": "Choose a category",
+      "title": "Choose a category",
+      "search": "Search categories",
+      "selected": "Selected:",
+      "none": "None yet",
+      "confirm": "Confirm",
+      "noMatch": "No category matches.",
+      "level": "Category level {level}"
     }
   },
   "errors": {

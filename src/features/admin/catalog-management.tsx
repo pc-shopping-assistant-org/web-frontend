@@ -12,10 +12,10 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Link, useRouter } from "@/i18n/navigation";
-import type {CategoryTree} from "@/features/catalog/contracts/responses";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 import { useBrands, useCategories } from "@/features/catalog/queries";
+import { CategoryPicker } from "./category-picker";
 import { galleryRequest, ProductGalleryEditor, type GalleryItem } from "./product-fields";
 import { SpecificationsEditor } from "./specifications-editor";
 import { VariantMatrixEditor } from "./variant-matrix";
@@ -138,24 +138,13 @@ export function ProductCreateForm() {
             />
             <div className="space-y-2">
               <Label htmlFor="product-category">{t("category")}</Label>
-              <Select
+              <CategoryPicker
                 id="product-category"
                 value={form.categoryId}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    categoryId: event.target.value,
-                  }))
-                }
-                required
-              >
-                <option value="">{t("chooseCategory")}</option>
-                {flatten(categories.data ?? []).map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.label}
-                  </option>
-                ))}
-              </Select>
+                onChange={(categoryId) => setForm((current) => ({ ...current, categoryId }))}
+                categories={categories.data ?? []}
+                loading={categories.isPending}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-brand">{t("brand")}</Label>
@@ -275,20 +264,4 @@ function Field({
       />
     </div>
   );
-}
-function flatten(
-  categories: CategoryTree[],
-  depth = 0,
-): { id: string; label: string }[] {
-  return categories.flatMap((category) => [
-    ...(category.id
-      ? [
-          {
-            id: category.id,
-            label: `${"— ".repeat(depth)}${category.name ?? ""}`,
-          },
-        ]
-      : []),
-    ...flatten(category.children ?? [], depth + 1),
-  ]);
 }
