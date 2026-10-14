@@ -21,7 +21,7 @@ it("prefills the build question without auto-sending or attaching mock product I
   expect(streamChat).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", {name: /send/}));
   await screen.findByText("chat answer");
-  expect(streamChat).toHaveBeenCalledWith("Đánh giá cấu hình DEMO của tôi", undefined, expect.any(Object), expect.any(AbortSignal));
+  expect(streamChat).toHaveBeenCalledWith("Đánh giá cấu hình DEMO của tôi", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: []});
   expect(evaluate).not.toHaveBeenCalled();
   expect(compare).not.toHaveBeenCalled();
 });
@@ -33,21 +33,23 @@ it("offers one chat without workflow navigation and keeps conversation history",
   await user.type(screen.getByRole("textbox", {name: "promptLabel"}), "Laptop cho lập trình");
   await user.click(screen.getByRole("button", {name: /send/}));
   expect(await screen.findByText("chat answer")).toBeInTheDocument();
-  expect(streamChat).toHaveBeenCalledWith("Laptop cho lập trình", undefined, expect.any(Object), expect.any(AbortSignal));
+  expect(streamChat).toHaveBeenCalledWith("Laptop cho lập trình", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: []});
 });
-it("uses the evaluation adapter for an attached product inside the same conversation", async () => {
+it("sends an attached product to the same stateful chat runtime", async () => {
   const user = userEvent.setup();
   render(<AssistantPage initialProductIds={["a"]} />);
   await user.type(screen.getByRole("textbox", {name: "promptLabel"}), "Giải thích ưu điểm");
   await user.click(screen.getByRole("button", {name: /send/}));
-  expect(await screen.findByText("evaluation answer")).toBeInTheDocument();
-  expect(evaluate).toHaveBeenCalledWith("a", "Giải thích ưu điểm");
+  expect(await screen.findByText("chat answer")).toBeInTheDocument();
+  expect(streamChat).toHaveBeenCalledWith("Giải thích ưu điểm", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: ["a"]});
+  expect(evaluate).not.toHaveBeenCalled();
 });
 it("uses the comparison adapter without a separate compare page", async () => {
   const user = userEvent.setup();
   render(<AssistantPage initialProductIds={["a", "b"]} />);
   await user.type(screen.getByRole("textbox", {name: "promptLabel"}), "So sánh hai mẫu");
   await user.click(screen.getByRole("button", {name: /send/}));
-  expect(await screen.findByText("comparison answer")).toBeInTheDocument();
-  expect(compare).toHaveBeenCalledWith(["a", "b"], "So sánh hai mẫu");
+  expect(await screen.findByText("chat answer")).toBeInTheDocument();
+  expect(streamChat).toHaveBeenCalledWith("So sánh hai mẫu", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: ["a", "b"]});
+  expect(compare).not.toHaveBeenCalled();
 });

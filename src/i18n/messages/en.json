@@ -527,6 +527,7 @@
     "searchHint": "Describe the outcome you want; semantic search will match it to the current catalog.",
     "send": "Send",
     "newConversation": "New conversation",
+    "confirmProposal": "Confirm proposal",
     "productIds": "Product IDs",
     "productIdsPlaceholder": "Choose products from the catalog",
     "compareHint": "Choose two to five products from the catalog.",

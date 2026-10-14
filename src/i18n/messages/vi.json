@@ -527,6 +527,7 @@
     "searchHint": "Mô tả kết quả bạn muốn; tìm kiếm ngữ nghĩa sẽ đối chiếu với catalog hiện tại.",
     "send": "Gửi",
     "newConversation": "Cuộc trò chuyện mới",
+    "confirmProposal": "Xác nhận đề xuất",
     "productIds": "ID sản phẩm",
     "productIdsPlaceholder": "Chọn sản phẩm trong catalog",
     "compareHint": "Chọn từ hai đến năm sản phẩm trong catalog.",

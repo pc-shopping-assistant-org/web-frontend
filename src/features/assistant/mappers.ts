@@ -15,6 +15,35 @@ import type {
   EvaluateData,
   SearchData,
 } from "@/features/assistant/models";
+import type {StatefulTurnResult} from "./contracts/stateful";
+import {AiMode, RequirementValueKind} from "@/lib/domain/assistant-enums";
+
+export function mapStatefulTurn(dto: StatefulTurnResult): ChatData {
+  const proposal = dto.flexible?.proposal;
+  return {
+    conversation_id: dto.run.conversation_id, answer: dto.answer, intent: AiMode.Chat, products: dto.products.map(mapProductCard),
+    stateful: {
+      revision: dto.revision,
+      proposal: proposal ? {proposalId: proposal.proposal_id, proposalHash: proposal.proposal_hash,
+        targetRevision: proposal.target_revision, baseRequirementsHash: proposal.base_requirements_hash,
+        changes: proposal.changes.map(change => {
+          const value = change.value;
+          const label = value?.kind === RequirementValueKind.Text ? value.text : value?.kind === RequirementValueKind.Quantity ? `${value.amount} ${value.unit}` : value?.kind === RequirementValueKind.Reference ? value.variant_id : change.variant_id ?? "";
+          return `${change.operation} ${change.subject ?? change.target} / ${change.predicate ?? ""}: ${label}`;
+        })} : null,
+      clarificationOptions: [
+        ...(dto.flexible?.clarification?.items.flatMap(item => [
+          ...item.options.map((option, index) => `${index + 1}. ${option.name} (${option.sku})`),
+          ...(item.unit_options.length ? [`${item.quantity_amount ?? ""}: ${item.unit_options.join(" / ")}`] : []),
+        ]) ?? []),
+        ...(dto.flexible?.task_clarification?.items.flatMap(item => item.options.map((option, index) => `${item.mention} — ${index + 1}. ${option.name}`)) ?? []),
+      ],
+      build: dto.build ? {totalSpending: dto.build.total_spending_vnd, stale: dto.build.stale,
+        parts: dto.build.parts.map(part => ({slot: part.slot, name: part.name,
+          variantId: part.variant_id, spending: part.spending_vnd, owned: part.is_owned, pinned: part.is_pinned}))} : null,
+    },
+  };
+}
 
 const text = (value?: string | null) => value?.trim() ?? "";
 const number = (value?: number | null) => value ?? 0;

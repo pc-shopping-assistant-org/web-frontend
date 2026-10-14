@@ -15,6 +15,24 @@ export enum ChatStreamEventType {
   Error = "ERROR",
 }
 
+export enum FlexibleTurnStatus {
+  Completed = "COMPLETED",
+  Unresolved = "UNRESOLVED",
+  WaitingInput = "WAITING_INPUT",
+  Discarded = "DISCARDED",
+}
+
+export enum RequirementOperation {
+  Set = "SET",
+  Clear = "CLEAR",
+}
+
+export enum RequirementValueKind {
+  Text = "TEXT",
+  Quantity = "QUANTITY",
+  Reference = "REFERENCE",
+}
+
 export enum AnalyticsPeriod {
   Week = "WEEK",
   Month = "MONTH",

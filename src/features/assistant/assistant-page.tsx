@@ -16,7 +16,9 @@ import {Link} from "@/i18n/navigation";
 import {formatMoney} from "@/lib/format";
 import {useProducts} from "@/features/catalog/queries";
 import {CatalogCategoryIcon} from "@/features/catalog/components/catalog-category-icon";
-import {compare, evaluate, streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
+import {streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
+import type {Confirmation} from "./contracts/stateful";
+import {MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
 
 type Result = ChatData | SearchData | ConsultData | CompareData | EvaluateData;
 type ChatTurn = {prompt: string; response: Result};
@@ -34,6 +36,10 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const streamController = useRef<AbortController | null>(null);
+  const lastResponse = chatTurns.at(-1)?.response;
+  const proposal = lastResponse && "stateful" in lastResponse ? lastResponse.stateful?.proposal : null;
+  const proposalChanges = proposal?.changes ?? [];
+  const clarificationOptions = lastResponse && "stateful" in lastResponse ? lastResponse.stateful?.clarificationOptions ?? [] : [];
 
   useEffect(() => () => streamController.current?.abort(), []);
 
@@ -41,6 +47,11 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
     event.preventDefault();
     if (streamController.current || (!prompt.trim() && !productIds.length)) return;
     const submittedPrompt = prompt.trim() || t(productIds.length > 1 ? "defaultCompare" : "defaultEvaluate");
+    await send(submittedPrompt);
+  }
+
+  async function send(submittedPrompt: string, confirmation?: Confirmation) {
+    if (streamController.current) return;
     const controller = new AbortController();
     streamController.current = controller;
     setLoading(true);
@@ -48,24 +59,17 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
     setStreamingPrompt(submittedPrompt);
     setStreamingAnswer("");
     try {
-      let data: Result;
-      if (productIds.length > 1) {
-        data = await compare(productIds, submittedPrompt);
-      } else if (productIds.length === 1) {
-        data = await evaluate(productIds[0], submittedPrompt);
-      } else {
-        const chat = await streamChat(submittedPrompt, conversationId, {
+      const data = await streamChat(submittedPrompt, conversationId, {
           onStart: id => {if (!controller.signal.aborted) setConversationId(id);},
           onDelta: delta => {if (!controller.signal.aborted) setStreamingAnswer(current => current + delta);},
-        }, controller.signal);
-        data = chat;
-        if (!controller.signal.aborted) setConversationId(chat.conversation_id);
-      }
+      }, controller.signal, confirmation ? {confirmation} : {selectedProductIds: productIds});
+      if (!controller.signal.aborted) setConversationId(data.conversation_id);
       if (controller.signal.aborted) return;
       setChatTurns(current => [...current, {prompt: submittedPrompt, response: data}]);
       setStreamingPrompt("");
       setStreamingAnswer("");
       setPrompt("");
+      setProductIds([]);
     } catch (cause) {
       if (!controller.signal.aborted) {
         setError(cause);
@@ -114,6 +118,13 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
           ) : null}
           {streamingPrompt ? <StreamingChatTurn prompt={streamingPrompt} answer={streamingAnswer} /> : null}
           {error ? <ErrorMessage error={error} /> : null}
+          {proposalChanges.length ? <ul className="space-y-1 rounded-lg border p-3 text-sm">{proposalChanges.map((change, index) => <li key={index}>{change}</li>)}</ul> : null}
+          {clarificationOptions.length ? <ul className="space-y-1 rounded-lg border p-3 text-sm">{clarificationOptions.map((option, index) => <li key={index}>{option}</li>)}</ul> : null}
+          {proposal ? <Button disabled={loading} onClick={() => void send(t("confirmProposal"), {
+            schema_version: 2, proposal_id: proposal.proposalId,
+            proposal_hash: proposal.proposalHash, target_revision: proposal.targetRevision,
+            base_requirements_hash: proposal.baseRequirementsHash,
+          })}>{t("confirmProposal")}</Button> : null}
         </div>
 
         <form onSubmit={event => void submit(event)} className="border-t bg-muted/15 p-4 sm:p-6">
@@ -123,7 +134,7 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
               <p className="mb-3 mt-2 text-xs leading-5 text-muted-foreground">{t("attachmentHint")}</p>
               <ProductPicker value={productIds} onChange={setProductIds} locale={locale} />
             </details>
-            <Textarea aria-label={t("promptLabel")} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder={t("unifiedPlaceholder")} rows={3} maxLength={productIds.length ? 1000 : 4000} className="min-h-24 resize-y rounded-xl bg-background p-4 text-base" />
+            <Textarea aria-label={t("promptLabel")} value={prompt} onChange={event => setPrompt(event.target.value)} placeholder={t("unifiedPlaceholder")} rows={3} maxLength={productIds.length ? MAX_PRODUCT_QUESTION_CHARS : MAX_TURN_MESSAGE_CHARS} className="min-h-24 resize-y rounded-xl bg-background p-4 text-base" />
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="text-xs leading-5 text-muted-foreground">{t("catalogGroundedHint")}</p>
               <Button type="submit" className="h-11 min-w-28" disabled={loading || (!prompt.trim() && !productIds.length)}>{loading ? common("loading") : t("send")}<ArrowRight className="size-4" /></Button>
@@ -146,8 +157,8 @@ function ProductPicker({
 }) {
   const t = useTranslations("assistant");
   const [keyword, setKeyword] = useState("");
-  const products = useProducts({ limit: 100 });
-  const max = 5;
+  const products = useProducts({ limit: PRODUCT_PICKER_PAGE_SIZE });
+  const max = MAX_SELECTED_PRODUCTS;
   const allProducts = products.data?.items ?? [];
   const visibleProducts = allProducts.filter((product) =>
     [product.name, product.brandName, product.categoryName]

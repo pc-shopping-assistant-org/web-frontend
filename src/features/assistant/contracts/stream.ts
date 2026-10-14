@@ -4,7 +4,7 @@ import {
   CHAT_STREAM_EVENT_VALUES,
 } from "@/lib/domain/assistant-enums";
 
-const productCardStreamSchema = z
+export const productCardStreamSchema = z
   .object({
     id: z.uuid().nullable().optional(),
     name: z.string(),
