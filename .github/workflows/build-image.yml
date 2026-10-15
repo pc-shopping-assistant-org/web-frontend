@@ -2,11 +2,8 @@ name: Build and publish frontend image
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
   pull_request:
+  merge_group:
   workflow_dispatch:
 
 concurrency:
@@ -21,6 +18,8 @@ jobs:
     name: Verify Next.js application
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -29,7 +28,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: yarn
 
       - name: Enable Corepack
         run: corepack enable
@@ -41,7 +39,12 @@ jobs:
         run: yarn lint
 
       - name: Run typecheck
-        run: yarn typecheck
+        run: |
+          yarn next typegen
+          yarn typecheck
+
+      - name: Check committed OpenAPI types
+        run: yarn api:check
 
       - name: Run tests
         run: yarn test:run
@@ -52,6 +55,11 @@ jobs:
   image:
     name: Build image
     needs: verify
+    if: >-
+      github.event_name == 'pull_request' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' &&
+        (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')))
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

@@ -101,7 +101,19 @@ account, catalog, commerce, assistant, and API message keys. The old
 
 ```bash
 corepack yarn lint
+corepack yarn next typegen
 corepack yarn typecheck
+corepack yarn api:check
 corepack yarn test:run
 corepack yarn build
 ```
+
+GitHub Actions runs these gates on every push, pull request and merge queue
+(`merge_group`), plus manual dispatch. Corepack uses the pinned Yarn version;
+type generation runs before TypeScript on a clean checkout. Tests/OpenAPI checks
+use local fixtures and committed snapshots, not live backend/AI credentials.
+
+The existing image job waits for verification. PRs build without publishing;
+main pushes, `v*` tags and manual dispatch may publish to GHCR. Other branch/tag
+pushes and merge queues run verification only. To block merging on failure, select
+`Verify Next.js application` as a required check in GitHub branch rules.
