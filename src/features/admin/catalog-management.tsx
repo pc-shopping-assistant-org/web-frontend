@@ -137,13 +137,15 @@ export function ProductCreateForm() {
               }
             />
             <div className="space-y-2">
-              <Label htmlFor="product-category">{t("category")}</Label>
+              <Label htmlFor="product-category">{t("category")} <span className="text-destructive">*</span></Label>
               <CategoryPicker
                 id="product-category"
                 value={form.categoryId}
                 onChange={(categoryId) => setForm((current) => ({ ...current, categoryId }))}
                 categories={categories.data ?? []}
                 loading={categories.isPending}
+                error={categories.error}
+                required
               />
             </div>
             <div className="space-y-2">

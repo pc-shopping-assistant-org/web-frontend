@@ -1051,7 +1051,49 @@
       "none": "Chưa chọn",
       "confirm": "Xác nhận",
       "noMatch": "Không có danh mục nào khớp.",
-      "level": "Danh mục cấp {level}"
+      "level": "Danh mục cấp {level}",
+      "required": "Cần chọn danh mục trước khi lưu.",
+      "empty": "Chưa có danh mục nào."
+    },
+    "orderList": {
+      "all": "Tất cả",
+      "order": "Đơn hàng",
+      "customer": "Khách hàng",
+      "items": "Sản phẩm",
+      "total": "Tổng tiền",
+      "actions": "Thao tác",
+      "empty": "Chưa có đơn hàng nào.",
+      "emptyFiltered": "Không có đơn hàng nào khớp bộ lọc.",
+      "rangeError": "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc."
+    },
+    "paymentList": {
+      "all": "Tất cả",
+      "transaction": "Mã giao dịch",
+      "order": "Đơn hàng",
+      "method": "Phương thức",
+      "amount": "Số tiền",
+      "time": "Thời gian",
+      "actions": "Thao tác",
+      "empty": "Chưa có thanh toán nào.",
+      "emptyFiltered": "Không có thanh toán nào khớp bộ lọc.",
+      "rangeError": "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc."
+    },
+    "paymentMethodList": {
+      "method": "Phương thức",
+      "code": "Mã",
+      "empty": "Chưa có phương thức thanh toán nào."
+    },
+    "reviewList": {
+      "all": "Tất cả",
+      "empty": "Chưa có đánh giá nào.",
+      "emptyFiltered": "Không có đánh giá nào khớp bộ lọc."
+    },
+    "supplierList": {
+      "name": "Nhà cung cấp",
+      "email": "Email",
+      "phone": "Số điện thoại",
+      "empty": "Chưa có nhà cung cấp nào.",
+      "emptyFiltered": "Không có nhà cung cấp nào khớp bộ lọc."
     }
   },
   "errors": {

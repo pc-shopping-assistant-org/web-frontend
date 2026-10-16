@@ -30,7 +30,7 @@ const BrandManagement = dynamic(
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminProductDetailPage = dynamic(
-  () => import("@/features/admin/detail-pages").then((module) => module.AdminProductDetailPage),
+  () => import("@/features/admin/product-detail").then((module) => module.AdminProductDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
 const CustomersPage = dynamic(
@@ -50,23 +50,23 @@ const EmployeeDetailPage = dynamic(
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminDiscountDetailPage = dynamic(
-  () => import("@/features/admin/detail-pages").then((module) => module.AdminDiscountDetailPage),
+  () => import("@/features/admin/discount-detail").then((module) => module.AdminDiscountDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminOrderDetailPage = dynamic(
-  () => import("@/features/admin/detail-pages").then((module) => module.AdminOrderDetailPage),
+  () => import("@/features/admin/order-detail").then((module) => module.AdminOrderDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminSupplierDetailPage = dynamic(
-  () => import("@/features/admin/detail-pages").then((module) => module.AdminSupplierDetailPage),
+  () => import("@/features/admin/supplier-detail").then((module) => module.AdminSupplierDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminInvoiceDetailPage = dynamic(
-  () => import("@/features/admin/detail-pages").then((module) => module.AdminInvoiceDetailPage),
+  () => import("@/features/admin/invoice-pages").then((module) => module.AdminInvoiceDetailPage),
   {loading: () => <AdminPageSkeleton />},
 );
 const AdminInvoicesPage = dynamic(
-  () => import("@/features/admin/detail-pages").then((module) => module.AdminInvoicesPage),
+  () => import("@/features/admin/invoice-pages").then((module) => module.AdminInvoicesPage),
   {loading: () => <AdminPageSkeleton />},
 );
 
