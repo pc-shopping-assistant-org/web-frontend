@@ -38,6 +38,7 @@ import {
   updateDiscountStatus,
   updateProductStatus,
   replaceCategorySpecs,
+  syncSearchIndex,
   updateReviewStatus,
   uploadAdminFile,
 } from "./api";
@@ -310,4 +311,9 @@ export function useUpdateAdminSupplier() {
 }
 export function useDeleteAdminSupplier() {
   return useAdminMutation(deleteSupplier);
+}
+
+/** The index lives in Elasticsearch, not in a cached query, so nothing needs refreshing afterwards. */
+export function useSyncSearchIndex() {
+  return useMutation({ mutationFn: syncSearchIndex });
 }

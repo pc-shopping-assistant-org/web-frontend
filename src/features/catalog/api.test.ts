@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 
-import {getCategorySpecLabels, getProductBySlug, getProducts} from "./api";
+import {getCategorySpecLabels, getProductBySlug, getProducts, listProducts, searchProducts} from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -49,5 +49,52 @@ describe("storefront catalog reads", () => {
 
     expect(labels.gb).toEqual({label: "RAM", unit: "GB", order: 0});
     expect(labels.type).toEqual({label: "RAM type", unit: undefined, order: 1});
+  });
+});
+
+describe("storefront text search", () => {
+  const hit = {id: "p1", name: "RTX 4070", seoName: "rtx-4070", brandName: "Asus", categoryName: "VGA", minPrice: 100, maxPrice: 120, inStock: true, mainImageUrl: "http://img/a.png"};
+
+  it("searches through search-service and turns the page number into the next cursor", async () => {
+    const fetchMock = stubFetch({content: [hit], page: 0, size: 12, totalElements: 30, totalPages: 3, last: false});
+
+    const page = await searchProducts("rtx 40");
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/search-service/products/search?q=rtx+40&page=0&size=12");
+    expect(page).toMatchObject({hasNext: true, nextCursor: "1", size: 1});
+    expect(page.items[0]).toMatchObject({id: "p1", seoName: "rtx-4070", brandName: "Asus", imageUrl: "http://img/a.png", status: "ACTIVE"});
+  });
+
+  it("reads the cursor as the page number and stops on the last page", async () => {
+    const fetchMock = stubFetch({content: [hit], page: 2, size: 12, totalElements: 25, totalPages: 3, last: true});
+
+    const page = await searchProducts("rtx", {cursor: "2", limit: 12});
+
+    expect(fetchMock.mock.calls[0][0]).toContain("page=2");
+    expect(page).toMatchObject({hasNext: false, nextCursor: undefined});
+  });
+
+  it("falls back to the first page when the cursor is not a page number", async () => {
+    const fetchMock = stubFetch({content: [], page: 0, size: 12, totalElements: 0, totalPages: 0, last: true});
+
+    await searchProducts("rtx", {cursor: "abc"});
+
+    expect(fetchMock.mock.calls[0][0]).toContain("page=0");
+  });
+
+  it("narrows the search by category, brand and price like the catalog list", async () => {
+    const fetchMock = stubFetch({content: [], items: [], page: 0, size: 0, last: true, hasNext: false});
+
+    await listProducts({keyword: " card ", categoryId: "c1", brandId: "b1", minPrice: 10, maxPrice: 20});
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/search-service/products/search?q=card&page=0&size=12&categoryId=c1&brandId=b1&minPrice=10&maxPrice=20");
+  });
+
+  it("lists through the catalog when the keyword is blank", async () => {
+    const fetchMock = stubFetch({content: [], items: [], page: 0, size: 0, last: true, hasNext: false});
+
+    await listProducts({keyword: "  ", categoryId: "c1", limit: 12});
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/products?categoryId=c1&limit=12");
   });
 });

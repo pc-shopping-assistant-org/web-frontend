@@ -393,3 +393,11 @@ export function deleteProduct(id: string) {
     method: "DELETE",
   });
 }
+
+/** What a full rebuild of the search index did: documents written, documents dropped, products that failed (run again for those). */
+export type SearchIndexSyncResult = {indexed: number; removed: number; failed: number};
+
+/** Rebuilds the whole search index from the catalog (ADMIN); it reads every product, so it can take a while. */
+export function syncSearchIndex() {
+  return backendFetch<SearchIndexSyncResult>("/sync-service/products/sync", {method: "POST"});
+}

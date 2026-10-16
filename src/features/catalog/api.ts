@@ -25,6 +25,7 @@ import {
   type EditReviewRequest,
 } from "@/features/catalog/contracts/requests";
 import {parseRequest} from "@/lib/api/parse-request";
+import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 export type ProductFilters = {
   cursor?: string;
@@ -46,6 +47,49 @@ export async function getProducts(filters: ProductFilters = {}) {
     `/catalog-service/products${query ? `?${query}` : ""}`,
   );
   return mapProductPage(response);
+}
+
+/** search-service row; it only indexes what the storefront shows, so every hit is on sale. */
+type ProductSearchHitDto = {
+  id: string;
+  name: string;
+  seoName: string;
+  brandName?: string | null;
+  categoryName?: string | null;
+  minPrice?: number | null;
+  maxPrice?: number | null;
+  inStock?: boolean;
+  mainImageUrl?: string | null;
+};
+type ProductSearchPageDto = {content: ProductSearchHitDto[]; page: number; size: number; last: boolean};
+
+const DEFAULT_SEARCH_SIZE = 12;
+
+/**
+ * Text search through search-service (Elasticsearch): by name, brand, category and description, tolerant of accents and typos,
+ * and narrowed by the same category, brand and price filters as the catalog list.
+ * It pages by number, so the next page number travels as the cursor the catalog list also uses.
+ */
+export async function searchProducts(keyword: string, filters: Omit<ProductFilters, "keyword"> = {}) {
+  const page = Number.parseInt(filters.cursor ?? "0", 10);
+  const params = new URLSearchParams({q: keyword, page: String(Number.isNaN(page) ? 0 : page), size: String(filters.limit ?? DEFAULT_SEARCH_SIZE)});
+  for (const key of ["categoryId", "brandId", "minPrice", "maxPrice"] as const) {
+    const value = filters[key];
+    if (value !== undefined && value !== "") params.set(key, String(value));
+  }
+  const response = await backendFetch<ProductSearchPageDto>(`/search-service/products/search?${params.toString()}`);
+  return mapProductPage({
+    items: (response.content ?? []).map((hit) => ({...hit, status: ResourceStatus.Active})),
+    nextCursor: response.last ? null : String(response.page + 1),
+    hasNext: !response.last,
+    size: response.content?.length ?? 0,
+  });
+}
+
+/** A keyword goes to the search, without one the catalog lists; both narrow by category, brand and price. */
+export function listProducts(filters: ProductFilters = {}) {
+  const keyword = filters.keyword?.trim();
+  return keyword ? searchProducts(keyword, filters) : getProducts({...filters, keyword: undefined});
 }
 
 export async function getProductBySlug(seoName: string) {

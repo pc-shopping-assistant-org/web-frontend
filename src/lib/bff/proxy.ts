@@ -22,6 +22,9 @@ type UpstreamResult = {
 };
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
+// A full search-index rebuild reads the whole catalog in one request.
+const LONG_RUNNING_TIMEOUT_MS = 120_000;
+const LONG_RUNNING_PATHS = new Set(["/sync-service/products/sync"]);
 const AUTH_TOKEN_PATHS = new Set(["auth/login", "auth/google", "auth/verify-otp", "auth/refresh-token"]);
 
 function jsonBody(value: unknown) {
@@ -70,7 +73,8 @@ async function requestUpstream(
   accessToken: string | undefined,
 ): Promise<UpstreamResult> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+  const timeoutMs = LONG_RUNNING_PATHS.has(upstreamPath.split("?")[0]) ? LONG_RUNNING_TIMEOUT_MS : UPSTREAM_TIMEOUT_MS;
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${upstreamBaseUrl(service)}${upstreamPath}`, {

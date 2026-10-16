@@ -2,7 +2,7 @@
 
 import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
-import {createProductReview, getBrands, getCategories, getCategorySpecLabels, getMyProductReviews, getOrderLineProduct, getReviewedOrderItems, getProductBySlug, getProductReviews, getProducts, updateProductReview, type ProductFilters} from "./api";
+import {createProductReview, getBrands, getCategories, getCategorySpecLabels, getMyProductReviews, getOrderLineProduct, getReviewedOrderItems, getProductBySlug, getProductReviews, listProducts, updateProductReview, type ProductFilters} from "./api";
 
 export const catalogKeys = {
   all: ["catalog"] as const,
@@ -20,7 +20,7 @@ export function useProducts(
 ) {
   return useQuery({
     queryKey: catalogKeys.products(filters),
-    queryFn: () => getProducts(filters),
+    queryFn: () => listProducts(filters),
     enabled: options.enabled ?? true,
     placeholderData: keepPreviousData,
   });

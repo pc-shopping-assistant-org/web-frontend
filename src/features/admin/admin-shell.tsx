@@ -20,6 +20,7 @@ import {
   PanelLeftOpen,
   Package,
   ShieldAlert,
+  DatabaseZap,
   SlidersHorizontal,
   Users,
   UserCog,
@@ -101,6 +102,7 @@ const navGroups = [
     items: [
       { key: "customers", href: "/admin/customers", icon: Users, employeeOnly: true },
       { key: "employees", href: "/admin/employees", icon: UserCog, adminOnly: true },
+      { key: "searchIndex", href: "/admin/search-index", icon: DatabaseZap, adminOnly: true },
     ],
   },
 ] as const;

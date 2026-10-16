@@ -21,6 +21,10 @@ const CatalogSettingsPage = dynamic(
   () => import("@/features/admin/catalog-settings").then((module) => module.CatalogSettingsPage),
   {loading: () => <AdminPageSkeleton />},
 );
+const SearchIndexPage = dynamic(
+  () => import("@/features/admin/search-index-page").then((module) => module.SearchIndexPage),
+  {loading: () => <AdminPageSkeleton />},
+);
 const CategoryManagement = dynamic(
   () => import("@/features/admin/category-management").then((module) => module.CategoryManagement),
   {loading: () => <AdminPageSkeleton />},
@@ -80,6 +84,10 @@ export function AdminResourceRouteClient({resource}: {resource: AdminResource}) 
 
 export function CatalogSettingsRouteClient() {
   return <CatalogSettingsPage />;
+}
+
+export function SearchIndexRouteClient() {
+  return <SearchIndexPage />;
 }
 
 export function CategoryManagementRouteClient() {
