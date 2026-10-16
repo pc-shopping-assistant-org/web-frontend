@@ -18,7 +18,6 @@ import {
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
-  MessageSquareQuote,
   Package,
   ShieldAlert,
   SlidersHorizontal,
@@ -102,7 +101,6 @@ const navGroups = [
     items: [
       { key: "customers", href: "/admin/customers", icon: Users, employeeOnly: true },
       { key: "employees", href: "/admin/employees", icon: UserCog, adminOnly: true },
-      { key: "reviews", href: "/admin/reviews", icon: MessageSquareQuote, employeeOnly: true },
     ],
   },
 ] as const;

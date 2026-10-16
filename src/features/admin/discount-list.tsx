@@ -16,6 +16,7 @@ import {formatMoney} from "@/lib/format";
 import {cn} from "@/lib/utils";
 
 import {AdminPagination} from "./admin-pagination";
+import {StatusTabs} from "./list-kit";
 import type {DiscountSummary} from "./contracts/responses";
 import {useAdminDiscounts, useAdminDiscountStatus} from "./queries";
 
@@ -57,23 +58,12 @@ export function DiscountListPage() {
         </Link>
       </div>
 
-      <div role="tablist" aria-label={t("discountState")} className="flex gap-6 overflow-x-auto overflow-y-hidden border-b">
-        {TABS.map((tab) => (
-          <button
-            key={tab || "all"}
-            type="button"
-            role="tab"
-            aria-selected={state === tab}
-            onClick={() => pick(tab)}
-            className={cn(
-              "-mb-px shrink-0 border-b-2 px-1 pb-3 text-sm transition",
-              state === tab ? "border-primary font-medium text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {tab ? t(`statusValues.${tab}`) : tl("all")}
-          </button>
-        ))}
-      </div>
+      <StatusTabs
+        label={t("discountState")}
+        value={state}
+        onChange={pick}
+        tabs={TABS.map((tab) => ({value: tab, label: tab ? t(`statusValues.${tab}`) : tl("all")}))}
+      />
 
       <Card className="p-4 sm:p-5">
         {query.isPending ? (

@@ -1042,6 +1042,58 @@
         "attributeMissing": "Pick an attribute for every row.",
         "attributeDuplicate": "An attribute can be used only once in the form."
       }
+    },
+    "categoryPicker": {
+      "placeholder": "Choose a category",
+      "title": "Choose a category",
+      "search": "Search categories",
+      "selected": "Selected:",
+      "none": "None yet",
+      "confirm": "Confirm",
+      "noMatch": "No category matches.",
+      "level": "Category level {level}",
+      "required": "A category is needed before you can save.",
+      "empty": "There are no categories yet."
+    },
+    "orderList": {
+      "all": "All",
+      "order": "Order",
+      "customer": "Customer",
+      "items": "Products",
+      "total": "Total",
+      "actions": "Actions",
+      "empty": "There are no orders yet.",
+      "emptyFiltered": "No order matches the filters.",
+      "rangeError": "The start date must be on or before the end date."
+    },
+    "paymentList": {
+      "all": "All",
+      "transaction": "Transaction",
+      "order": "Order",
+      "method": "Method",
+      "amount": "Amount",
+      "time": "Time",
+      "actions": "Actions",
+      "empty": "There are no payments yet.",
+      "emptyFiltered": "No payment matches the filters.",
+      "rangeError": "The start date must be on or before the end date."
+    },
+    "paymentMethodList": {
+      "method": "Method",
+      "code": "Code",
+      "empty": "There are no payment methods yet."
+    },
+    "reviewList": {
+      "all": "All",
+      "empty": "There are no reviews yet.",
+      "emptyFiltered": "No review matches the filters."
+    },
+    "supplierList": {
+      "name": "Supplier",
+      "email": "Email",
+      "phone": "Phone number",
+      "empty": "There are no suppliers yet.",
+      "emptyFiltered": "No supplier matches the filters."
     }
   },
   "errors": {
