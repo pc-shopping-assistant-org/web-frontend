@@ -10,11 +10,14 @@ export function ProductGrid({
   compareIds = [],
   onCompareToggle,
   onClearFilters,
+  variant = "default",
 }: {
   products: ProductSummary[];
   compareIds?: string[];
   onCompareToggle?: (product: ProductSummary) => void;
   onClearFilters?: () => void;
+  /** `listing` is the denser grid and lean card of the product list page. */
+  variant?: "default" | "listing";
 }) {
   const t = useTranslations("catalog");
   if (products.length === 0) {
@@ -30,10 +33,11 @@ export function ProductGrid({
     );
   }
   return (
-    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+    <div className={variant === "listing" ? "grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" : "grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"}>
       {products.map((product, index) => <ProductCard
         key={product.id ?? product.seoName ?? index}
         product={product}
+        variant={variant}
         compareSelected={Boolean(product.id && compareIds.includes(product.id))}
         compareDisabled={compareIds.length >= 5}
         onCompareToggle={onCompareToggle}

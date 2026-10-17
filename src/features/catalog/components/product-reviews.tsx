@@ -57,14 +57,12 @@ export function ProductReviews({productId, enabled = true}: {productId: string; 
     }
   }
 
-  return <section className="mt-14">
-    <div className="mb-5 flex items-end justify-between">
-      <div>
-        <p className="eyebrow">{t("reviews")}</p>
-        <h2 className="mt-2 text-2xl font-semibold">{t("customerReviews")}</h2>
-      </div>
+  return <section className="mt-6 overflow-hidden rounded-xl border bg-card">
+    <div className="flex items-center justify-between gap-3 bg-muted/50 px-4 py-3 sm:px-6">
+      <h2 className="text-base font-medium uppercase tracking-wide">{t("customerReviews")}</h2>
       <span className="text-sm text-muted-foreground">{page ? t("reviewsCount", {count: page.totalElements}) : null}</span>
     </div>
+    <div className="p-4 sm:p-6">
     {mine.isError ? <div className="mb-4"><ErrorMessage error={mine.error} /></div> : null}
     {myReviews.length ? <div className="mb-4 space-y-4">
       {myReviews.map((review) => <Card key={review.id} className="border-primary/40 bg-primary/[0.03]">
@@ -111,5 +109,6 @@ export function ProductReviews({productId, enabled = true}: {productId: string; 
         <Button variant="outline" disabled={page.last} onClick={() => setPageNumber((current) => current + 1)}>{t("next")}<ChevronRight className="size-4" /></Button>
       </div> : null}
     </>}
+    </div>
   </section>;
 }

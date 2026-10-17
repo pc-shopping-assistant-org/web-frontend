@@ -50,6 +50,7 @@ function productTheme(categoryName?: string | null) {
 export function ProductCard({
   product,
   compact = false,
+  variant = "default",
   compareSelected = false,
   compareDisabled = false,
   onCompareToggle,
@@ -57,6 +58,8 @@ export function ProductCard({
   product: ProductSummary;
   /** Dense presentation used by merchandising rails on the storefront. */
   compact?: boolean;
+  /** `listing` is the lean card of the product list: image, name, price and small actions, no badges. */
+  variant?: "default" | "listing";
   compareSelected?: boolean;
   compareDisabled?: boolean;
   onCompareToggle?: (product: ProductSummary) => void;
@@ -75,6 +78,7 @@ export function ProductCard({
     : undefined;
   const price = product.minPrice ?? product.maxPrice;
   const theme = productTheme(product.categoryName);
+  const listing = variant === "listing";
 
   async function quickAdd(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -115,6 +119,79 @@ export function ProductCard({
       // the whole catalog result.
       setQuickAddError(cause);
     }
+  }
+
+  if (listing) {
+    const hasRange = product.minPrice != null && product.maxPrice != null && product.maxPrice > product.minPrice;
+    const iconButton = "inline-flex size-8 items-center justify-center rounded-lg border bg-background text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:cursor-wait disabled:opacity-60";
+    return (
+      <Card className="group flex h-full flex-col overflow-hidden rounded-xl border-border/70 shadow-none transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+        {productHref ? (
+          <Link href={productHref} prefetch={false} className="block" aria-label={`${t("productDetails")}: ${name}`}>
+            <ProductVisual product={product} name={name} theme={theme} interactive listing />
+          </Link>
+        ) : (
+          <ProductVisual product={product} name={name} theme={theme} listing />
+        )}
+        <CardContent className="flex flex-1 flex-col gap-2 p-3">
+          <h3 className="line-clamp-2 min-h-10 text-sm font-medium leading-5">
+            {productHref ? (
+              <Link href={productHref} prefetch={false} className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">{name}</Link>
+            ) : name}
+          </h3>
+          <p className="truncate text-xs text-muted-foreground">{product.brandName ?? t("brandFallback")}</p>
+          <p className="text-base font-semibold text-primary">
+            {hasRange ? <span className="mr-1 text-xs font-normal text-muted-foreground">{t("from")}</span> : null}
+            {formatMoney(price, locale)}
+          </p>
+          {(product.reviewCount ?? 0) > 0 ? (
+            <p className="flex items-center gap-1 text-xs text-muted-foreground">
+              <IconStar className="size-3 fill-amber-400 text-amber-400" />
+              {formatRating(product.ratingAverage)} · {product.reviewCount} {t("reviews")}
+            </p>
+          ) : null}
+          <div className="mt-auto space-y-2 pt-1">
+            {addToCart.isError || quickAddError ? <ErrorMessage error={quickAddError ?? addToCart.error} /> : null}
+            {quickAddMessage ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{quickAddMessage}</p> : null}
+            {added ? (
+              <p className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
+                <IconCheck className="size-3.5" />
+                {t("addedToCart")}
+              </p>
+            ) : null}
+            <div className="flex items-center gap-1.5">
+              {productHref ? (
+                <button type="button" className={iconButton} onClick={(event) => void quickAdd(event)} disabled={addToCart.isPending} aria-label={addToCart.isPending ? t("addingToCart") : t("quickAdd")} title={addToCart.isPending ? t("addingToCart") : t("quickAdd")}>
+                  {addToCart.isPending ? <IconLoader2 className="size-4 animate-spin" /> : <IconShoppingCart className="size-4" />}
+                </button>
+              ) : null}
+              {onCompareToggle && product.id ? (
+                <button
+                  type="button"
+                  className={cn(iconButton, compareSelected && "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground")}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onCompareToggle(product);
+                  }}
+                  disabled={compareDisabled && !compareSelected}
+                  aria-pressed={compareSelected}
+                  aria-label={compareSelected ? t("removeFromCompare") : t("addToCompare")}
+                  title={compareSelected ? t("removeFromCompare") : t("addToCompare")}
+                >
+                  <IconArrowsLeftRight className="size-4" />
+                </button>
+              ) : null}
+              {product.id ? (
+                <Link href={`/assistant?productId=${encodeURIComponent(product.id)}`} className={iconButton} aria-label={t("askAssistant")} title={t("askAssistant")}>
+                  <IconSparkles className="size-4" />
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -237,14 +314,34 @@ function ProductVisual({
   theme,
   interactive = false,
   compact = false,
+  listing = false,
 }: {
   product: ProductSummary;
   name: string;
   theme: ProductTheme;
   interactive?: boolean;
   compact?: boolean;
+  listing?: boolean;
 }) {
   const t = useTranslations("catalog");
+  if (listing) {
+    return (
+      <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-muted/25 p-3">
+        {product.imageUrl ? (
+          <Image
+            src={product.imageUrl}
+            alt={name}
+            fill
+            sizes="(min-width: 1536px) 15vw, (min-width: 1024px) 20vw, (min-width: 640px) 30vw, 50vw"
+            unoptimized
+            className={cn("object-contain p-3", interactive && "transition duration-300 group-hover:scale-105")}
+          />
+        ) : (
+          <ProductFallbackArt product={product} name={name} interactive={interactive} compact />
+        )}
+      </div>
+    );
+  }
   return (
     <div className={cn("relative flex items-center justify-center overflow-hidden p-5", compact ? "h-40" : "h-56", theme.visual)}>
       <span className="pointer-events-none absolute -left-8 -top-10 size-32 rounded-full bg-white/65 blur-3xl" />

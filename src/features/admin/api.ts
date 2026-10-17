@@ -401,3 +401,16 @@ export type SearchIndexSyncResult = {indexed: number; removed: number; failed: n
 export function syncSearchIndex() {
   return backendFetch<SearchIndexSyncResult>("/sync-service/products/sync", {method: "POST"});
 }
+
+/** Catalog changes the index could not take in (the catalog or Elasticsearch was down too long, or the event was unreadable). */
+export type DeadLetterStatus = {pending: number};
+export type DeadLetterReplayResult = {replayed: number; skipped: number; pending: number; blocked: boolean};
+
+export function getDeadLetterStatus() {
+  return backendFetch<DeadLetterStatus>("/sync-service/products/sync/dlt");
+}
+
+/** Runs the parked changes through the index again, oldest first (ADMIN). */
+export function replayDeadLetters() {
+  return backendFetch<DeadLetterReplayResult>("/sync-service/products/sync/dlt/replay", {method: "POST"});
+}

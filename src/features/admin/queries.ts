@@ -39,6 +39,8 @@ import {
   updateProductStatus,
   replaceCategorySpecs,
   syncSearchIndex,
+  getDeadLetterStatus,
+  replayDeadLetters,
   updateReviewStatus,
   uploadAdminFile,
 } from "./api";
@@ -316,4 +318,15 @@ export function useDeleteAdminSupplier() {
 /** The index lives in Elasticsearch, not in a cached query, so nothing needs refreshing afterwards. */
 export function useSyncSearchIndex() {
   return useMutation({ mutationFn: syncSearchIndex });
+}
+const deadLetterKey = ["admin", "search-index", "dead-letters"] as const;
+export function useDeadLetterStatus() {
+  return useQuery({ queryKey: deadLetterKey, queryFn: getDeadLetterStatus, retry: false });
+}
+export function useReplayDeadLetters() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: replayDeadLetters,
+    onSuccess: () => qc.invalidateQueries({ queryKey: deadLetterKey }),
+  });
 }
