@@ -116,8 +116,8 @@ use local fixtures and committed snapshots, not live backend/AI credentials.
 
 Only a push/manual dispatch on the exact `release` branch builds/publishes an image,
 tagged `release` and `sha-<full commit>`. PRs, other branches/tags and merge queues
-verify only. Release then SSHes to the server and updates only web-frontend, waiting
-for health. GitHub Environment `release` SSH variables/secrets are documented in
-`../infra/README.md`. Runtime endpoints and Google config come from server
+verify only. This repository never deploys. Only the infra repository's `release`
+workflow deploys the stack; its SSH setup is documented in `../infra/README.md`.
+Runtime endpoints and Google config come from server
 `infra/.env.docker`; Docker context excludes all `.env*`, with no deployment env
 build arguments. Select `Verify Next.js application` as a required branch check.
