@@ -19,10 +19,6 @@ RUN corepack enable
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 
-# NEXT_PUBLIC_* values are inlined into the browser bundle at build time, so they must be known here
-ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID
-ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
-
 RUN yarn build
 
 FROM node:22-bookworm-slim AS runtime
