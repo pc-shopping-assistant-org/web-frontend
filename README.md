@@ -18,8 +18,9 @@ Open `http://localhost:3000/vi` (or `/en`). Customer flows are live API calls;
 there is no runtime mock data.
 
 To enable Google Login, create a Google Identity Services web client and set
-the same client ID in `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (browser) and backend
-`GOOGLE_CLIENT_ID` (server). The backend verifies the ID token and links it to
+the same runtime `GOOGLE_CLIENT_ID` in frontend and backend. The public allowlisted
+value is read through `/api/config`, not embedded by `NEXT_PUBLIC_*` at build time.
+The backend verifies the ID token and links it to
 an existing local account; local registration remains required for the phone
 and address fields in this MVP.
 
@@ -113,7 +114,10 @@ GitHub Actions runs these gates on every push, pull request and merge queue
 type generation runs before TypeScript on a clean checkout. Tests/OpenAPI checks
 use local fixtures and committed snapshots, not live backend/AI credentials.
 
-The existing image job waits for verification. PRs build without publishing;
-main pushes, `v*` tags and manual dispatch may publish to GHCR. Other branch/tag
-pushes and merge queues run verification only. To block merging on failure, select
-`Verify Next.js application` as a required check in GitHub branch rules.
+Only a push/manual dispatch on the exact `release` branch builds/publishes an image,
+tagged `release` and `sha-<full commit>`. PRs, other branches/tags and merge queues
+verify only. Release then SSHes to the server and updates only web-frontend, waiting
+for health. GitHub Environment `release` SSH variables/secrets are documented in
+`../infra/README.md`. Runtime endpoints and Google config come from server
+`infra/.env.docker`; Docker context excludes all `.env*`, with no deployment env
+build arguments. Select `Verify Next.js application` as a required branch check.
