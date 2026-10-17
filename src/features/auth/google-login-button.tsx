@@ -4,10 +4,12 @@ import Script from "next/script";
 import {useRouter} from "@/i18n/navigation";
 import {useTranslations} from "next-intl";
 import {useCallback, useEffect, useRef, useState} from "react";
-import {useQueryClient} from "@tanstack/react-query";
+import {useQuery, useQueryClient} from "@tanstack/react-query";
 
 import {ErrorMessage} from "@/components/ui/error-message";
 import {ApiMessageKey} from "@/lib/domain/message-keys";
+import {apiFetch} from "@/lib/api/client";
+import {PUBLIC_CONFIG_PATH, publicConfigKeys, publicConfigSchema} from "@/lib/config/public-config";
 
 import {loginWithGoogle} from "./api";
 import {resyncIdentityCaches} from "@/features/auth/queries";
@@ -55,7 +57,12 @@ export function GoogleLoginButton({redirectTo}: {redirectTo?: string} = {}) {
   const [scriptReady, setScriptReady] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [pending, setPending] = useState(false);
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const {data: publicConfig} = useQuery({
+    queryKey: publicConfigKeys.all,
+    queryFn: async () => publicConfigSchema.parse(await apiFetch(PUBLIC_CONFIG_PATH, {cache: "no-store"})),
+    retry: false,
+  });
+  const clientId = publicConfig?.googleClientId;
 
   const handleCredential = useCallback(async (response: GoogleCredentialResponse) => {
     if (!response.credential || pendingRef.current) return;
