@@ -47,7 +47,7 @@ declare global {
 
 const GOOGLE_SCRIPT = "https://accounts.google.com/gsi/client";
 
-export function GoogleLoginButton({redirectTo}: {redirectTo?: string} = {}) {
+export function GoogleLoginButton({redirectTo, onSuccess}: {redirectTo?: string; onSuccess?: () => void} = {}) {
   const t = useTranslations("auth");
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -73,15 +73,19 @@ export function GoogleLoginButton({redirectTo}: {redirectTo?: string} = {}) {
       const request: GoogleLoginRequest = {idToken: response.credential};
       await loginWithGoogle(request);
       await resyncIdentityCaches(queryClient);
-      router.push(redirectTo?.startsWith("/") ? redirectTo : "/account");
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push(redirectTo?.startsWith("/") ? redirectTo : "/account");
+        router.refresh();
+      }
     } catch (cause) {
       setError(cause);
     } finally {
       pendingRef.current = false;
       setPending(false);
     }
-  }, [redirectTo, router, queryClient]);
+  }, [redirectTo, onSuccess, router, queryClient]);
 
   const renderButton = useCallback(() => {
     if (!clientId || !scriptReady || !window.google || !containerRef.current || initializedRef.current) return;
