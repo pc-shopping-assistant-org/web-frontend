@@ -9,6 +9,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {ErrorMessage} from "@/components/ui/error-message";
+import {Dialog} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
 import {Skeleton} from "@/components/ui/skeleton";
 import {Textarea} from "@/components/ui/textarea";
@@ -16,6 +17,9 @@ import {Link} from "@/i18n/navigation";
 import {formatMoney} from "@/lib/format";
 import {useProducts} from "@/features/catalog/queries";
 import {CatalogCategoryIcon} from "@/features/catalog/components/catalog-category-icon";
+import {useProfile} from "@/features/auth/queries";
+import {LoginForm} from "@/features/auth/login-form";
+import {ApiClientError} from "@/lib/api/envelope";
 import {streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
 import type {Confirmation} from "./contracts/stateful";
 import {MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
@@ -27,6 +31,8 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
   const t = useTranslations("assistant");
   const common = useTranslations("common");
   const locale = useLocale();
+  const profile = useProfile();
+  const [signInOpen, setSignInOpen] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [productIds, setProductIds] = useState<string[]>(initialProductIds);
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
@@ -52,6 +58,10 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
 
   async function send(submittedPrompt: string, confirmation?: Confirmation) {
     if (streamController.current) return;
+    if (profile.error instanceof ApiClientError && profile.error.status === 401) {
+      setSignInOpen(true);
+      return;
+    }
     const controller = new AbortController();
     streamController.current = controller;
     setLoading(true);
@@ -72,7 +82,11 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
       setProductIds([]);
     } catch (cause) {
       if (!controller.signal.aborted) {
-        setError(cause);
+        if (cause instanceof ApiClientError && cause.status === 401) {
+          setSignInOpen(true);
+        } else {
+          setError(cause);
+        }
         setStreamingPrompt("");
         setStreamingAnswer("");
       }
@@ -92,6 +106,9 @@ export function AssistantPage({initialProductIds = [], initialPrompt = "", inval
 
   return (
     <section className="storefront-wrap py-7 sm:py-10">
+      <Dialog open={signInOpen} onClose={() => setSignInOpen(false)} title={t("signInTitle")} description={t("signInDescription")} closeLabel={t("signInClose")}>
+        <LoginForm onSuccess={() => setSignInOpen(false)} />
+      </Dialog>
       <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Bot className="size-8" /></span>

@@ -21,7 +21,7 @@ import {loginRequestSchema} from "@/features/auth/contracts/requests";
 
 type LoginFormValues = z.infer<typeof loginRequestSchema>;
 
-export function LoginForm({redirectTo}: {redirectTo?: string} = {}) {
+export function LoginForm({redirectTo, onSuccess}: {redirectTo?: string; onSuccess?: () => void} = {}) {
   const t = useTranslations("auth");
   const common = useTranslations("common");
   const router = useRouter();
@@ -33,8 +33,12 @@ export function LoginForm({redirectTo}: {redirectTo?: string} = {}) {
     try {
       await login(values);
       await resyncIdentityCaches(queryClient);
-      router.push(redirectTo?.startsWith("/") ? redirectTo : "/account");
-      router.refresh();
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push(redirectTo?.startsWith("/") ? redirectTo : "/account");
+        router.refresh();
+      }
     } catch (error) {
       setError(error);
     }
@@ -45,7 +49,7 @@ export function LoginForm({redirectTo}: {redirectTo?: string} = {}) {
     <div className="space-y-2"><Label htmlFor="password">{t("password")}</Label><Input id="password" type="password" autoComplete="current-password" {...form.register("password")} aria-invalid={Boolean(form.formState.errors.password)} />{form.formState.errors.password ? <p className="text-xs text-destructive">{common("validation")}</p> : null}</div>
     {error ? <ErrorMessage error={error} /> : null}
     <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? common("loading") : t("login")}</Button>
-    <GoogleLoginButton redirectTo={redirectTo} />
+    <GoogleLoginButton redirectTo={redirectTo} onSuccess={onSuccess} />
     <Link href="/forgot-password" className="block text-center text-sm text-muted-foreground hover:text-foreground hover:underline">{t("forgotPassword")}</Link>
   </form>;
 }
