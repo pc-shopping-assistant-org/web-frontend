@@ -49,6 +49,10 @@ const EmployeesPage = dynamic(
   () => import("@/features/employees/employees-page").then((module) => module.EmployeesPage),
   {loading: () => <AdminPageSkeleton />},
 );
+const EmployeeCreatePage = dynamic(
+  () => import("@/features/employees/employee-create-page").then((module) => module.EmployeeCreatePage),
+  {loading: () => <AdminPageSkeleton />},
+);
 const EmployeeDetailPage = dynamic(
   () => import("@/features/employees/employee-detail-page").then((module) => module.EmployeeDetailPage),
   {loading: () => <AdminPageSkeleton />},
@@ -112,6 +116,10 @@ export function AdminCustomerDetailRouteClient({customerId}: {customerId: string
 
 export function EmployeesRouteClient() {
   return <EmployeesPage />;
+}
+
+export function EmployeeCreateRouteClient() {
+  return <EmployeeCreatePage />;
 }
 
 export function AdminEmployeeDetailRouteClient({employeeId}: {employeeId: string}) {

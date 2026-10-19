@@ -700,7 +700,7 @@ function ChangePasswordCard({ hasPassword }: { hasPassword: boolean }) {
       </CardHeader>
       <CardContent>
         {awaitingOtp ? (
-          <form className="space-y-4" onSubmit={(event) => void submitOtp(event)}>
+          <form method="post" className="space-y-4" onSubmit={(event) => void submitOtp(event)}>
             <p className="text-sm text-emerald-700">{t("otpSent")}</p>
             <Field
               id="change-otp"
@@ -720,7 +720,7 @@ function ChangePasswordCard({ hasPassword }: { hasPassword: boolean }) {
             </div>
           </form>
         ) : (
-          <form className="space-y-4" onSubmit={(event) => void requestOtp(event)}>
+          <form method="post" className="space-y-4" onSubmit={(event) => void requestOtp(event)}>
             {hasPassword ? (
               <Field
                 id="old-password"
