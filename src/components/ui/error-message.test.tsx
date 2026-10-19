@@ -13,7 +13,9 @@ const translated: Record<string, string> = {
 
 vi.mock("next-intl", () => ({
   useTranslations: (namespace: string) =>
-    Object.assign((key: string) => (namespace === "common" ? "Có lỗi xảy ra." : translated[key]), {has: (key: string) => key in translated}),
+    Object.assign((key: string) => (namespace === "common" ? "Có lỗi xảy ra." : translated[key]), {
+      has: (key: string) => key in translated,
+    }),
 }));
 
 afterEach(cleanup);

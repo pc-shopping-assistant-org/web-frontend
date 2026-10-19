@@ -13,7 +13,10 @@ vi.mock("@tanstack/react-query", () => ({useQueryClient: () => ({})}));
 vi.mock("./api", () => ({login: mocks.login}));
 vi.mock("./queries", () => ({resyncIdentityCaches: mocks.resync}));
 vi.mock("./google-login-button", () => ({GoogleLoginButton: () => null}));
-afterEach(() => {cleanup(); vi.clearAllMocks();});
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+});
 
 async function signIn() {
   const user = userEvent.setup();

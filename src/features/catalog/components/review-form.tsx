@@ -39,43 +39,53 @@ export function ReviewForm({
   const [rating, setRating] = useState(initial?.rating ?? 0);
   const [comment, setComment] = useState(initial?.comment ?? "");
 
-  return <form
-    className="space-y-4"
-    onSubmit={(event) => {
-      event.preventDefault();
-      if (rating) onSubmit({rating, comment});
-    }}
-  >
-    <div className="space-y-2">
-      <Label>{t("ratingLabel")}</Label>
-      <div className="flex gap-1" role="group" aria-label={t("ratingLabel")}>
-        {RATINGS.map((value) => <button
-          key={value}
-          type="button"
-          aria-label={t("starsOption", {count: value})}
-          aria-pressed={rating === value}
-          onClick={() => setRating(value)}
-          className="rounded p-0.5 transition hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-        >
-          <Star className={`size-7 ${value <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"}`} />
-        </button>)}
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (rating) onSubmit({rating, comment});
+      }}
+    >
+      <div className="space-y-2">
+        <Label>{t("ratingLabel")}</Label>
+        <div className="flex gap-1" role="group" aria-label={t("ratingLabel")}>
+          {RATINGS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-label={t("starsOption", {count: value})}
+              aria-pressed={rating === value}
+              onClick={() => setRating(value)}
+              className="rounded p-0.5 transition hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            >
+              <Star className={`size-7 ${value <= rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"}`} />
+            </button>
+          ))}
+        </div>
       </div>
-    </div>
-    <div className="space-y-2">
-      <Label htmlFor={`${idPrefix}-comment`}>{t("commentLabel")}</Label>
-      <Textarea
-        id={`${idPrefix}-comment`}
-        value={comment}
-        maxLength={REVIEW_COMMENT_MAX_LENGTH}
-        placeholder={t("commentPlaceholder")}
-        onChange={(event) => setComment(event.target.value)}
-      />
-    </div>
-    {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-    {error ? <ErrorMessage error={error} /> : null}
-    <div className="flex gap-2">
-      <Button type="submit" disabled={pending || !rating}>{submitLabel}</Button>
-      {onCancel ? <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>{t("cancelReview")}</Button> : null}
-    </div>
-  </form>;
+      <div className="space-y-2">
+        <Label htmlFor={`${idPrefix}-comment`}>{t("commentLabel")}</Label>
+        <Textarea
+          id={`${idPrefix}-comment`}
+          value={comment}
+          maxLength={REVIEW_COMMENT_MAX_LENGTH}
+          placeholder={t("commentPlaceholder")}
+          onChange={(event) => setComment(event.target.value)}
+        />
+      </div>
+      {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
+      {error ? <ErrorMessage error={error} /> : null}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={pending || !rating}>
+          {submitLabel}
+        </Button>
+        {onCancel ? (
+          <Button type="button" variant="outline" onClick={onCancel} disabled={pending}>
+            {t("cancelReview")}
+          </Button>
+        ) : null}
+      </div>
+    </form>
+  );
 }

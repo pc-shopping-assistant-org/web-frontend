@@ -10,22 +10,9 @@ import {cn} from "@/lib/utils";
  * they are safe to render from App Router `loading.tsx` files and from client
  * query fallbacks alike.
  */
-function LoadingFrame({
-  children,
-  className,
-  label = "Loading",
-}: {
-  children: ReactNode;
-  className?: string;
-  label?: string;
-}) {
+function LoadingFrame({children, className, label = "Loading"}: {children: ReactNode; className?: string; label?: string}) {
   return (
-    <div
-      role="status"
-      aria-busy="true"
-      aria-label={label}
-      className={cn("animate-in fade-in duration-200", className)}
-    >
+    <div role="status" aria-busy="true" aria-label={label} className={cn("animate-in fade-in duration-200", className)}>
       {children}
       <span className="sr-only">{label}...</span>
     </div>

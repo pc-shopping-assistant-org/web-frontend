@@ -25,13 +25,15 @@ export function VnpayPayButton({paymentId, label}: {paymentId: string; label?: s
     }
   }
 
-  return <div className="space-y-3">
-    <Button type="button" onClick={() => void start()} disabled={pay.isPending || pay.isSuccess}>
-      <CreditCard className="size-4" />
-      {pay.isPending || pay.isSuccess ? common("loading") : label ?? t("payWithVnpay")}
-    </Button>
-    {pay.isError ? <ErrorMessage error={pay.error} /> : null}
-  </div>;
+  return (
+    <div className="space-y-3">
+      <Button type="button" onClick={() => void start()} disabled={pay.isPending || pay.isSuccess}>
+        <CreditCard className="size-4" />
+        {pay.isPending || pay.isSuccess ? common("loading") : (label ?? t("payWithVnpay"))}
+      </Button>
+      {pay.isError ? <ErrorMessage error={pay.error} /> : null}
+    </div>
+  );
 }
 
 /**
@@ -52,15 +54,24 @@ export function VnpayAutoRedirect({orderId}: {orderId: string}) {
   useEffect(() => {
     if (!paymentId || started.current) return;
     started.current = true;
-    pay.mutateAsync(paymentId).then((url) => window.location.assign(url), () => {
-      // the error is shown below, with the button to try again
-    });
+    pay.mutateAsync(paymentId).then(
+      (url) => window.location.assign(url),
+      () => {
+        // the error is shown below, with the button to try again
+      },
+    );
   }, [paymentId, pay]);
 
-  return <div className="space-y-3 rounded-xl border bg-muted/40 p-4 text-sm">
-    {pay.isError ? <>
-      <p className="text-amber-900">{t("vnpayFailed")}</p>
-      {paymentId ? <VnpayPayButton paymentId={paymentId} label={t("payWithVnpay")} /> : null}
-    </> : <p className="font-medium">{paymentId ? t("vnpayRedirecting") : t("vnpayPreparing")}</p>}
-  </div>;
+  return (
+    <div className="space-y-3 rounded-xl border bg-muted/40 p-4 text-sm">
+      {pay.isError ? (
+        <>
+          <p className="text-amber-900">{t("vnpayFailed")}</p>
+          {paymentId ? <VnpayPayButton paymentId={paymentId} label={t("payWithVnpay")} /> : null}
+        </>
+      ) : (
+        <p className="font-medium">{paymentId ? t("vnpayRedirecting") : t("vnpayPreparing")}</p>
+      )}
+    </div>
+  );
 }

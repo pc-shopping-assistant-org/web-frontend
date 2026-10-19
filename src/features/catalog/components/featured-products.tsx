@@ -29,8 +29,10 @@ export function FeaturedProducts({
   const locale = useLocale();
   const [selected, setSelected] = useState(ALL);
   if (pending) return <FeaturedProductsSkeleton />;
-  if (unavailable) return <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">{t("catalogDescription")}</div>;
-  if (products.length === 0) return <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">{t("noProducts")}</div>;
+  if (unavailable)
+    return <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">{t("catalogDescription")}</div>;
+  if (products.length === 0)
+    return <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">{t("noProducts")}</div>;
 
   const groups = groupProducts(products, t("uncategorized"), locale);
   const chips = groups.slice(0, VISIBLE_CHIPS);
@@ -43,7 +45,13 @@ export function FeaturedProducts({
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]" role="group" aria-label={t("categoryTitle")}>
         <FilterChip active={!group} onClick={() => setSelected(ALL)} label={t("filterAll")} count={products.length} />
         {chips.map((chip) => (
-          <FilterChip key={chip.id} active={chip.id === group?.id} onClick={() => setSelected(chip.id)} label={chip.name} count={chip.products.length} />
+          <FilterChip
+            key={chip.id}
+            active={chip.id === group?.id}
+            onClick={() => setSelected(chip.id)}
+            label={chip.name}
+            count={chip.products.length}
+          />
         ))}
       </div>
 
@@ -82,7 +90,9 @@ function FilterChip({active, onClick, label, count}: {active: boolean; onClick: 
           : "border-border/70 bg-background hover:border-primary/30 hover:bg-primary/5 hover:text-primary",
       )}
     >
-      <span className="max-w-40 truncate" title={label}>{label}</span>
+      <span className="max-w-40 truncate" title={label}>
+        {label}
+      </span>
       <span className={cn("text-xs tabular-nums", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{count}</span>
     </button>
   );
@@ -98,5 +108,7 @@ function groupProducts(products: ProductSummary[], uncategorized: string, locale
     current.products.push(product);
     groups.set(id, current);
   }
-  return [...groups.values()].sort((left, right) => right.products.length - left.products.length || left.name.localeCompare(right.name, locale));
+  return [...groups.values()].sort(
+    (left, right) => right.products.length - left.products.length || left.name.localeCompare(right.name, locale),
+  );
 }

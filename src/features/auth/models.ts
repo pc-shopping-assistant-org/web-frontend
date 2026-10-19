@@ -30,7 +30,4 @@ export type AuthResponse = {
   user?: UserSummary;
 };
 
-export type AuthTokenPair = Pick<
-  AuthResponse,
-  "accessToken" | "refreshToken" | "expiresIn" | "tokenType"
->;
+export type AuthTokenPair = Pick<AuthResponse, "accessToken" | "refreshToken" | "expiresIn" | "tokenType">;

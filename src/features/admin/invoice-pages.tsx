@@ -1,20 +1,20 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Link } from "@/i18n/navigation";
-import { formatMoney } from "@/lib/format";
-import { AdminPagination } from "./admin-pagination";
-import { useAdminInvoice, useAdminInvoices } from "@/features/orders/queries";
-import { BackLink, Loading, Failure, SummaryLine } from "./detail-kit";
+import {useLocale, useTranslations} from "next-intl";
+import {useState} from "react";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Input} from "@/components/ui/input";
+import {Link} from "@/i18n/navigation";
+import {formatMoney} from "@/lib/format";
+import {AdminPagination} from "./admin-pagination";
+import {useAdminInvoice, useAdminInvoices} from "@/features/orders/queries";
+import {BackLink, Loading, Failure, SummaryLine} from "./detail-kit";
 
 export function AdminInvoicesPage() {
   const t = useTranslations("admin");
   const locale = useLocale();
-  const [draft, setDraft] = useState({ keyword: "", fromDate: "", toDate: "" });
+  const [draft, setDraft] = useState({keyword: "", fromDate: "", toDate: ""});
   const [applied, setApplied] = useState(draft);
   const [pageNumber, setPageNumber] = useState(0);
   const invoices = useAdminInvoices({
@@ -25,7 +25,7 @@ export function AdminInvoicesPage() {
     invoiceTo: applied.toDate ? `${applied.toDate}T23:59:59Z` : undefined,
   });
   const reset = () => {
-    const empty = { keyword: "", fromDate: "", toDate: "" };
+    const empty = {keyword: "", fromDate: "", toDate: ""};
     setDraft(empty);
     setApplied(empty);
     setPageNumber(0);
@@ -35,12 +35,8 @@ export function AdminInvoicesPage() {
     <div>
       <div className="mb-8 border-b border-border/70 pb-6">
         <p className="eyebrow">{t("label")}</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-          {t("invoices")}
-        </h1>
-        <p className="mt-2 max-w-3xl text-muted-foreground">
-          {t("resource.invoicesDescription")}
-        </p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">{t("invoices")}</h1>
+        <p className="mt-2 max-w-3xl text-muted-foreground">{t("resource.invoicesDescription")}</p>
       </div>
       <Card className="mb-6">
         <CardContent className="p-4">
@@ -48,34 +44,30 @@ export function AdminInvoicesPage() {
             className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_10rem_auto_auto]"
             onSubmit={(event) => {
               event.preventDefault();
-              setApplied({ ...draft, keyword: draft.keyword.trim() });
+              setApplied({...draft, keyword: draft.keyword.trim()});
               setPageNumber(0);
             }}
           >
             <Input
               value={draft.keyword}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, keyword: event.target.value }))
-              }
+              onChange={(event) => setDraft((current) => ({...current, keyword: event.target.value}))}
               placeholder={t("searchInvoices")}
             />
             <Input
               aria-label={t("fromDate")}
               type="date"
               value={draft.fromDate}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, fromDate: event.target.value }))
-              }
+              onChange={(event) => setDraft((current) => ({...current, fromDate: event.target.value}))}
             />
             <Input
               aria-label={t("toDate")}
               type="date"
               value={draft.toDate}
-              onChange={(event) =>
-                setDraft((current) => ({ ...current, toDate: event.target.value }))
-              }
+              onChange={(event) => setDraft((current) => ({...current, toDate: event.target.value}))}
             />
-            <Button type="submit" size="field">{t("search")}</Button>
+            <Button type="submit" size="field">
+              {t("search")}
+            </Button>
             <Button type="button" size="field" variant="outline" onClick={reset}>
               {t("clearFilters")}
             </Button>
@@ -89,37 +81,23 @@ export function AdminInvoicesPage() {
       ) : (
         <>
           {(page?.items ?? []).length === 0 ? (
-            <div className="rounded-2xl border border-dashed bg-card p-12 text-center text-sm text-muted-foreground">
-              {t("noResults")}
-            </div>
+            <div className="rounded-2xl border border-dashed bg-card p-12 text-center text-sm text-muted-foreground">{t("noResults")}</div>
           ) : (
             <div className="space-y-3">
               {(page?.items ?? []).map((invoice) => (
-                <Card
-                  key={invoice.id}
-                  className="transition hover:border-primary/30 hover:shadow-md"
-                >
+                <Card key={invoice.id} className="transition hover:border-primary/30 hover:shadow-md">
                   <CardContent className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-5">
                     <div className="min-w-0">
-                      <Link
-                        href={`/admin/invoices/${invoice.id}`}
-                        className="font-semibold hover:text-primary hover:underline"
-                      >
+                      <Link href={`/admin/invoices/${invoice.id}`} className="font-semibold hover:text-primary hover:underline">
                         {invoice.invoiceNumber}
                       </Link>
                       <p className="mt-1 text-sm text-muted-foreground">
                         {invoice.recipientName ?? "—"} ·{" "}
-                        {invoice.invoiceDate
-                          ? new Date(invoice.invoiceDate).toLocaleDateString(
-                              locale === "vi" ? "vi-VN" : "en-US",
-                            )
-                          : "—"}
+                        {invoice.invoiceDate ? new Date(invoice.invoiceDate).toLocaleDateString(locale === "vi" ? "vi-VN" : "en-US") : "—"}
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <span className="font-semibold">
-                        {formatMoney(invoice.totalAmount, locale)}
-                      </span>
+                      <span className="font-semibold">{formatMoney(invoice.totalAmount, locale)}</span>
                       <Link
                         href={`/admin/invoices/${invoice.id}`}
                         className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
@@ -135,9 +113,9 @@ export function AdminInvoicesPage() {
           {page && page.totalPages > 1 ? (
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                {t("pageOf", { page: page.page + 1, total: page.totalPages })}
+                {t("pageOf", {page: page.page + 1, total: page.totalPages})}
                 {" · "}
-                {t("totalInvoices", { count: page.totalElements })}
+                {t("totalInvoices", {count: page.totalElements})}
               </p>
               <AdminPagination
                 hasPrev={page.page > 0}
@@ -153,7 +131,7 @@ export function AdminInvoicesPage() {
   );
 }
 
-export function AdminInvoiceDetailPage({ orderId }: { orderId: string }) {
+export function AdminInvoiceDetailPage({orderId}: {orderId: string}) {
   const t = useTranslations("admin");
   const locale = useLocale();
   const invoice = useAdminInvoice(orderId);
@@ -174,9 +152,7 @@ export function AdminInvoiceDetailPage({ orderId }: { orderId: string }) {
           <p className="eyebrow">{t("invoiceDetail")}</p>
           <h1 className="mt-2 text-3xl font-semibold">{item.invoiceNumber}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {item.invoiceDate
-              ? new Date(item.invoiceDate).toLocaleString(locale === "vi" ? "vi-VN" : "en-US")
-              : "—"}
+            {item.invoiceDate ? new Date(item.invoiceDate).toLocaleString(locale === "vi" ? "vi-VN" : "en-US") : "—"}
           </p>
         </div>
         <div className="flex gap-2">
@@ -198,15 +174,10 @@ export function AdminInvoiceDetailPage({ orderId }: { orderId: string }) {
           </CardHeader>
           <CardContent className="divide-y">
             {item.items.map((line) => (
-              <div
-                key={line.id}
-                className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
-              >
+              <div key={line.id} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
                 <div className="min-w-0">
                   <p className="font-medium">{line.productName}</p>
-                  {line.variantLabel ? (
-                    <p className="text-sm text-muted-foreground">{line.variantLabel}</p>
-                  ) : null}
+                  {line.variantLabel ? <p className="text-sm text-muted-foreground">{line.variantLabel}</p> : null}
                   <p className="text-sm text-muted-foreground">
                     {line.sku ? `${line.sku} · ` : ""}
                     {line.quantity} × {formatMoney(line.unitPrice, locale)}
@@ -217,9 +188,7 @@ export function AdminInvoiceDetailPage({ orderId }: { orderId: string }) {
                     </p>
                   ) : null}
                 </div>
-                <span className="shrink-0 font-semibold">
-                  {formatMoney(line.lineTotal, locale)}
-                </span>
+                <span className="shrink-0 font-semibold">{formatMoney(line.lineTotal, locale)}</span>
               </div>
             ))}
           </CardContent>

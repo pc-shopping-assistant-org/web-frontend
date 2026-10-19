@@ -8,7 +8,20 @@ const VARIANT = "00000000-0000-4000-8000-000000000001";
 const cart = {
   id: "c1",
   items: [
-    {productVariantId: VARIANT, productId: "p1", productName: "Card", sku: "S1", model: "M", variantLabel: "Color: Blue", imageUrl: "http://img/a.png", price: 1000, quantity: 2, subtotal: 2000, stockQuantity: 5, available: true},
+    {
+      productVariantId: VARIANT,
+      productId: "p1",
+      productName: "Card",
+      sku: "S1",
+      model: "M",
+      variantLabel: "Color: Blue",
+      imageUrl: "http://img/a.png",
+      price: 1000,
+      quantity: 2,
+      subtotal: 2000,
+      stockQuantity: 5,
+      available: true,
+    },
     {productVariantId: "v2", quantity: 1, subtotal: 0, available: false},
   ],
   totalItems: 2,
@@ -16,9 +29,15 @@ const cart = {
 };
 
 function stubFetch(payload: unknown = cart) {
-  const fetchMock = vi.fn().mockImplementation(async () =>
-    new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {status: 200, headers: {"content-type": "application/json"}}),
-  );
+  const fetchMock = vi
+    .fn()
+    .mockImplementation(
+      async () =>
+        new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {
+          status: 200,
+          headers: {"content-type": "application/json"},
+        }),
+    );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }

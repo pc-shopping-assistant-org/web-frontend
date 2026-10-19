@@ -90,10 +90,18 @@ export function CategoryManagement() {
             <table className="w-full min-w-[44rem] border-collapse text-sm">
               <thead className="bg-muted/50 text-left text-muted-foreground">
                 <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">{tc("name")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{t("description")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{t("status")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tc("actions")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tc("name")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("description")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("status")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tc("actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -119,20 +127,38 @@ export function CategoryManagement() {
                           )}
                           <span className={cn("min-w-0 truncate", depth === 0 && "font-medium")}>{category.name}</span>
                           {children.length > 0 ? (
-                            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{children.length}</span>
+                            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                              {children.length}
+                            </span>
                           ) : null}
                         </div>
                       </td>
                       <td className="max-w-xs px-4 py-3 text-muted-foreground">
-                        <span className="line-clamp-1" title={category.description ?? undefined}>{category.description || "—"}</span>
+                        <span className="line-clamp-1" title={category.description ?? undefined}>
+                          {category.description || "—"}
+                        </span>
                       </td>
-                      <td className="px-4 py-3"><StatusBadge status={category.status} /></td>
+                      <td className="px-4 py-3">
+                        <StatusBadge status={category.status} />
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" onClick={() => setDialog({mode: "edit", category})}>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="xs"
+                            className="h-auto p-0 text-sm font-medium"
+                            onClick={() => setDialog({mode: "edit", category})}
+                          >
                             {tc("edit")}
                           </Button>
-                          <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" onClick={() => setDialog({mode: "create", parentId: category.id})}>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="xs"
+                            className="h-auto p-0 text-sm font-medium"
+                            onClick={() => setDialog({mode: "create", parentId: category.id})}
+                          >
                             {tc("addChild")}
                           </Button>
                           <ConfirmAction
@@ -158,7 +184,14 @@ export function CategoryManagement() {
         )}
       </Card>
 
-      {dialog ? <CategoryDialog key={dialog.mode === "edit" ? dialog.category.id : `new-${dialog.parentId ?? ""}`} state={dialog} tree={tree} onClose={() => setDialog(null)} /> : null}
+      {dialog ? (
+        <CategoryDialog
+          key={dialog.mode === "edit" ? dialog.category.id : `new-${dialog.parentId ?? ""}`}
+          state={dialog}
+          tree={tree}
+          onClose={() => setDialog(null)}
+        />
+      ) : null}
     </section>
   );
 }
@@ -176,7 +209,7 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
     name: editing?.name ?? "",
     seoName: editing?.seoName ?? "",
     description: editing?.description ?? "",
-    parentId: editing ? (editing.parentId ?? "") : (state.mode === "create" ? (state.parentId ?? "") : ""),
+    parentId: editing ? (editing.parentId ?? "") : state.mode === "create" ? (state.parentId ?? "") : "",
     status: (editing?.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
   });
   /** A category cannot go under itself or under one of its own children. */
@@ -211,7 +244,9 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
       description={editing ? undefined : tc("addDescription")}
       footer={
         <>
-          <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>{t("cancel")}</Button>
+          <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>
+            {t("cancel")}
+          </Button>
           <Button type="submit" form={formId} disabled={mutation.isPending || !form.name.trim()}>
             {editing ? t("save") : tc("create")}
           </Button>
@@ -220,14 +255,27 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
     >
       <form id={formId} className="grid grid-cols-[minmax(0,1fr)] gap-4" onSubmit={(event) => void submit(event)}>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-name`}>{t("name")} <span className="text-destructive">*</span></Label>
-          <Input id={`${formId}-name`} data-autofocus value={form.name} maxLength={255} required onChange={(event) => set({name: event.target.value})} />
+          <Label htmlFor={`${formId}-name`}>
+            {t("name")} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id={`${formId}-name`}
+            data-autofocus
+            value={form.name}
+            maxLength={255}
+            required
+            onChange={(event) => set({name: event.target.value})}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor={`${formId}-parent`}>{t("parentCategory")}</Label>
           <Select id={`${formId}-parent`} value={form.parentId} onChange={(event) => set({parentId: event.target.value})}>
             <option value="">{t("rootCategory")}</option>
-            {parents.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+            {parents.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
           </Select>
         </div>
         <div className="space-y-2">
@@ -237,7 +285,11 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
         {editing ? (
           <div className="space-y-2">
             <Label htmlFor={`${formId}-status`}>{t("status")}</Label>
-            <Select id={`${formId}-status`} value={form.status} onChange={(event) => set({status: event.target.value as EditableResourceStatus})}>
+            <Select
+              id={`${formId}-status`}
+              value={form.status}
+              onChange={(event) => set({status: event.target.value as EditableResourceStatus})}
+            >
               <option value={ResourceStatus.Active}>{t(`statusValues.${ResourceStatus.Active}`)}</option>
               <option value={ResourceStatus.Inactive}>{t(`statusValues.${ResourceStatus.Inactive}`)}</option>
             </Select>

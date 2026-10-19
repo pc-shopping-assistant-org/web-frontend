@@ -6,8 +6,11 @@ export default async function BuildPcPage({searchParams}: {searchParams: Promise
   let initialSelection: Selection = {};
   let invalidLink = false;
   if (build) {
-    try { initialSelection = selectionSchema.parse(JSON.parse(String(build))); }
-    catch { invalidLink = true; }
+    try {
+      initialSelection = selectionSchema.parse(JSON.parse(String(build)));
+    } catch {
+      invalidLink = true;
+    }
   }
   return <BuilderPage initialSelection={initialSelection} invalidLink={invalidLink} />;
 }

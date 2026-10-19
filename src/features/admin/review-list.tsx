@@ -74,12 +74,21 @@ export function ReviewListPage() {
 
       <FilterPanel onSubmit={search} onReset={reset} className="xl:grid-cols-[minmax(0,1fr)_14rem]">
         <FilterField label={t("search")}>
-          <Input aria-label={t("searchReviews")} placeholder={t("searchReviews")} value={draft.keyword} onChange={(event) => setDraft((current) => ({...current, keyword: event.target.value}))} />
+          <Input
+            aria-label={t("searchReviews")}
+            placeholder={t("searchReviews")}
+            value={draft.keyword}
+            onChange={(event) => setDraft((current) => ({...current, keyword: event.target.value}))}
+          />
         </FilterField>
         <FilterField label={t("rating")}>
           <Select value={draft.rating} onChange={(event) => setDraft((current) => ({...current, rating: event.target.value}))}>
             <option value="">{t("allRatings")}</option>
-            {Array.from({length: MAX_RATING}, (_, index) => MAX_RATING - index).map((rating) => <option key={rating} value={rating}>{rating}/{MAX_RATING}</option>)}
+            {Array.from({length: MAX_RATING}, (_, index) => MAX_RATING - index).map((rating) => (
+              <option key={rating} value={rating}>
+                {rating}/{MAX_RATING}
+              </option>
+            ))}
           </Select>
         </FilterField>
       </FilterPanel>
@@ -94,15 +103,31 @@ export function ReviewListPage() {
         ) : (
           <ul className="divide-y overflow-hidden rounded-xl border">
             {items.map((review) => (
-              <ReviewRow key={review.id} review={review} date={(value) => date.format(new Date(value))} onStatus={(id, next) => mutation.mutateAsync({id, status: next})} />
+              <ReviewRow
+                key={review.id}
+                review={review}
+                date={(value) => date.format(new Date(value))}
+                onStatus={(id, next) => mutation.mutateAsync({id, status: next})}
+              />
             ))}
           </ul>
         )}
-        {mutation.isError ? <div className="mt-4"><ErrorMessage error={mutation.error} /></div> : null}
+        {mutation.isError ? (
+          <div className="mt-4">
+            <ErrorMessage error={mutation.error} />
+          </div>
+        ) : null}
         {page && items.length > 0 && (page.hasPrev || page.hasNext) ? (
           <ListFooter
             summary={t("showingItems", {count: items.length})}
-            pager={<AdminPagination hasPrev={page.hasPrev} hasNext={page.hasNext} onPrev={() => setCursor(page.prevCursor)} onNext={() => setCursor(page.nextCursor)} />}
+            pager={
+              <AdminPagination
+                hasPrev={page.hasPrev}
+                hasNext={page.hasNext}
+                onPrev={() => setCursor(page.prevCursor)}
+                onNext={() => setCursor(page.nextCursor)}
+              />
+            }
           />
         ) : null}
       </Card>
@@ -110,7 +135,15 @@ export function ReviewListPage() {
   );
 }
 
-function ReviewRow({review, date, onStatus}: {review: Review; date: (value: string) => string; onStatus: (id: string, status: string) => Promise<unknown> | unknown}) {
+function ReviewRow({
+  review,
+  date,
+  onStatus,
+}: {
+  review: Review;
+  date: (value: string) => string;
+  onStatus: (id: string, status: string) => Promise<unknown> | unknown;
+}) {
   const t = useTranslations("admin");
   const rating = Math.max(0, Math.min(MAX_RATING, review.rating ?? 0));
   const product = review.productName ?? t("product");
@@ -121,7 +154,9 @@ function ReviewRow({review, date, onStatus}: {review: Review; date: (value: stri
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             {review.productId ? (
-              <Link href={`/admin/products/${review.productId}`} className="font-medium hover:text-primary hover:underline">{product}</Link>
+              <Link href={`/admin/products/${review.productId}`} className="font-medium hover:text-primary hover:underline">
+                {product}
+              </Link>
             ) : (
               <p className="font-medium">{product}</p>
             )}
@@ -135,7 +170,12 @@ function ReviewRow({review, date, onStatus}: {review: Review; date: (value: stri
         <div className="flex flex-wrap items-center gap-3">
           <StatusBadge status={review.status} />
           {review.id ? (
-            <StatusSelect currentStatus={review.status ?? ReviewStatus.Active} options={Object.values(ReviewStatus)} label={t("status")} onStatus={(status) => onStatus(review.id, status)} />
+            <StatusSelect
+              currentStatus={review.status ?? ReviewStatus.Active}
+              options={Object.values(ReviewStatus)}
+              label={t("status")}
+              onStatus={(status) => onStatus(review.id, status)}
+            />
           ) : null}
         </div>
       </div>
@@ -143,7 +183,9 @@ function ReviewRow({review, date, onStatus}: {review: Review; date: (value: stri
         {Array.from({length: MAX_RATING}, (_, index) => (
           <Star key={index} className={index < rating ? "size-4 fill-amber-400 text-amber-400" : "size-4 text-muted-foreground/30"} />
         ))}
-        <span className="ml-1 text-sm font-medium">{rating}/{MAX_RATING}</span>
+        <span className="ml-1 text-sm font-medium">
+          {rating}/{MAX_RATING}
+        </span>
       </div>
       <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{review.comment || t("noReviewComment")}</p>
     </li>

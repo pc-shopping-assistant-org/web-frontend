@@ -17,7 +17,10 @@ export function useAddToCart() {
 
 export function useUpdateCartItem() {
   const queryClient = useQueryClient();
-  return useMutation({mutationFn: ({variantId, quantity}: {variantId: string; quantity: number}) => updateCartItem(variantId, {quantity}), onSuccess: (cart) => queryClient.setQueryData(cartKeys.all, cart)});
+  return useMutation({
+    mutationFn: ({variantId, quantity}: {variantId: string; quantity: number}) => updateCartItem(variantId, {quantity}),
+    onSuccess: (cart) => queryClient.setQueryData(cartKeys.all, cart),
+  });
 }
 
 export function useRemoveCartItem() {

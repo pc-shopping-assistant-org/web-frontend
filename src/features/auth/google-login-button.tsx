@@ -69,28 +69,31 @@ export function GoogleLoginButton({redirectTo, onSuccess}: {redirectTo?: string;
   });
   const clientId = publicConfig?.googleClientId;
 
-  const handleCredential = useCallback(async (response: GoogleCredentialResponse) => {
-    if (!response.credential || pendingRef.current) return;
-    setError(null);
-    pendingRef.current = true;
-    setPending(true);
-    try {
-      const request: GoogleLoginRequest = {idToken: response.credential};
-      await loginWithGoogle(request);
-      await resyncIdentityCaches(queryClient);
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        router.push(redirectTo?.startsWith("/") ? redirectTo : "/account");
-        router.refresh();
+  const handleCredential = useCallback(
+    async (response: GoogleCredentialResponse) => {
+      if (!response.credential || pendingRef.current) return;
+      setError(null);
+      pendingRef.current = true;
+      setPending(true);
+      try {
+        const request: GoogleLoginRequest = {idToken: response.credential};
+        await loginWithGoogle(request);
+        await resyncIdentityCaches(queryClient);
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          router.push(redirectTo?.startsWith("/") ? redirectTo : "/account");
+          router.refresh();
+        }
+      } catch (cause) {
+        setError(cause);
+      } finally {
+        pendingRef.current = false;
+        setPending(false);
       }
-    } catch (cause) {
-      setError(cause);
-    } finally {
-      pendingRef.current = false;
-      setPending(false);
-    }
-  }, [redirectTo, onSuccess, router, queryClient]);
+    },
+    [redirectTo, onSuccess, router, queryClient],
+  );
 
   const renderButton = useCallback(() => {
     if (!clientId || !scriptReady || !window.google || !containerRef.current || initializedRef.current) return;
@@ -118,10 +121,22 @@ export function GoogleLoginButton({redirectTo, onSuccess}: {redirectTo?: string;
 
   if (!clientId) return null;
 
-  return <div className="space-y-4">
-    <Script src={GOOGLE_SCRIPT} strategy="afterInteractive" onLoad={() => setScriptReady(true)} onReady={() => setScriptReady(true)} onError={() => setError(new Error(ApiMessageKey.SERVICE_UNAVAILABLE))} />
-    <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-muted-foreground"><span className="h-px flex-1 bg-border" /><span>{t("orContinueWith")}</span><span className="h-px flex-1 bg-border" /></div>
-    <div ref={containerRef} className={cn("flex justify-center", pending && "pointer-events-none opacity-60")} aria-busy={pending} />
-    {error ? <ErrorMessage error={error} fallback={ApiMessageKey.SERVICE_UNAVAILABLE} /> : null}
-  </div>;
+  return (
+    <div className="space-y-4">
+      <Script
+        src={GOOGLE_SCRIPT}
+        strategy="afterInteractive"
+        onLoad={() => setScriptReady(true)}
+        onReady={() => setScriptReady(true)}
+        onError={() => setError(new Error(ApiMessageKey.SERVICE_UNAVAILABLE))}
+      />
+      <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="h-px flex-1 bg-border" />
+        <span>{t("orContinueWith")}</span>
+        <span className="h-px flex-1 bg-border" />
+      </div>
+      <div ref={containerRef} className={cn("flex justify-center", pending && "pointer-events-none opacity-60")} aria-busy={pending} />
+      {error ? <ErrorMessage error={error} fallback={ApiMessageKey.SERVICE_UNAVAILABLE} /> : null}
+    </div>
+  );
 }

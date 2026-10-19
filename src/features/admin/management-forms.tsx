@@ -1,22 +1,16 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Plus } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useState, type FormEvent } from "react";
+import {ChevronDown, ChevronUp, Plus} from "lucide-react";
+import {useTranslations} from "next-intl";
+import {useState, type FormEvent} from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ErrorMessage } from "@/components/ui/error-message";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useCreateAdminSupplier } from "./queries";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+import {ErrorMessage} from "@/components/ui/error-message";
+import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
+import {Textarea} from "@/components/ui/textarea";
+import {useCreateAdminSupplier} from "./queries";
 
 function Field({
   id,
@@ -38,14 +32,7 @@ function Field({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        required={required}
-        disabled={disabled}
-      />
+      <Input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} disabled={disabled} />
     </div>
   );
 }
@@ -67,18 +54,8 @@ function CreateCardHeader({
         <CardTitle>{title}</CardTitle>
         {description ? <CardDescription>{description}</CardDescription> : null}
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        aria-expanded={open}
-        onClick={onToggle}
-      >
-        {open ? (
-          <ChevronUp className="size-4" />
-        ) : (
-          <ChevronDown className="size-4" />
-        )}
+      <Button type="button" variant="outline" size="sm" aria-expanded={open} onClick={onToggle}>
+        {open ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
         {open ? t("hideCreate") : t("openCreate")}
       </Button>
     </CardHeader>
@@ -105,28 +82,19 @@ export function SupplierCreateForm() {
       address: form.address.trim() || undefined,
       description: form.description.trim() || undefined,
     });
-    setForm({ name: "", email: "", phone: "", address: "", description: "" });
+    setForm({name: "", email: "", phone: "", address: "", description: ""});
   }
   return (
     <Card className="mb-6">
-      <CreateCardHeader
-        title={t("createSupplier")}
-        open={open}
-        onToggle={() => setOpen((value) => !value)}
-      />
+      <CreateCardHeader title={t("createSupplier")} open={open} onToggle={() => setOpen((value) => !value)} />
       {open ? (
         <CardContent>
-          <form
-            className="grid gap-4 sm:grid-cols-2"
-            onSubmit={(event) => void submit(event)}
-          >
+          <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
             <Field
               id="new-supplier-name"
               label={t("name")}
               value={form.name}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, name: value }))
-              }
+              onChange={(value) => setForm((current) => ({...current, name: value}))}
               required
             />
             <Field
@@ -134,30 +102,22 @@ export function SupplierCreateForm() {
               label={t("email")}
               type="email"
               value={form.email}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, email: value }))
-              }
+              onChange={(value) => setForm((current) => ({...current, email: value}))}
             />
             <Field
               id="new-supplier-phone"
               label={t("phone")}
               value={form.phone}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, phone: value }))
-              }
+              onChange={(value) => setForm((current) => ({...current, phone: value}))}
             />
             <Field
               id="new-supplier-address"
               label={t("address")}
               value={form.address}
-              onChange={(value) =>
-                setForm((current) => ({ ...current, address: value }))
-              }
+              onChange={(value) => setForm((current) => ({...current, address: value}))}
             />
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="new-supplier-description">
-                {t("description")}
-              </Label>
+              <Label htmlFor="new-supplier-description">{t("description")}</Label>
               <Textarea
                 id="new-supplier-description"
                 value={form.description}
@@ -170,10 +130,7 @@ export function SupplierCreateForm() {
               />
             </div>
             <div className="sm:col-span-2">
-              <Button
-                type="submit"
-                disabled={create.isPending || !form.name.trim()}
-              >
+              <Button type="submit" disabled={create.isPending || !form.name.trim()}>
                 <Plus className="size-4" />
                 {t("create")}
               </Button>

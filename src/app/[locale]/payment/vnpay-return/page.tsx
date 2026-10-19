@@ -6,5 +6,9 @@ import {VnpayReturnPage} from "@/features/orders/vnpay-return-page";
 export const metadata: Metadata = {title: "Payment result"};
 
 export default function VnpayReturnRoute() {
-  return <Suspense fallback={null}><VnpayReturnPage /></Suspense>;
+  return (
+    <Suspense fallback={null}>
+      <VnpayReturnPage />
+    </Suspense>
+  );
 }

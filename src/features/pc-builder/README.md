@@ -23,12 +23,12 @@ select action. Focus management, Escape and close behavior use the native librar
 No generated OpenAPI contract exists for these mock endpoints, so local Zod
 contracts validate boundaries; `models.ts` and `mappers.ts` remain UI-owned.
 
-| API | Input | Result |
-| --- | --- | --- |
-| GET `/api/mock/pc-builder/components?slot=CPU` | Slot enum | SKU catalog fixtures |
-| GET `/api/mock/pc-builder/accessories` | None | Optional peripheral fixtures |
-| POST `/api/mock/pc-builder/quote` | `{selection: {CPU: "cpu-amd"}}` | Server total, parts, missing slots, checks |
-| POST `/api/mock/pc-builder/validate` | `{selection: {}, slot: "CPU"}` | Candidate statuses in one batch |
+| API                                            | Input                           | Result                                     |
+| ---------------------------------------------- | ------------------------------- | ------------------------------------------ |
+| GET `/api/mock/pc-builder/components?slot=CPU` | Slot enum                       | SKU catalog fixtures                       |
+| GET `/api/mock/pc-builder/accessories`         | None                            | Optional peripheral fixtures               |
+| POST `/api/mock/pc-builder/quote`              | `{selection: {CPU: "cpu-amd"}}` | Server total, parts, missing slots, checks |
+| POST `/api/mock/pc-builder/validate`           | `{selection: {}, slot: "CPU"}`  | Candidate statuses in one batch            |
 
 All responses use `{data, message, errors}` with static `PC_BUILD_*` keys.
 Submitted prices/extra fields and invalid slots/SKUs are rejected. Invalid

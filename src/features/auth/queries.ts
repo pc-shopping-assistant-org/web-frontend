@@ -17,16 +17,10 @@ export const authKeys = {
 // the invalidation. Cancelling first forces every subsequent read to be a
 // fresh request made with the new cookies.
 export async function resyncIdentityCaches(queryClient: QueryClient) {
-  await Promise.all([
-    queryClient.cancelQueries({queryKey: authKeys.profile}),
-    queryClient.cancelQueries({queryKey: cartKeys.all}),
-  ]);
+  await Promise.all([queryClient.cancelQueries({queryKey: authKeys.profile}), queryClient.cancelQueries({queryKey: cartKeys.all})]);
   queryClient.removeQueries({queryKey: authKeys.profile});
   queryClient.removeQueries({queryKey: cartKeys.all});
-  await Promise.all([
-    queryClient.invalidateQueries({queryKey: authKeys.profile}),
-    queryClient.invalidateQueries({queryKey: cartKeys.all}),
-  ]);
+  await Promise.all([queryClient.invalidateQueries({queryKey: authKeys.profile}), queryClient.invalidateQueries({queryKey: cartKeys.all})]);
 }
 
 export function useProfile() {

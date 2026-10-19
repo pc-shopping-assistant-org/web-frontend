@@ -14,7 +14,9 @@ import {cn} from "@/lib/utils";
 type Node = {id: string; name: string; children: Node[]};
 
 function toNodes(categories: CategoryTree[]): Node[] {
-  return categories.flatMap((category) => (category.id ? [{id: category.id, name: category.name ?? "", children: toNodes(category.children ?? [])}] : []));
+  return categories.flatMap((category) =>
+    category.id ? [{id: category.id, name: category.name ?? "", children: toNodes(category.children ?? [])}] : [],
+  );
 }
 
 /** The ids from the top category down to `id`, or empty when it is not in the tree. */
@@ -189,7 +191,8 @@ function PickerDialog({
     else if (event.key === "ArrowUp") focus(buttons[index - 1]);
     else if (event.key === "Home") focus(buttons[0]);
     else if (event.key === "End") focus(buttons[buttons.length - 1]);
-    else if (event.key === "ArrowLeft") focus(scroller.current?.querySelector<HTMLElement>(`ul[data-col="${depth - 1}"] button[aria-current="true"]`));
+    else if (event.key === "ArrowLeft")
+      focus(scroller.current?.querySelector<HTMLElement>(`ul[data-col="${depth - 1}"] button[aria-current="true"]`));
     else if (event.key === "ArrowRight" && button.dataset.parent === "true") {
       event.preventDefault();
       button.click();
@@ -234,12 +237,15 @@ function PickerDialog({
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-3">
           <p className="min-w-0 flex-1 text-sm text-muted-foreground">
-            {t("selected")}{" "}
-            <span className="font-semibold text-foreground">{selected ? namesOf(nodes, path).join(" > ") : t("none")}</span>
+            {t("selected")} <span className="font-semibold text-foreground">{selected ? namesOf(nodes, path).join(" > ") : t("none")}</span>
           </p>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>{tc("cancel")}</Button>
-            <Button type="button" disabled={!selected} onClick={() => onConfirm(selected)}>{t("confirm")}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {tc("cancel")}
+            </Button>
+            <Button type="button" disabled={!selected} onClick={() => onConfirm(selected)}>
+              {t("confirm")}
+            </Button>
           </div>
         </div>
       }
@@ -259,25 +265,34 @@ function PickerDialog({
         </div>
 
         {error ? (
-          <div className="rounded-xl border p-4"><ErrorMessage error={error} /></div>
+          <div className="rounded-xl border p-4">
+            <ErrorMessage error={error} />
+          </div>
         ) : nodes.length === 0 ? (
           <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">{t("empty")}</div>
         ) : words ? (
           <ul className="max-h-80 divide-y overflow-y-auto rounded-xl border" onKeyDown={onResultKeys}>
-            {found.length ? found.map((entry) => {
-              const id = entry.path[entry.path.length - 1];
-              return (
-                <li key={id} data-result>
-                  <button
-                    type="button"
-                    onClick={() => chooseFound(entry.path)}
-                    className={cn("w-full px-4 py-2.5 text-left text-sm transition hover:bg-muted/50", id === selected && "font-medium text-primary")}
-                  >
-                    {entry.names.join(" > ")}
-                  </button>
-                </li>
-              );
-            }) : <li className="p-8 text-center text-sm text-muted-foreground">{t("noMatch")}</li>}
+            {found.length ? (
+              found.map((entry) => {
+                const id = entry.path[entry.path.length - 1];
+                return (
+                  <li key={id} data-result>
+                    <button
+                      type="button"
+                      onClick={() => chooseFound(entry.path)}
+                      className={cn(
+                        "w-full px-4 py-2.5 text-left text-sm transition hover:bg-muted/50",
+                        id === selected && "font-medium text-primary",
+                      )}
+                    >
+                      {entry.names.join(" > ")}
+                    </button>
+                  </li>
+                );
+              })
+            ) : (
+              <li className="p-8 text-center text-sm text-muted-foreground">{t("noMatch")}</li>
+            )}
           </ul>
         ) : (
           <div ref={scroller} className="overflow-x-auto rounded-xl border bg-card" onKeyDown={onColumnKeys}>
@@ -285,7 +300,12 @@ function PickerDialog({
               {Array.from({length: Math.max(columns.length, 3)}, (_, depth) => {
                 const items = columns[depth] ?? [];
                 return (
-                  <ul key={depth} data-col={depth} aria-label={t("level", {level: depth + 1})} className="max-h-80 w-56 shrink-0 overflow-y-auto p-1.5 sm:w-1/3 sm:min-w-56">
+                  <ul
+                    key={depth}
+                    data-col={depth}
+                    aria-label={t("level", {level: depth + 1})}
+                    className="max-h-80 w-56 shrink-0 overflow-y-auto p-1.5 sm:w-1/3 sm:min-w-56"
+                  >
                     {items.map((node, index) => {
                       const active = path[depth] === node.id;
                       // one stop per column for Tab: the chosen category, or the first while none is chosen
@@ -305,7 +325,9 @@ function PickerDialog({
                             )}
                           >
                             <span className="min-w-0 truncate">{node.name}</span>
-                            {node.children.length ? <ChevronRight className={cn("size-4 shrink-0", active ? "" : "text-muted-foreground")} /> : null}
+                            {node.children.length ? (
+                              <ChevronRight className={cn("size-4 shrink-0", active ? "" : "text-muted-foreground")} />
+                            ) : null}
                           </button>
                         </li>
                       );

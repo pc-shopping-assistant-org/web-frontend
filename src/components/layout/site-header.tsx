@@ -15,20 +15,20 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
-import { useState, type FormEvent } from "react";
+import {useTranslations} from "next-intl";
+import {useState, type FormEvent} from "react";
 
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
-import type { Locale } from "@/i18n/routing";
-import { cn } from "@/lib/utils";
-import { isStaffRole } from "@/lib/auth/roles";
-import { useLogout, useProfile } from "@/features/auth/queries";
-import { useCart } from "@/features/cart/queries";
-import { useCategories } from "@/features/catalog/queries";
+import {Link, usePathname, useRouter} from "@/i18n/navigation";
+import type {Locale} from "@/i18n/routing";
+import {cn} from "@/lib/utils";
+import {isStaffRole} from "@/lib/auth/roles";
+import {useLogout, useProfile} from "@/features/auth/queries";
+import {useCart} from "@/features/cart/queries";
+import {useCategories} from "@/features/catalog/queries";
 import type {CategoryTree} from "@/features/catalog/contracts/responses";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-export function SiteHeader({ locale }: { locale: Locale }) {
+export function SiteHeader({locale}: {locale: Locale}) {
   const t = useTranslations("nav");
   const common = useTranslations("common");
   const home = useTranslations("home");
@@ -43,29 +43,24 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const links = [
-    { href: "/" as const, label: t("home") },
-    { href: "/products" as const, label: t("products"), icon: IconLayoutGrid },
-    { href: "/build-pc" as const, label: "Build PC", icon: IconDeviceDesktop },
-    { href: "/assistant" as const, label: t("assistant"), icon: IconRobot },
-    ...(!isStaff
-      ? [{ href: "/cart" as const, label: t("cart"), icon: IconShoppingCart }]
-      : []),
+    {href: "/" as const, label: t("home")},
+    {href: "/products" as const, label: t("products"), icon: IconLayoutGrid},
+    {href: "/build-pc" as const, label: "Build PC", icon: IconDeviceDesktop},
+    {href: "/assistant" as const, label: t("assistant"), icon: IconRobot},
+    ...(!isStaff ? [{href: "/cart" as const, label: t("cart"), icon: IconShoppingCart}] : []),
   ];
-  const primaryLinks = profile.isSuccess
-    ? [...links, { href: "/orders" as const, label: t("orders"), icon: IconClipboardList }]
-    : links;
+  const primaryLinks = profile.isSuccess ? [...links, {href: "/orders" as const, label: t("orders"), icon: IconClipboardList}] : links;
 
   const otherLocale: Locale = locale === "vi" ? "en" : "vi";
-  const visibleLinks = isStaff
-    ? primaryLinks.filter(({ href }) => href !== "/orders")
-    : primaryLinks;
+  const visibleLinks = isStaff ? primaryLinks.filter(({href}) => href !== "/orders") : primaryLinks;
   const profileName = profile.data?.fullName ?? profile.data?.email ?? t("account");
-  const profileInitials = profileName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(-2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("") || "U";
+  const profileInitials =
+    profileName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(-2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "U";
 
   async function signOut() {
     try {
@@ -79,11 +74,7 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   function submitSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const keyword = searchTerm.trim();
-    router.push(
-      keyword
-        ? `/products?keyword=${encodeURIComponent(keyword)}`
-        : "/products",
-    );
+    router.push(keyword ? `/products?keyword=${encodeURIComponent(keyword)}` : "/products");
   }
 
   function isActive(href: string) {
@@ -93,19 +84,8 @@ export function SiteHeader({ locale }: { locale: Locale }) {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-background/90 backdrop-blur">
       <div className="storefront-wrap flex h-16 items-center justify-between">
-        <Link
-          href="/"
-          className="flex shrink-0 items-center gap-2 font-semibold tracking-tight"
-          onClick={() => setOpen(false)}
-        >
-          <Image
-            src="/icon.png"
-            alt={common("appName")}
-            width={36}
-            height={36}
-            className="size-9 rounded-xl object-contain"
-            priority
-          />
+        <Link href="/" className="flex shrink-0 items-center gap-2 font-semibold tracking-tight" onClick={() => setOpen(false)}>
+          <Image src="/icon.png" alt={common("appName")} width={36} height={36} className="size-9 rounded-xl object-contain" priority />
           <span>{common("appName")}</span>
         </Link>
 
@@ -138,18 +118,11 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
         >
-          {open ? (
-            <IconX className="size-5" />
-          ) : (
-            <IconMenu2 className="size-5" />
-          )}
+          {open ? <IconX className="size-5" /> : <IconMenu2 className="size-5" />}
         </button>
 
-        <nav
-          className="hidden items-center gap-0 md:flex"
-          aria-label="Primary navigation"
-        >
-          {visibleLinks.map(({ href, label, icon: Icon }) => (
+        <nav className="hidden items-center gap-0 md:flex" aria-label="Primary navigation">
+          {visibleLinks.map(({href, label, icon: Icon}) => (
             <Link
               key={href}
               href={href}
@@ -170,7 +143,10 @@ export function SiteHeader({ locale }: { locale: Locale }) {
           {profile.isSuccess ? (
             <>
               {isStaff ? (
-                <Link href="/admin" className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2 text-sm font-medium text-primary hover:bg-primary/10">
+                <Link
+                  href="/admin"
+                  className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-primary/20 bg-primary/5 px-2.5 py-2 text-sm font-medium text-primary hover:bg-primary/10"
+                >
                   <IconLayoutDashboard className="size-4" />
                   {t("admin")}
                 </Link>
@@ -197,17 +173,11 @@ export function SiteHeader({ locale }: { locale: Locale }) {
             </>
           ) : (
             <>
-              <Link
-                href="/login"
-                className="ml-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted"
-              >
+              <Link href="/login" className="ml-2 inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted">
                 <IconUserCircle className="size-4" />
                 {t("login")}
               </Link>
-              <Link
-                href="/register"
-                className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
-              >
+              <Link href="/register" className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted">
                 {t("register")}
               </Link>
             </>
@@ -223,11 +193,14 @@ export function SiteHeader({ locale }: { locale: Locale }) {
       </div>
 
       {open ? (
-        <nav
-          className="border-t px-4 py-3 md:hidden"
-          aria-label="Mobile navigation"
-        >
-          <form className="relative mb-3" onSubmit={(event) => { submitSearch(event); setOpen(false); }}>
+        <nav className="border-t px-4 py-3 md:hidden" aria-label="Mobile navigation">
+          <form
+            className="relative mb-3"
+            onSubmit={(event) => {
+              submitSearch(event);
+              setOpen(false);
+            }}
+          >
             <label className="sr-only" htmlFor="mobile-product-search">
               {home("searchLabel")}
             </label>
@@ -254,13 +227,8 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                 {t("catalogMenu")}
               </span>
             </Link>
-            {visibleLinks.map(({ href, label, icon: Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                onClick={() => setOpen(false)}
-                className="rounded-lg px-3 py-3 text-sm hover:bg-muted"
-              >
+            {visibleLinks.map(({href, label, icon: Icon}) => (
+              <Link key={href} href={href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
                 <span className="flex items-center gap-2">
                   {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
                   {label}
@@ -280,14 +248,13 @@ export function SiteHeader({ locale }: { locale: Locale }) {
                     onClick={() => setOpen(false)}
                     className="rounded-lg px-3 py-3 text-sm font-medium text-primary hover:bg-primary/5"
                   >
-                    <span className="flex items-center gap-2"><IconLayoutDashboard className="size-4" />{t("admin")}</span>
+                    <span className="flex items-center gap-2">
+                      <IconLayoutDashboard className="size-4" />
+                      {t("admin")}
+                    </span>
                   </Link>
                 ) : null}
-                <Link
-                  href="/account"
-                  onClick={() => setOpen(false)}
-                  className="rounded-lg px-3 py-3 text-sm hover:bg-muted"
-                >
+                <Link href="/account" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
                   {profile.data.fullName ?? t("account")}
                 </Link>
                 <button
@@ -303,18 +270,10 @@ export function SiteHeader({ locale }: { locale: Locale }) {
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  onClick={() => setOpen(false)}
-                  className="rounded-lg px-3 py-3 text-sm hover:bg-muted"
-                >
+                <Link href="/login" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
                   {t("login")}
                 </Link>
-                <Link
-                  href="/register"
-                  onClick={() => setOpen(false)}
-                  className="rounded-lg px-3 py-3 text-sm hover:bg-muted"
-                >
+                <Link href="/register" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
                   {t("register")}
                 </Link>
               </>
@@ -343,11 +302,12 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
   const t = useTranslations("nav");
   const items = getActiveCategories(categories).slice(0, MENU_CATEGORY_LIMIT);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (id: string) => setExpanded((current) => {
-    const next = new Set(current);
-    if (!next.delete(id)) next.add(id);
-    return next;
-  });
+  const toggle = (id: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
 
   return (
     <details className="group relative hidden shrink-0 md:block">
@@ -400,7 +360,10 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
         ) : (
           <p className="px-2 py-5 text-sm text-muted-foreground">{t("catalogMenuEmpty")}</p>
         )}
-        <Link href="/assistant" className="mt-3 flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/85">
+        <Link
+          href="/assistant"
+          className="mt-3 flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground transition hover:bg-primary/85"
+        >
           <IconRobot className="size-4" aria-hidden="true" />
           {t("catalogMenuAssistant")}
         </Link>

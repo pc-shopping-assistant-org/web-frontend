@@ -61,11 +61,16 @@ export function CatalogPage({
   // that query: the server prerenders the loading state while the client
   // renders the loaded lists, which fails hydration. Holding the loading state
   // until after mount keeps the first client pass identical to the server pass.
-  const hydrated = useSyncExternalStore(subscribeNoop, () => true, () => false);
+  const hydrated = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 
   const categoryList = useMemo(() => categoryOptions(categories.data ?? []), [categories.data]);
   const brandList = useMemo(
-    () => (brands.data ?? []).filter((brand) => brand.status === ResourceStatus.Active).map((brand) => ({value: brand.id, label: brand.name})),
+    () =>
+      (brands.data ?? []).filter((brand) => brand.status === ResourceStatus.Active).map((brand) => ({value: brand.id, label: brand.name})),
     [brands.data],
   );
 
@@ -93,8 +98,12 @@ export function CatalogPage({
   const activeFilters: {key: keyof CatalogUrlFilters; label: string}[] = [
     ...(filters.categoryId ? [{key: "categoryId" as const, label: `${t("category")}: ${selectedCategoryName ?? filters.categoryId}`}] : []),
     ...(filters.brandId ? [{key: "brandId" as const, label: `${t("brand")}: ${selectedBrandName ?? filters.brandId}`}] : []),
-    ...(filters.minPrice !== undefined ? [{key: "minPrice" as const, label: `${t("minPrice")}: ${formatFilterValue(filters.minPrice)}`}] : []),
-    ...(filters.maxPrice !== undefined ? [{key: "maxPrice" as const, label: `${t("maxPrice")}: ${formatFilterValue(filters.maxPrice)}`}] : []),
+    ...(filters.minPrice !== undefined
+      ? [{key: "minPrice" as const, label: `${t("minPrice")}: ${formatFilterValue(filters.minPrice)}`}]
+      : []),
+    ...(filters.maxPrice !== undefined
+      ? [{key: "maxPrice" as const, label: `${t("maxPrice")}: ${formatFilterValue(filters.maxPrice)}`}]
+      : []),
   ];
   const narrowedBy = activeFilters.length;
   const anyFilter = narrowedBy > 0 || Boolean(filters.keyword);
@@ -102,7 +111,12 @@ export function CatalogPage({
   return (
     <section className="page-wrap py-6 sm:py-8">
       <div className="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-8 xl:grid-cols-[15rem_minmax(0,1fr)]">
-        <aside className={cn("mb-5 rounded-xl border bg-card p-4 lg:mb-0 lg:block lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0", filtersOpen ? "block" : "hidden")}>
+        <aside
+          className={cn(
+            "mb-5 rounded-xl border bg-card p-4 lg:mb-0 lg:block lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0",
+            filtersOpen ? "block" : "hidden",
+          )}
+        >
           <CatalogFilters
             categories={categoryList}
             brands={brandList}
@@ -121,29 +135,75 @@ export function CatalogPage({
         <div className="min-w-0">
           <h1 className="text-lg font-medium sm:text-xl">
             {filters.keyword
-              ? t.rich("searchResultsFor", {keyword: filters.keyword, mark: (chunks) => <span className="break-words text-primary">{chunks}</span>})
+              ? t.rich("searchResultsFor", {
+                  keyword: filters.keyword,
+                  mark: (chunks) => <span className="break-words text-primary">{chunks}</span>,
+                })
               : t("allProducts")}
           </h1>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-muted/50 px-3 py-2.5 sm:px-4">
-            <Button type="button" variant="outline" size="sm" className="lg:hidden" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="lg:hidden"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
               <SlidersHorizontal className="size-4" aria-hidden="true" />
               {t("filterTitleShort")}
-              {narrowedBy > 0 ? <span className="ml-0.5 rounded-full bg-primary px-1.5 text-[0.7rem] font-semibold text-primary-foreground">{narrowedBy}</span> : null}
+              {narrowedBy > 0 ? (
+                <span className="ml-0.5 rounded-full bg-primary px-1.5 text-[0.7rem] font-semibold text-primary-foreground">
+                  {narrowedBy}
+                </span>
+              ) : null}
             </Button>
-            {query.data ? <p className="text-sm text-muted-foreground">{t("resultCount", {count: query.data.size ?? products.length})}</p> : null}
+            {query.data ? (
+              <p className="text-sm text-muted-foreground">{t("resultCount", {count: query.data.size ?? products.length})}</p>
+            ) : null}
             {filters.keyword || activeFilters.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2" aria-label={t("filteredResults")}>
-                {filters.keyword ? <FilterChip label={`${t("search")}: ${filters.keyword}`} onRemove={() => update({keyword: undefined})} removeLabel={t("removeFilter")} /> : null}
-                {activeFilters.map(({key, label}) => <FilterChip key={key} label={label} onRemove={() => update({[key]: undefined})} removeLabel={t("removeFilter")} />)}
+                {filters.keyword ? (
+                  <FilterChip
+                    label={`${t("search")}: ${filters.keyword}`}
+                    onRemove={() => update({keyword: undefined})}
+                    removeLabel={t("removeFilter")}
+                  />
+                ) : null}
+                {activeFilters.map(({key, label}) => (
+                  <FilterChip key={key} label={label} onRemove={() => update({[key]: undefined})} removeLabel={t("removeFilter")} />
+                ))}
               </div>
             ) : null}
             {trail.hasPrev || query.data?.hasNext ? (
               <div className="ml-auto flex items-center gap-1.5">
-                <Button type="button" variant="outline" size="icon-sm" aria-label={t("previous")} title={t("previous")} disabled={!trail.hasPrev} onClick={() => {trail.pop(); movePage(trail.prevCursor);}}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("previous")}
+                  title={t("previous")}
+                  disabled={!trail.hasPrev}
+                  onClick={() => {
+                    trail.pop();
+                    movePage(trail.prevCursor);
+                  }}
+                >
                   <ChevronLeft className="size-4" />
                 </Button>
-                <Button type="button" variant="outline" size="icon-sm" aria-label={t("next")} title={t("next")} disabled={!query.data?.hasNext || !query.data?.nextCursor} onClick={() => {trail.push(filters.cursor); movePage(query.data?.nextCursor);}}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon-sm"
+                  aria-label={t("next")}
+                  title={t("next")}
+                  disabled={!query.data?.hasNext || !query.data?.nextCursor}
+                  onClick={() => {
+                    trail.push(filters.cursor);
+                    movePage(query.data?.nextCursor);
+                  }}
+                >
                   <ChevronRight className="size-4" />
                 </Button>
               </div>
@@ -155,21 +215,59 @@ export function CatalogPage({
             {query.isError ? (
               <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-8 text-center">
                 <p className="font-medium">{t("loadError")}</p>
-                <p className="mt-2 text-sm text-muted-foreground">{query.error instanceof ApiClientError && query.error.messageKey === ApiMessageKey.SERVICE_UNAVAILABLE ? common("backendUnavailable") : common("unknownError")}</p>
-                <Button className="mt-5" variant="outline" onClick={() => void query.refetch()}>{common("retry")}</Button>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {query.error instanceof ApiClientError && query.error.messageKey === ApiMessageKey.SERVICE_UNAVAILABLE
+                    ? common("backendUnavailable")
+                    : common("unknownError")}
+                </p>
+                <Button className="mt-5" variant="outline" onClick={() => void query.refetch()}>
+                  {common("retry")}
+                </Button>
               </div>
             ) : null}
             {!query.isPending && !query.isError ? (
               <div className={cn("transition-opacity duration-200", query.isFetching && "opacity-60")} aria-busy={query.isFetching}>
-                <ProductGrid variant="listing" products={products} compareIds={compareIds} onClearFilters={anyFilter ? clearFilters : undefined} onCompareToggle={(product) => {
-                  if (!product.id) return;
-                  setCompareIds((current) => current.includes(product.id!) ? current.filter((id) => id !== product.id) : current.length < 5 ? [...current, product.id!] : current);
-                }} />
+                <ProductGrid
+                  variant="listing"
+                  products={products}
+                  compareIds={compareIds}
+                  onClearFilters={anyFilter ? clearFilters : undefined}
+                  onCompareToggle={(product) => {
+                    if (!product.id) return;
+                    setCompareIds((current) =>
+                      current.includes(product.id!)
+                        ? current.filter((id) => id !== product.id)
+                        : current.length < 5
+                          ? [...current, product.id!]
+                          : current,
+                    );
+                  }}
+                />
                 <CompareTray products={products} ids={compareIds} onClear={() => setCompareIds([])} />
                 {trail.hasPrev || query.data?.hasNext ? (
                   <div className="mt-8 flex justify-center gap-2">
-                    <Button variant="outline" disabled={!trail.hasPrev} onClick={() => {trail.pop(); movePage(trail.prevCursor);}}><ChevronLeft className="size-4" />{t("previous")}</Button>
-                    <Button variant="outline" disabled={!query.data?.hasNext || !query.data?.nextCursor} onClick={() => {trail.push(filters.cursor); movePage(query.data?.nextCursor);}}>{t("next")}<ChevronRight className="size-4" /></Button>
+                    <Button
+                      variant="outline"
+                      disabled={!trail.hasPrev}
+                      onClick={() => {
+                        trail.pop();
+                        movePage(trail.prevCursor);
+                      }}
+                    >
+                      <ChevronLeft className="size-4" />
+                      {t("previous")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={!query.data?.hasNext || !query.data?.nextCursor}
+                      onClick={() => {
+                        trail.push(filters.cursor);
+                        movePage(query.data?.nextCursor);
+                      }}
+                    >
+                      {t("next")}
+                      <ChevronRight className="size-4" />
+                    </Button>
                   </div>
                 ) : null}
               </div>
@@ -206,15 +304,16 @@ function CompareTray({
   onClear: () => void;
 }) {
   const t = useTranslations("catalog");
-  const selected = useMemo(
-    () => ids.map((id) => products.find((product) => product.id === id)).filter(Boolean),
-    [ids, products],
-  );
+  const selected = useMemo(() => ids.map((id) => products.find((product) => product.id === id)).filter(Boolean), [ids, products]);
   if (ids.length === 0) return null;
 
   const compareHref = `/assistant?productIds=${encodeURIComponent(ids.join(","))}`;
   return (
-    <div className="sticky bottom-4 z-20 mt-7 rounded-2xl border border-primary/20 bg-background/95 p-3 shadow-xl shadow-slate-950/10 backdrop-blur sm:p-4" role="region" aria-label={t("compareTray")}>
+    <div
+      className="sticky bottom-4 z-20 mt-7 rounded-2xl border border-primary/20 bg-background/95 p-3 shadow-xl shadow-slate-950/10 backdrop-blur sm:p-4"
+      role="region"
+      aria-label={t("compareTray")}
+    >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -223,7 +322,10 @@ function CompareTray({
           <div className="min-w-0">
             <p className="font-semibold">{t("compareTrayTitle", {count: ids.length})}</p>
             <p className="mt-0.5 truncate text-xs text-muted-foreground">
-              {selected.map((product) => product?.name).filter(Boolean).join(" · ") || t("compareTrayHint")}
+              {selected
+                .map((product) => product?.name)
+                .filter(Boolean)
+                .join(" · ") || t("compareTrayHint")}
             </p>
           </div>
         </div>

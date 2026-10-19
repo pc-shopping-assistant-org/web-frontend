@@ -1,30 +1,22 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import {useTranslations} from "next-intl";
 
-import { ProductCreateForm } from "./catalog-management";
-import { DiscountCreateForm } from "./discount-create";
-import { DiscountListPage } from "./discount-list";
-import { PageHeader } from "./list-kit";
-import { OrderListPage } from "./order-list";
-import { PaymentListPage } from "./payment-list";
-import { PaymentMethodListPage } from "./payment-method-list";
-import { ProductListPage } from "./product-list";
-import { ReviewListPage } from "./review-list";
-import { SupplierListPage } from "./supplier-list";
+import {ProductCreateForm} from "./catalog-management";
+import {DiscountCreateForm} from "./discount-create";
+import {DiscountListPage} from "./discount-list";
+import {PageHeader} from "./list-kit";
+import {OrderListPage} from "./order-list";
+import {PaymentListPage} from "./payment-list";
+import {PaymentMethodListPage} from "./payment-method-list";
+import {ProductListPage} from "./product-list";
+import {ReviewListPage} from "./review-list";
+import {SupplierListPage} from "./supplier-list";
 
 export type AdminResource =
-  | "products"
-  | "product-create"
-  | "discount-create"
-  | "orders"
-  | "discounts"
-  | "suppliers"
-  | "payments"
-  | "payment-methods"
-  | "reviews";
+  "products" | "product-create" | "discount-create" | "orders" | "discounts" | "suppliers" | "payments" | "payment-methods" | "reviews";
 
-export function AdminResourcePage({ resource }: { resource: AdminResource }) {
+export function AdminResourcePage({resource}: {resource: AdminResource}) {
   switch (resource) {
     case "products":
       return <ProductListPage />;

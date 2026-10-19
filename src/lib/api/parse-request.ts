@@ -8,10 +8,7 @@ import {ApiMessageKey} from "@/lib/domain/message-keys";
  * Validate a request at the feature/BFF boundary while preserving the same
  * static message-key contract used for upstream API failures.
  */
-export function parseRequest<TSchema extends z.ZodTypeAny>(
-  schema: TSchema,
-  input: unknown,
-): z.output<TSchema> {
+export function parseRequest<TSchema extends z.ZodTypeAny>(schema: TSchema, input: unknown): z.output<TSchema> {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
 

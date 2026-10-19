@@ -8,23 +8,38 @@ afterEach(() => vi.restoreAllMocks());
 
 function stubFetch(...payloads: unknown[]) {
   const queue = [...payloads];
-  const fetchMock = vi.fn().mockImplementation(async () =>
-    new Response(JSON.stringify({data: queue.shift() ?? null, message: "SUCCESS", errors: []}), {
-      status: 200,
-      headers: {"content-type": "application/json"},
-    }),
+  const fetchMock = vi.fn().mockImplementation(
+    async () =>
+      new Response(JSON.stringify({data: queue.shift() ?? null, message: "SUCCESS", errors: []}), {
+        status: 200,
+        headers: {"content-type": "application/json"},
+      }),
   );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
 const discount = (status: string, state = "RUNNING") => ({
-  id: "d1", code: "SAVE10", title: "Save", discountType: "PERCENT", value: 10, applicationScope: "ORDER", minOrderAmount: null,
-  startAt: "2026-01-01T00:00:00Z", endAt: "2026-12-31T00:00:00Z", status, state, categoryIds: [],
+  id: "d1",
+  code: "SAVE10",
+  title: "Save",
+  discountType: "PERCENT",
+  value: 10,
+  applicationScope: "ORDER",
+  minOrderAmount: null,
+  startAt: "2026-01-01T00:00:00Z",
+  endAt: "2026-12-31T00:00:00Z",
+  status,
+  state,
+  categoryIds: [],
 });
 const definition = {
-  title: "Save", discountType: DiscountType.Percent, value: 10, applicationScope: DiscountScope.Order,
-  startAt: "2026-01-01T00:00:00.000Z", endAt: "2026-12-31T00:00:00.000Z",
+  title: "Save",
+  discountType: DiscountType.Percent,
+  value: 10,
+  applicationScope: DiscountScope.Order,
+  startAt: "2026-01-01T00:00:00.000Z",
+  endAt: "2026-12-31T00:00:00.000Z",
 };
 
 describe("admin discounts", () => {

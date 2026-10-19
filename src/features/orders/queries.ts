@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
 import {cartKeys} from "@/features/cart/queries";
 
@@ -73,8 +73,8 @@ export function useCreateOrder() {
   return useMutation({
     mutationFn: createOrder,
     onSuccess: (order) => {
-      qc.invalidateQueries({ queryKey: orderKeys.all });
-      qc.invalidateQueries({ queryKey: cartKeys.all });
+      qc.invalidateQueries({queryKey: orderKeys.all});
+      qc.invalidateQueries({queryKey: cartKeys.all});
       qc.setQueryData(orderKeys.detail(order.id), order);
     },
   });
@@ -82,10 +82,9 @@ export function useCreateOrder() {
 export function useCancelOrder() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ orderId, reason }: { orderId: string; reason?: string }) =>
-      cancelOrder(orderId, reason),
+    mutationFn: ({orderId, reason}: {orderId: string; reason?: string}) => cancelOrder(orderId, reason),
     // also after a refusal: the order has usually changed under the customer
-    onSettled: () => qc.invalidateQueries({ queryKey: orderKeys.all }),
+    onSettled: () => qc.invalidateQueries({queryKey: orderKeys.all}),
   });
 }
 export function useAdminOrders(filters: AdminOrderFilters = {}) {
@@ -125,21 +124,18 @@ function useAdminOrderMutation<TVariables>(mutationFn: (variables: TVariables) =
   const qc = useQueryClient();
   return useMutation({
     mutationFn,
-    onSettled: () => Promise.all([
-      qc.invalidateQueries({ queryKey: orderKeys.all }),
-      qc.invalidateQueries({ queryKey: ["admin"] }),
-    ]),
+    onSettled: () => Promise.all([qc.invalidateQueries({queryKey: orderKeys.all}), qc.invalidateQueries({queryKey: ["admin"]})]),
   });
 }
 export function useAdvanceOrder() {
-  return useAdminOrderMutation(({ orderId, status }: { orderId: string; status: string }) => advanceOrder(orderId, status));
+  return useAdminOrderMutation(({orderId, status}: {orderId: string; status: string}) => advanceOrder(orderId, status));
 }
 export function useCancelOrderAsAdmin() {
-  return useAdminOrderMutation(({ orderId, reason }: { orderId: string; reason: string }) => cancelOrderAsAdmin(orderId, reason));
+  return useAdminOrderMutation(({orderId, reason}: {orderId: string; reason: string}) => cancelOrderAsAdmin(orderId, reason));
 }
 /** Asks for the VNPAY pay URL of a payment; the caller sends the browser there. */
 export function useCreateVnpayUrl() {
-  return useMutation({ mutationFn: createVnpayUrl });
+  return useMutation({mutationFn: createVnpayUrl});
 }
 /** The outcome VNPAY reported for the customer who just came back; the order changed, so its caches are refreshed. */
 export function useVnpayResult(query: string) {
@@ -149,7 +145,7 @@ export function useVnpayResult(query: string) {
     queryFn: async () => {
       const result = await getVnpayResult(query);
       // not awaited and not this query itself: it would wait for its own refetch
-      void qc.invalidateQueries({ queryKey: orderKeys.all, predicate: (entry) => entry.queryKey[1] !== "vnpay-result" });
+      void qc.invalidateQueries({queryKey: orderKeys.all, predicate: (entry) => entry.queryKey[1] !== "vnpay-result"});
       return result;
     },
     retry: false,

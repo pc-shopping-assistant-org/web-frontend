@@ -7,7 +7,10 @@ import {SearchIndexPage} from "./search-index-page";
 
 const profile = vi.hoisted(() => ({role: "ADMIN" as string | undefined, pending: false}));
 
-vi.mock("next-intl", () => ({useLocale: () => "vi", useTranslations: () => (key: string, values?: Record<string, unknown>) => (values ? `${key}:${JSON.stringify(values)}` : key)}));
+vi.mock("next-intl", () => ({
+  useLocale: () => "vi",
+  useTranslations: () => (key: string, values?: Record<string, unknown>) => (values ? `${key}:${JSON.stringify(values)}` : key),
+}));
 vi.mock("@/components/ui/error-message", () => ({ErrorMessage: () => <p role="alert">refused</p>}));
 vi.mock("@/features/auth/queries", () => ({useProfile: () => ({isPending: profile.pending, data: {role: profile.role}})}));
 
@@ -25,10 +28,17 @@ const REPLAY = "/api/backend/sync-service/products/sync/dlt/replay";
 type Answers = {sync?: unknown; pending?: number; replay?: unknown};
 
 /** Answers each sync-service call by its address, the way the gateway would. */
-function stubBackend({sync = {indexed: 0, removed: 0, failed: 0}, pending = 0, replay = {replayed: 0, skipped: 0, pending: 0, blocked: false}}: Answers = {}) {
+function stubBackend({
+  sync = {indexed: 0, removed: 0, failed: 0},
+  pending = 0,
+  replay = {replayed: 0, skipped: 0, pending: 0, blocked: false},
+}: Answers = {}) {
   const fetchMock = vi.fn().mockImplementation(async (url: string) => {
     const data = url === STATUS ? {pending} : url === REPLAY ? replay : sync;
-    return new Response(JSON.stringify({data, message: "SUCCESS", errors: []}), {status: 200, headers: {"content-type": "application/json"}});
+    return new Response(JSON.stringify({data, message: "SUCCESS", errors: []}), {
+      status: 200,
+      headers: {"content-type": "application/json"},
+    });
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
@@ -75,11 +85,22 @@ it("says how many products failed so the admin runs it again", async () => {
 });
 
 it("keeps the dialog open with the error when the sync is refused", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockImplementation(async (url: string) =>
-    url === STATUS
-      ? new Response(JSON.stringify({data: {pending: 0}, message: "SUCCESS", errors: []}), {status: 200, headers: {"content-type": "application/json"}})
-      : new Response(JSON.stringify({data: null, message: "FORBIDDEN", errors: []}), {status: 403, headers: {"content-type": "application/json"}}),
-  ));
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockImplementation(async (url: string) =>
+        url === STATUS
+          ? new Response(JSON.stringify({data: {pending: 0}, message: "SUCCESS", errors: []}), {
+              status: 200,
+              headers: {"content-type": "application/json"},
+            })
+          : new Response(JSON.stringify({data: null, message: "FORBIDDEN", errors: []}), {
+              status: 403,
+              headers: {"content-type": "application/json"},
+            }),
+      ),
+  );
   const user = setup();
 
   await runSync(user);
@@ -130,9 +151,18 @@ it("says so when the replay stopped on a change that failed again, and when some
 });
 
 it("tells the admin when the waiting changes cannot be read", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockImplementation(async () =>
-    new Response(JSON.stringify({data: null, message: "ERROR", errors: []}), {status: 503, headers: {"content-type": "application/json"}}),
-  ));
+  vi.stubGlobal(
+    "fetch",
+    vi
+      .fn()
+      .mockImplementation(
+        async () =>
+          new Response(JSON.stringify({data: null, message: "ERROR", errors: []}), {
+            status: 503,
+            headers: {"content-type": "application/json"},
+          }),
+      ),
+  );
   setup();
 
   expect(await screen.findByText("dltUnavailable")).toBeInTheDocument();

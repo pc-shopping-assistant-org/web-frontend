@@ -118,7 +118,9 @@ export function ProductListPage() {
             >
               <option value="">{t("allCategories")}</option>
               {flattenCategories(categories.data ?? []).map((category) => (
-                <option key={category.id} value={category.id}>{category.label}</option>
+                <option key={category.id} value={category.id}>
+                  {category.label}
+                </option>
               ))}
             </Select>
             <Select
@@ -128,9 +130,13 @@ export function ProductListPage() {
               onChange={(event) => setDraft((current) => ({...current, brandId: event.target.value}))}
             >
               <option value="">{t("allBrands")}</option>
-              {(brands.data ?? []).filter((brand) => brand.status === ResourceStatus.Active).map((brand) => (
-                <option key={brand.id} value={brand.id}>{brand.name}</option>
-              ))}
+              {(brands.data ?? [])
+                .filter((brand) => brand.status === ResourceStatus.Active)
+                .map((brand) => (
+                  <option key={brand.id} value={brand.id}>
+                    {brand.name}
+                  </option>
+                ))}
             </Select>
             <div className="flex gap-2">
               <Button type="submit" variant="outline" className="border-primary text-primary hover:bg-primary/5" size="field">
@@ -149,11 +155,21 @@ export function ProductListPage() {
             <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:max-w-xl">
               <label className="space-y-1.5 text-sm">
                 <span className="font-medium text-muted-foreground">{t("minPrice")}</span>
-                <Input type="number" min={0} value={draft.minPrice} onChange={(event) => setDraft((current) => ({...current, minPrice: event.target.value}))} />
+                <Input
+                  type="number"
+                  min={0}
+                  value={draft.minPrice}
+                  onChange={(event) => setDraft((current) => ({...current, minPrice: event.target.value}))}
+                />
               </label>
               <label className="space-y-1.5 text-sm">
                 <span className="font-medium text-muted-foreground">{t("maxPrice")}</span>
-                <Input type="number" min={0} value={draft.maxPrice} onChange={(event) => setDraft((current) => ({...current, maxPrice: event.target.value}))} />
+                <Input
+                  type="number"
+                  min={0}
+                  value={draft.maxPrice}
+                  onChange={(event) => setDraft((current) => ({...current, maxPrice: event.target.value}))}
+                />
               </label>
             </div>
           ) : null}
@@ -162,7 +178,9 @@ export function ProductListPage() {
         {query.isPending ? (
           <Skeleton className="mt-5 h-64 rounded-xl" />
         ) : query.isError ? (
-          <div className="mt-5"><ErrorMessage error={query.error} /></div>
+          <div className="mt-5">
+            <ErrorMessage error={query.error} />
+          </div>
         ) : (
           <>
             <p className="mt-5 text-sm font-medium">{tl("showing", {count: page?.items.length ?? 0})}</p>
@@ -175,11 +193,21 @@ export function ProductListPage() {
                 <table className="w-full min-w-[52rem] border-collapse text-sm">
                   <thead className="bg-muted/50 text-left text-muted-foreground">
                     <tr>
-                      <th scope="col" className="px-4 py-3 font-medium">{tl("name")}</th>
-                      <th scope="col" className="px-4 py-3 font-medium">{tl("price")}</th>
-                      <th scope="col" className="px-4 py-3 font-medium">{tl("stock")}</th>
-                      <th scope="col" className="px-4 py-3 font-medium">{t("status")}</th>
-                      <th scope="col" className="px-4 py-3 font-medium">{tl("actions")}</th>
+                      <th scope="col" className="px-4 py-3 font-medium">
+                        {tl("name")}
+                      </th>
+                      <th scope="col" className="px-4 py-3 font-medium">
+                        {tl("price")}
+                      </th>
+                      <th scope="col" className="px-4 py-3 font-medium">
+                        {tl("stock")}
+                      </th>
+                      <th scope="col" className="px-4 py-3 font-medium">
+                        {t("status")}
+                      </th>
+                      <th scope="col" className="px-4 py-3 font-medium">
+                        {tl("actions")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -215,7 +243,11 @@ export function ProductListPage() {
             ) : null}
           </>
         )}
-        {statusMutation.isError ? <div className="mt-4"><ErrorMessage error={statusMutation.error} /></div> : null}
+        {statusMutation.isError ? (
+          <div className="mt-4">
+            <ErrorMessage error={statusMutation.error} />
+          </div>
+        ) : null}
       </Card>
     </div>
   );
@@ -270,17 +302,23 @@ function ProductRow({
         ) : (
           <>
             {formatMoney(product.minPrice, locale)}
-            {product.maxPrice !== product.minPrice ? <span className="text-muted-foreground"> – {formatMoney(product.maxPrice, locale)}</span> : null}
+            {product.maxPrice !== product.minPrice ? (
+              <span className="text-muted-foreground"> – {formatMoney(product.maxPrice, locale)}</span>
+            ) : null}
           </>
         )}
       </td>
       <td className="whitespace-nowrap px-4 py-4">
         {variants === 0 ? "—" : stock === 0 ? <span className="font-medium text-destructive">{tl("outOfStock")}</span> : stock}
       </td>
-      <td className="px-4 py-4"><StatusBadge status={product.status} /></td>
+      <td className="px-4 py-4">
+        <StatusBadge status={product.status} />
+      </td>
       <td className="px-4 py-4">
         <div className="flex flex-col items-start gap-1.5 text-sm">
-          <Link href={`/admin/products/${product.id}`} className="font-medium text-primary hover:underline">{tl("update")}</Link>
+          <Link href={`/admin/products/${product.id}`} className="font-medium text-primary hover:underline">
+            {tl("update")}
+          </Link>
           {active ? (
             <ConfirmAction
               title={t("confirmStatusChange")}
@@ -296,7 +334,14 @@ function ProductRow({
               {tl("deactivate")}
             </ConfirmAction>
           ) : (
-            <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" disabled={busy} onClick={() => void onStatus(ResourceStatus.Active).catch(() => undefined)}>
+            <Button
+              type="button"
+              variant="link"
+              size="xs"
+              className="h-auto p-0 text-sm font-medium"
+              disabled={busy}
+              onClick={() => void onStatus(ResourceStatus.Active).catch(() => undefined)}
+            >
               {tl("activate")}
             </Button>
           )}

@@ -27,7 +27,9 @@ export function SearchIndexPage() {
     return (
       <div className="space-y-5">
         <PageHeader title={tl("title")} />
-        <Card className="p-6 text-sm text-muted-foreground" role="alert">{tl("forbidden")}</Card>
+        <Card className="p-6 text-sm text-muted-foreground" role="alert">
+          {tl("forbidden")}
+        </Card>
       </div>
     );
   }
@@ -84,7 +86,9 @@ function DeadLetters() {
           <h2 className="text-base font-semibold">{tl("dltTitle")}</h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{tl("dltDescription")}</p>
           {status.isError ? (
-            <p className="mt-3 text-sm text-destructive" role="alert">{tl("dltUnavailable")}</p>
+            <p className="mt-3 text-sm text-destructive" role="alert">
+              {tl("dltUnavailable")}
+            </p>
           ) : status.isPending ? null : (
             <p className={cn("mt-3 text-sm font-medium", pending > 0 ? "text-destructive" : "text-emerald-700")}>
               {pending > 0 ? tl("dltPending", {count: pending}) : tl("dltNone")}
@@ -96,7 +100,11 @@ function DeadLetters() {
           {replay.isPending ? tl("dltReplaying") : tl("dltReplay")}
         </Button>
       </div>
-      {replay.isError ? <p className="mt-4 text-sm text-destructive" role="alert">{tl("dltReplayFailed")}</p> : null}
+      {replay.isError ? (
+        <p className="mt-4 text-sm text-destructive" role="alert">
+          {tl("dltReplayFailed")}
+        </p>
+      ) : null}
       {replay.data ? <ReplayResult result={replay.data} /> : null}
     </Card>
   );
@@ -142,7 +150,11 @@ function SyncResult({result}: {result: SearchIndexSyncResult}) {
         ))}
       </dl>
       <p className={cn("mt-4 flex items-start gap-2 text-sm", clean ? "text-emerald-700" : "text-destructive")}>
-        {clean ? <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> : <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />}
+        {clean ? (
+          <CircleCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        ) : (
+          <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        )}
         {clean ? tl("successAll") : tl("successPartial", {count: result.failed})}
       </p>
     </Card>

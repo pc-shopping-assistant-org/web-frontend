@@ -6,10 +6,14 @@ import {ApiClientError} from "@/lib/api/envelope";
 
 const profile = vi.hoisted(() => ({data: {id: "user"} as {id: string} | undefined, error: null as unknown}));
 vi.mock("@/features/auth/queries", () => ({useProfile: () => profile}));
-vi.mock("@/features/auth/login-form", () => ({LoginForm: ({onSuccess}: {onSuccess: () => void}) => <button onClick={onSuccess}>testLoginSuccess</button>}));
+vi.mock("@/features/auth/login-form", () => ({
+  LoginForm: ({onSuccess}: {onSuccess: () => void}) => <button onClick={onSuccess}>testLoginSuccess</button>,
+}));
 
 vi.mock("next-intl", () => ({useLocale: () => "vi", useTranslations: () => Object.assign((key: string) => key, {has: () => true})}));
-vi.mock("@/i18n/navigation", () => ({Link: ({children, href}: {children: React.ReactNode; href: string}) => <a href={href}>{children}</a>}));
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({children, href}: {children: React.ReactNode; href: string}) => <a href={href}>{children}</a>,
+}));
 vi.mock("@/features/catalog/queries", () => ({useProducts: () => ({data: {items: []}, isPending: false})}));
 vi.mock("./api", () => ({
   streamChat: vi.fn(async () => ({conversation_id: "test", answer: "chat answer", products: []})),
@@ -17,7 +21,12 @@ vi.mock("./api", () => ({
   evaluate: vi.fn(async () => ({answer: "evaluation answer"})),
 }));
 import {streamChat, compare, evaluate} from "./api";
-afterEach(() => {cleanup(); vi.clearAllMocks(); profile.data = {id: "user"}; profile.error = null;});
+afterEach(() => {
+  cleanup();
+  vi.clearAllMocks();
+  profile.data = {id: "user"};
+  profile.error = null;
+});
 
 it("lets guests draft and select products, then prompts sign-in without calling AI or losing the draft", async () => {
   profile.data = undefined;
@@ -38,7 +47,9 @@ it("lets guests draft and select products, then prompts sign-in without calling 
   expect(streamChat).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", {name: /send/}));
   expect(await screen.findByText("chat answer")).toBeInTheDocument();
-  expect(streamChat).toHaveBeenCalledWith("Tư vấn RAM", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: ["a"]});
+  expect(streamChat).toHaveBeenCalledWith("Tư vấn RAM", undefined, expect.any(Object), expect.any(AbortSignal), {
+    selectedProductIds: ["a"],
+  });
 });
 
 it("turns an AI 401 into a sign-in dialog rather than a generic error", async () => {
@@ -58,7 +69,9 @@ it("prefills the build question without auto-sending or attaching mock product I
   expect(streamChat).not.toHaveBeenCalled();
   await user.click(screen.getByRole("button", {name: /send/}));
   await screen.findByText("chat answer");
-  expect(streamChat).toHaveBeenCalledWith("Đánh giá cấu hình DEMO của tôi", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: []});
+  expect(streamChat).toHaveBeenCalledWith("Đánh giá cấu hình DEMO của tôi", undefined, expect.any(Object), expect.any(AbortSignal), {
+    selectedProductIds: [],
+  });
   expect(evaluate).not.toHaveBeenCalled();
   expect(compare).not.toHaveBeenCalled();
 });
@@ -70,7 +83,9 @@ it("offers one chat without workflow navigation and keeps conversation history",
   await user.type(screen.getByRole("textbox", {name: "promptLabel"}), "Laptop cho lập trình");
   await user.click(screen.getByRole("button", {name: /send/}));
   expect(await screen.findByText("chat answer")).toBeInTheDocument();
-  expect(streamChat).toHaveBeenCalledWith("Laptop cho lập trình", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: []});
+  expect(streamChat).toHaveBeenCalledWith("Laptop cho lập trình", undefined, expect.any(Object), expect.any(AbortSignal), {
+    selectedProductIds: [],
+  });
 });
 it("sends an attached product to the same stateful chat runtime", async () => {
   const user = userEvent.setup();
@@ -78,7 +93,9 @@ it("sends an attached product to the same stateful chat runtime", async () => {
   await user.type(screen.getByRole("textbox", {name: "promptLabel"}), "Giải thích ưu điểm");
   await user.click(screen.getByRole("button", {name: /send/}));
   expect(await screen.findByText("chat answer")).toBeInTheDocument();
-  expect(streamChat).toHaveBeenCalledWith("Giải thích ưu điểm", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: ["a"]});
+  expect(streamChat).toHaveBeenCalledWith("Giải thích ưu điểm", undefined, expect.any(Object), expect.any(AbortSignal), {
+    selectedProductIds: ["a"],
+  });
   expect(evaluate).not.toHaveBeenCalled();
 });
 it("uses the comparison adapter without a separate compare page", async () => {
@@ -87,6 +104,8 @@ it("uses the comparison adapter without a separate compare page", async () => {
   await user.type(screen.getByRole("textbox", {name: "promptLabel"}), "So sánh hai mẫu");
   await user.click(screen.getByRole("button", {name: /send/}));
   expect(await screen.findByText("chat answer")).toBeInTheDocument();
-  expect(streamChat).toHaveBeenCalledWith("So sánh hai mẫu", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: ["a", "b"]});
+  expect(streamChat).toHaveBeenCalledWith("So sánh hai mẫu", undefined, expect.any(Object), expect.any(AbortSignal), {
+    selectedProductIds: ["a", "b"],
+  });
   expect(compare).not.toHaveBeenCalled();
 });

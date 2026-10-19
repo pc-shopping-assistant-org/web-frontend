@@ -2,7 +2,16 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 
 import {Gender} from "@/lib/domain/account-enums";
 
-import {activateEmployee, createEmployee, deactivateEmployee, deleteEmployee, getEmployee, getEmployees, lockEmployee, updateEmployee} from "./api";
+import {
+  activateEmployee,
+  createEmployee,
+  deactivateEmployee,
+  deleteEmployee,
+  getEmployee,
+  getEmployees,
+  lockEmployee,
+  updateEmployee,
+} from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -10,19 +19,42 @@ const ID = "00000000-0000-4000-8000-000000000001";
 const AVATAR = "00000000-0000-4000-8000-000000000002";
 
 function stubFetch(payload: unknown) {
-  const fetchMock = vi.fn().mockImplementation(async () =>
-    new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {status: 200, headers: {"content-type": "application/json"}}),
-  );
+  const fetchMock = vi
+    .fn()
+    .mockImplementation(
+      async () =>
+        new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {
+          status: 200,
+          headers: {"content-type": "application/json"},
+        }),
+    );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
 const employee = {
-  accountId: ID, email: "emp@pcshop.local", phone: "0900000002", status: "ACTIVE", firstName: "Minh", lastName: "Tran",
-  gender: "MALE", birthday: null, address: null, avatarFileId: null, avatarUrl: null, createdAt: "2026-10-08T00:00:00Z",
+  accountId: ID,
+  email: "emp@pcshop.local",
+  phone: "0900000002",
+  status: "ACTIVE",
+  firstName: "Minh",
+  lastName: "Tran",
+  gender: "MALE",
+  birthday: null,
+  address: null,
+  avatarFileId: null,
+  avatarUrl: null,
+  createdAt: "2026-10-08T00:00:00Z",
 };
 
-const valid = {email: " New@PcShop.local ", phone: "0912345678", password: "Passw0rdOk", firstName: " An ", lastName: "Nguyen", gender: Gender.Female as const};
+const valid = {
+  email: " New@PcShop.local ",
+  phone: "0912345678",
+  password: "Passw0rdOk",
+  firstName: " An ",
+  lastName: "Nguyen",
+  gender: Gender.Female as const,
+};
 
 describe("employee api", () => {
   it("lists employees by page with the keyword and status, and drops the empty filters", async () => {
@@ -46,7 +78,14 @@ describe("employee api", () => {
     const fetchMock = stubFetch(employee);
     await createEmployee(valid);
     expect(fetchMock.mock.calls[0]).toEqual(["/api/backend/identity-service/employees", expect.objectContaining({method: "POST"})]);
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({email: "New@PcShop.local", phone: "0912345678", password: "Passw0rdOk", firstName: "An", lastName: "Nguyen", gender: "FEMALE"});
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      email: "New@PcShop.local",
+      phone: "0912345678",
+      password: "Passw0rdOk",
+      firstName: "An",
+      lastName: "Nguyen",
+      gender: "FEMALE",
+    });
   });
 
   it("refuses a bad employee before it is sent", async () => {
@@ -66,7 +105,10 @@ describe("employee api", () => {
   it("edits with a PATCH of only the fields given, and needs at least one", async () => {
     const fetchMock = stubFetch(employee);
     await updateEmployee(ID, {phone: "0987654321", avatarFileId: AVATAR});
-    expect(fetchMock.mock.calls[0]).toEqual([`/api/backend/identity-service/employees/${ID}`, expect.objectContaining({method: "PATCH", body: JSON.stringify({phone: "0987654321", avatarFileId: AVATAR})})]);
+    expect(fetchMock.mock.calls[0]).toEqual([
+      `/api/backend/identity-service/employees/${ID}`,
+      expect.objectContaining({method: "PATCH", body: JSON.stringify({phone: "0987654321", avatarFileId: AVATAR})}),
+    ]);
 
     await expect(updateEmployee(ID, {})).rejects.toThrow();
     await expect(updateEmployee(ID, {firstName: "  "})).rejects.toThrow();
@@ -77,7 +119,10 @@ describe("employee api", () => {
   it("locks with a POST", async () => {
     const fetchMock = stubFetch({...employee, status: "LOCKED"});
     expect(await lockEmployee(ID)).toMatchObject({status: "LOCKED"});
-    expect(fetchMock.mock.calls[0]).toEqual([`/api/backend/identity-service/employees/${ID}/lock`, expect.objectContaining({method: "POST"})]);
+    expect(fetchMock.mock.calls[0]).toEqual([
+      `/api/backend/identity-service/employees/${ID}/lock`,
+      expect.objectContaining({method: "POST"}),
+    ]);
   });
   it("switches an employee off and on with a POST each", async () => {
     const fetchMock = stubFetch({...employee, status: "INACTIVE"});

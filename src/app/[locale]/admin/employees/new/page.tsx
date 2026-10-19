@@ -4,4 +4,6 @@ import {EmployeeCreateRouteClient} from "../../admin-route-client";
 
 export const metadata: Metadata = {title: "New employee"};
 
-export default function AdminEmployeeCreateRoute() { return <EmployeeCreateRouteClient />; }
+export default function AdminEmployeeCreateRoute() {
+  return <EmployeeCreateRouteClient />;
+}

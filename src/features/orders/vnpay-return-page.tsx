@@ -18,10 +18,22 @@ export function VnpayReturnPage() {
   const query = useVnpayResult(useSearchParams().toString());
 
   if (query.isPending) {
-    return <section className="page-wrap max-w-2xl py-16"><p className="text-center text-muted-foreground">{t("checking")}</p></section>;
+    return (
+      <section className="page-wrap max-w-2xl py-16">
+        <p className="text-center text-muted-foreground">{t("checking")}</p>
+      </section>
+    );
   }
   if (query.isError) {
-    return <section className="page-wrap max-w-2xl space-y-4 py-16"><h1 className="text-2xl font-semibold">{t("errorTitle")}</h1><ErrorMessage error={query.error} /><Link href="/orders" className="inline-flex text-sm font-medium text-primary hover:underline">{t("viewOrder")}</Link></section>;
+    return (
+      <section className="page-wrap max-w-2xl space-y-4 py-16">
+        <h1 className="text-2xl font-semibold">{t("errorTitle")}</h1>
+        <ErrorMessage error={query.error} />
+        <Link href="/orders" className="inline-flex text-sm font-medium text-primary hover:underline">
+          {t("viewOrder")}
+        </Link>
+      </section>
+    );
   }
 
   const {result, orderId, amount} = query.data;
@@ -32,18 +44,30 @@ export function VnpayReturnPage() {
     PENDING: {icon: Clock3, tone: "text-amber-600", title: t("cancelledTitle"), description: t("cancelledDescription")},
   }[result];
   const Icon = view.icon;
-  return <section className="page-wrap max-w-2xl py-16">
-    <Card>
-      <CardContent className="space-y-5 p-8 text-center">
-        <Icon className={`mx-auto size-12 ${view.tone}`} />
-        <h1 className="text-3xl font-semibold">{view.title}</h1>
-        <p className="text-muted-foreground">{view.description}</p>
-        <p className="text-sm"><span className="text-muted-foreground">{t("amount")}: </span><span className="font-semibold">{formatMoney(amount, locale)}</span></p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <Link href={`/orders/${orderId}`} className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90">{t("viewOrder")}</Link>
-          <Link href="/products" className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted">{t("continueShopping")}</Link>
-        </div>
-      </CardContent>
-    </Card>
-  </section>;
+  return (
+    <section className="page-wrap max-w-2xl py-16">
+      <Card>
+        <CardContent className="space-y-5 p-8 text-center">
+          <Icon className={`mx-auto size-12 ${view.tone}`} />
+          <h1 className="text-3xl font-semibold">{view.title}</h1>
+          <p className="text-muted-foreground">{view.description}</p>
+          <p className="text-sm">
+            <span className="text-muted-foreground">{t("amount")}: </span>
+            <span className="font-semibold">{formatMoney(amount, locale)}</span>
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            <Link
+              href={`/orders/${orderId}`}
+              className="inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            >
+              {t("viewOrder")}
+            </Link>
+            <Link href="/products" className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted">
+              {t("continueShopping")}
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
 }

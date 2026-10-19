@@ -1,15 +1,11 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { DiscountForm } from "./discount-create";
-import { useAdminDiscount } from "./queries";
-import { BackLink, Loading, Failure } from "./detail-kit";
+import {useTranslations} from "next-intl";
+import {DiscountForm} from "./discount-create";
+import {useAdminDiscount} from "./queries";
+import {BackLink, Loading, Failure} from "./detail-kit";
 
-export function AdminDiscountDetailPage({
-  discountId,
-}: {
-  discountId: string;
-}) {
+export function AdminDiscountDetailPage({discountId}: {discountId: string}) {
   const t = useTranslations("admin");
   const discount = useAdminDiscount(discountId);
   if (discount.isPending) return <Loading />;

@@ -22,7 +22,9 @@ export async function addToCart(request: AddToCartRequest) {
 
 export async function updateCartItem(variantId: string, request: UpdateCartItemRequest) {
   const payload = parseRequest(updateCartItemRequestSchema, request);
-  return mapCart(await backendFetch<CartDto>(`${CART}/items/${encodeURIComponent(variantId)}`, {method: "PUT", body: JSON.stringify(payload)}));
+  return mapCart(
+    await backendFetch<CartDto>(`${CART}/items/${encodeURIComponent(variantId)}`, {method: "PUT", body: JSON.stringify(payload)}),
+  );
 }
 
 export async function removeCartItem(variantId: string) {

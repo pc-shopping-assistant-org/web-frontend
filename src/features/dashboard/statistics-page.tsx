@@ -30,7 +30,11 @@ function defaultRange() {
 
 /** The sales report of the admin: revenue over a range of days, the best sellers and the orders by status. */
 export function StatisticsPage() {
-  return <AdminOnly><Statistics /></AdminOnly>;
+  return (
+    <AdminOnly>
+      <Statistics />
+    </AdminOnly>
+  );
 }
 
 function Statistics() {
@@ -70,22 +74,44 @@ function Statistics() {
           >
             <label className="space-y-1.5 text-sm font-medium">
               {t("from")}
-              <Input id="stat-from" type="date" value={draft.from} aria-invalid={problem ? true : undefined} onChange={(event) => setDraft((current) => ({...current, from: event.target.value}))} />
+              <Input
+                id="stat-from"
+                type="date"
+                value={draft.from}
+                aria-invalid={problem ? true : undefined}
+                onChange={(event) => setDraft((current) => ({...current, from: event.target.value}))}
+              />
             </label>
             <label className="space-y-1.5 text-sm font-medium">
               {t("to")}
-              <Input id="stat-to" type="date" value={draft.to} aria-invalid={problem ? true : undefined} onChange={(event) => setDraft((current) => ({...current, to: event.target.value}))} />
+              <Input
+                id="stat-to"
+                type="date"
+                value={draft.to}
+                aria-invalid={problem ? true : undefined}
+                onChange={(event) => setDraft((current) => ({...current, to: event.target.value}))}
+              />
             </label>
             <label className="space-y-1.5 text-sm font-medium">
               {t("granularity")}
-              <Select id="stat-granularity" value={draftGranularity} onChange={(event) => setDraftGranularity(event.target.value as RevenueGranularity)}>
+              <Select
+                id="stat-granularity"
+                value={draftGranularity}
+                onChange={(event) => setDraftGranularity(event.target.value as RevenueGranularity)}
+              >
                 <option value="DAY">{t("byDay")}</option>
                 <option value="MONTH">{t("byMonth")}</option>
               </Select>
             </label>
-            <Button type="submit" className="self-end">{t("apply")}</Button>
+            <Button type="submit" className="self-end">
+              {t("apply")}
+            </Button>
           </form>
-          {problem ? <p role="alert" className="text-sm text-destructive">{t(`problem.${problem}`)}</p> : null}
+          {problem ? (
+            <p role="alert" className="text-sm text-destructive">
+              {t(`problem.${problem}`)}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -106,7 +132,7 @@ function RevenueCard({range, granularity}: {range: {from: string; to: string}; g
   const total = points.reduce((sum, point) => sum + point.revenue, 0);
   const orders = points.reduce((sum, point) => sum + point.orderCount, 0);
   const max = Math.max(1, ...points.map((point) => point.revenue));
-  const label = (period: string) => granularity === "MONTH" ? period.slice(0, 7) : period.slice(5);
+  const label = (period: string) => (granularity === "MONTH" ? period.slice(0, 7) : period.slice(5));
 
   return (
     <Card className="overflow-hidden">
@@ -129,7 +155,11 @@ function RevenueCard({range, granularity}: {range: {from: string; to: string}; g
           <Empty icon={BarChart3} title={t("revenue.empty")} description={t("revenue.emptyDescription")} />
         ) : (
           <div className="overflow-x-auto">
-            <div className="flex h-56 items-end gap-1.5 rounded-2xl bg-muted/35 px-3 pb-3 pt-5" style={{minWidth: `${points.length * 28}px`}} aria-label={t("revenue.title")}>
+            <div
+              className="flex h-56 items-end gap-1.5 rounded-2xl bg-muted/35 px-3 pb-3 pt-5"
+              style={{minWidth: `${points.length * 28}px`}}
+              aria-label={t("revenue.title")}
+            >
               {points.map((point) => (
                 <div
                   key={point.period}
@@ -163,7 +193,11 @@ function TopVariantsCard({range, limit, onLimit}: {range: {from: string; to: str
           <CardDescription>{t("top.description")}</CardDescription>
         </div>
         <Select className="h-9 w-28" value={limit} aria-label={t("top.limit")} onChange={(event) => onLimit(Number(event.target.value))}>
-          {TOP_LIMITS.map((value) => <option key={value} value={value}>{t("top.limitOption", {count: value})}</option>)}
+          {TOP_LIMITS.map((value) => (
+            <option key={value} value={value}>
+              {t("top.limitOption", {count: value})}
+            </option>
+          ))}
         </Select>
       </CardHeader>
       <CardContent>
@@ -178,7 +212,9 @@ function TopVariantsCard({range, limit, onLimit}: {range: {from: string; to: str
             {query.data.map((item, index) => (
               <li key={item.productVariantId} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-semibold text-muted-foreground">{index + 1}</span>
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-semibold text-muted-foreground">
+                    {index + 1}
+                  </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{item.productName}</p>
                     <p className="truncate text-xs text-muted-foreground">{[item.sku, item.variantLabel].filter(Boolean).join(" · ")}</p>

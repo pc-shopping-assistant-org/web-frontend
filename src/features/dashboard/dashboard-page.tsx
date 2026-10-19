@@ -70,8 +70,20 @@ function OrdersSection() {
       {query.data ? (
         <div className="grid gap-4 xl:grid-cols-[1fr_1.2fr]">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-            <Metric label={t("orders.revenueToday")} value={formatMoney(query.data.revenueToday, locale)} detail={t("orders.revenueNote")} icon={DollarSign} tone="bg-emerald-500/10 text-emerald-600" />
-            <Metric label={t("orders.revenueThisMonth")} value={formatMoney(query.data.revenueThisMonth, locale)} detail={t("orders.revenueNote")} icon={CircleDollarSign} tone="bg-blue-500/10 text-blue-600" />
+            <Metric
+              label={t("orders.revenueToday")}
+              value={formatMoney(query.data.revenueToday, locale)}
+              detail={t("orders.revenueNote")}
+              icon={DollarSign}
+              tone="bg-emerald-500/10 text-emerald-600"
+            />
+            <Metric
+              label={t("orders.revenueThisMonth")}
+              value={formatMoney(query.data.revenueThisMonth, locale)}
+              detail={t("orders.revenueNote")}
+              icon={CircleDollarSign}
+              tone="bg-blue-500/10 text-blue-600"
+            />
           </div>
           <Card>
             <CardHeader>
@@ -107,9 +119,24 @@ function CustomersSection() {
     <Section title={t("customers.title")} loading={query.isPending} error={query.isError ? query.error : undefined}>
       {query.data ? (
         <div className="grid gap-4 sm:grid-cols-3">
-          <Metric label={t("customers.total")} value={String(query.data.totalCustomers)} icon={Users} tone="bg-amber-500/10 text-amber-600" />
-          <Metric label={t("customers.newToday")} value={String(query.data.newToday)} icon={UserPlus} tone="bg-violet-500/10 text-violet-600" />
-          <Metric label={t("customers.newThisMonth")} value={String(query.data.newThisMonth)} icon={UserPlus} tone="bg-violet-500/10 text-violet-600" />
+          <Metric
+            label={t("customers.total")}
+            value={String(query.data.totalCustomers)}
+            icon={Users}
+            tone="bg-amber-500/10 text-amber-600"
+          />
+          <Metric
+            label={t("customers.newToday")}
+            value={String(query.data.newToday)}
+            icon={UserPlus}
+            tone="bg-violet-500/10 text-violet-600"
+          />
+          <Metric
+            label={t("customers.newThisMonth")}
+            value={String(query.data.newThisMonth)}
+            icon={UserPlus}
+            tone="bg-violet-500/10 text-violet-600"
+          />
         </div>
       ) : null}
     </Section>
@@ -130,7 +157,13 @@ function StockSection() {
             icon={TriangleAlert}
             tone="bg-amber-500/10 text-amber-600"
           />
-          <Metric label={t("stock.out")} value={String(query.data.outOfStockVariants)} detail={t("stock.outDetail")} icon={PackageX} tone="bg-rose-500/10 text-rose-600" />
+          <Metric
+            label={t("stock.out")}
+            value={String(query.data.outOfStockVariants)}
+            detail={t("stock.outDetail")}
+            icon={PackageX}
+            tone="bg-rose-500/10 text-rose-600"
+          />
         </div>
       ) : null}
     </Section>
@@ -138,11 +171,29 @@ function StockSection() {
 }
 
 /** One part of the page: its own title, its own loading, and its own error. */
-function Section({title, loading, error, tall, children}: {title: string; loading: boolean; error?: unknown; tall?: boolean; children: ReactNode}) {
+function Section({
+  title,
+  loading,
+  error,
+  tall,
+  children,
+}: {
+  title: string;
+  loading: boolean;
+  error?: unknown;
+  tall?: boolean;
+  children: ReactNode;
+}) {
   return (
     <section className="space-y-3" aria-label={title}>
       <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-      {loading ? <Skeleton className={tall ? "h-64 rounded-2xl" : "h-32 rounded-2xl"} /> : error ? <ErrorMessage error={error} /> : children}
+      {loading ? (
+        <Skeleton className={tall ? "h-64 rounded-2xl" : "h-32 rounded-2xl"} />
+      ) : error ? (
+        <ErrorMessage error={error} />
+      ) : (
+        children
+      )}
     </section>
   );
 }
@@ -202,13 +253,34 @@ function QuickActions({admin, employee}: {admin: boolean; employee: boolean}) {
   );
 }
 
-function QuickAction({href, icon: Icon, title}: {
-  href: "/admin/statistics" | "/admin/products" | "/admin/orders" | "/admin/customers" | "/admin/invoices" | "/admin/categories" | "/admin/brands" | "/admin/discounts" | "/admin/payments" | "/admin/payment-methods" | "/admin/options" | "/admin/employees" | "/admin/suppliers" | "/admin/reviews";
+function QuickAction({
+  href,
+  icon: Icon,
+  title,
+}: {
+  href:
+    | "/admin/statistics"
+    | "/admin/products"
+    | "/admin/orders"
+    | "/admin/customers"
+    | "/admin/invoices"
+    | "/admin/categories"
+    | "/admin/brands"
+    | "/admin/discounts"
+    | "/admin/payments"
+    | "/admin/payment-methods"
+    | "/admin/options"
+    | "/admin/employees"
+    | "/admin/suppliers"
+    | "/admin/reviews";
   icon: LucideIcon;
   title: string;
 }) {
   return (
-    <Link href={href} className="group flex items-center gap-3 rounded-2xl border bg-muted/20 p-3.5 transition hover:border-primary/30 hover:bg-primary/5">
+    <Link
+      href={href}
+      className="group flex items-center gap-3 rounded-2xl border bg-muted/20 p-3.5 transition hover:border-primary/30 hover:bg-primary/5"
+    >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-background text-primary shadow-sm">
         <Icon className="size-4" />
       </span>

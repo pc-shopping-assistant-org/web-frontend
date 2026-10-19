@@ -66,10 +66,7 @@ export const PAYMENT_STATUS_VALUES = enumValues(PaymentStatus);
 export const PAYMENT_METHOD_CODE_VALUES = enumValues(PaymentMethodCode);
 export const SHIPPING_METHOD_CODE_VALUES = enumValues(ShippingMethodCode);
 export const DISCOUNT_STATUS_VALUES = enumValues(DiscountStatus);
-export const EDITABLE_DISCOUNT_STATUS_VALUES = [
-  DiscountStatus.Active,
-  DiscountStatus.Inactive,
-] as const;
+export const EDITABLE_DISCOUNT_STATUS_VALUES = [DiscountStatus.Active, DiscountStatus.Inactive] as const;
 export const DISCOUNT_STATE_VALUES = enumValues(DiscountState);
 export const DISCOUNT_TYPE_VALUES = enumValues(DiscountType);
 export const DISCOUNT_SCOPE_VALUES = enumValues(DiscountScope);
@@ -77,16 +74,8 @@ export const DISCOUNT_SCOPE_VALUES = enumValues(DiscountScope);
 /** What the shop can do with an order, current status first; PENDING_PAYMENT to PENDING_CONFIRMATION belongs to the payment result. */
 export const ORDER_STATUS_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> = {
   [OrderStatus.PendingPayment]: [OrderStatus.PendingPayment, OrderStatus.Cancelled],
-  [OrderStatus.PendingConfirmation]: [
-    OrderStatus.PendingConfirmation,
-    OrderStatus.Confirmed,
-    OrderStatus.Cancelled,
-  ],
-  [OrderStatus.Confirmed]: [
-    OrderStatus.Confirmed,
-    OrderStatus.Shipping,
-    OrderStatus.Cancelled,
-  ],
+  [OrderStatus.PendingConfirmation]: [OrderStatus.PendingConfirmation, OrderStatus.Confirmed, OrderStatus.Cancelled],
+  [OrderStatus.Confirmed]: [OrderStatus.Confirmed, OrderStatus.Shipping, OrderStatus.Cancelled],
   [OrderStatus.Shipping]: [OrderStatus.Shipping, OrderStatus.Completed, OrderStatus.Cancelled],
   [OrderStatus.Completed]: [OrderStatus.Completed],
   [OrderStatus.Cancelled]: [OrderStatus.Cancelled],

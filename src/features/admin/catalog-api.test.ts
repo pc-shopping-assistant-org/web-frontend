@@ -9,11 +9,12 @@ afterEach(() => vi.restoreAllMocks());
 
 function stubFetch(...payloads: unknown[]) {
   const queue = [...payloads];
-  const fetchMock = vi.fn().mockImplementation(async () =>
-    new Response(JSON.stringify({data: queue.shift() ?? null, message: "SUCCESS", errors: []}), {
-      status: 200,
-      headers: {"content-type": "application/json"},
-    }),
+  const fetchMock = vi.fn().mockImplementation(
+    async () =>
+      new Response(JSON.stringify({data: queue.shift() ?? null, message: "SUCCESS", errors: []}), {
+        status: 200,
+        headers: {"content-type": "application/json"},
+      }),
   );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;

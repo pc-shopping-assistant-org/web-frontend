@@ -1,18 +1,8 @@
 import {aiFetch} from "@/lib/api/client";
 import {streamChat} from "./stateful-api";
 export {streamChat} from "./stateful-api";
-import type {
-  CompareDataDto,
-  ConsultDataDto,
-  EvaluateDataDto,
-  SearchDataDto,
-} from "@/features/assistant/contracts/dto";
-import {
-  mapCompareData,
-  mapConsultData,
-  mapEvaluateData,
-  mapSearchData,
-} from "@/features/assistant/mappers";
+import type {CompareDataDto, ConsultDataDto, EvaluateDataDto, SearchDataDto} from "@/features/assistant/contracts/dto";
+import {mapCompareData, mapConsultData, mapEvaluateData, mapSearchData} from "@/features/assistant/mappers";
 import {
   compareRequestSchema,
   consultRequestSchema,
@@ -20,13 +10,7 @@ import {
   semanticSearchRequestSchema,
 } from "@/features/assistant/contracts/requests";
 import type {ChatData} from "@/features/assistant/contracts/responses";
-export type {
-  ChatData,
-  CompareData,
-  ConsultData,
-  EvaluateData,
-  SearchData,
-} from "@/features/assistant/contracts/responses";
+export type {ChatData, CompareData, ConsultData, EvaluateData, SearchData} from "@/features/assistant/contracts/responses";
 import {parseRequest} from "@/lib/api/parse-request";
 
 export type ChatStreamHandlers = {

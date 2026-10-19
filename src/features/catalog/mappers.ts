@@ -105,9 +105,7 @@ export function mapCategoryTree(dto: CategoryTreeDto): CategoryTree {
 
 /** The admin list is flat; the tree is rebuilt from `parentId`, orphans fall back to the root. */
 export function buildCategoryTree(flat: CategoryDto[]): CategoryTree[] {
-  const nodes = new Map<string, CategoryTree>(
-    flat.map((dto) => [dto.id, {...mapCategoryResponse(dto), children: []}]),
-  );
+  const nodes = new Map<string, CategoryTree>(flat.map((dto) => [dto.id, {...mapCategoryResponse(dto), children: []}]));
   const roots: CategoryTree[] = [];
   for (const node of nodes.values()) {
     const parent = node.parentId ? nodes.get(node.parentId) : undefined;
@@ -243,4 +241,3 @@ export function mapReviewsPage(dto: ReviewsPageDto): ReviewsPage {
     size: number(dto.size),
   };
 }
-

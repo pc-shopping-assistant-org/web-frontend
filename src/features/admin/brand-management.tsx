@@ -58,10 +58,18 @@ export function BrandManagement() {
             <table className="w-full min-w-[40rem] border-collapse text-sm">
               <thead className="bg-muted/50 text-left text-muted-foreground">
                 <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">{tb("name")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{t("description")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{t("status")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tb("actions")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tb("name")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("description")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("status")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tb("actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -70,7 +78,14 @@ export function BrandManagement() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {brand.logoUrl ? (
-                          <Image src={brand.logoUrl} alt="" width={36} height={36} unoptimized className="size-9 shrink-0 rounded-lg border bg-white object-contain" />
+                          <Image
+                            src={brand.logoUrl}
+                            alt=""
+                            width={36}
+                            height={36}
+                            unoptimized
+                            className="size-9 shrink-0 rounded-lg border bg-white object-contain"
+                          />
                         ) : (
                           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
                             <Building2 className="size-4" aria-hidden="true" />
@@ -80,13 +95,23 @@ export function BrandManagement() {
                       </div>
                     </td>
                     <td className="max-w-xs px-4 py-3 text-muted-foreground">
-                      <span className="line-clamp-1" title={brand.description ?? undefined}>{brand.description || "—"}</span>
+                      <span className="line-clamp-1" title={brand.description ?? undefined}>
+                        {brand.description || "—"}
+                      </span>
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={brand.status} /></td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={brand.status} />
+                    </td>
                     <td className="px-4 py-3">
                       {brand.id ? (
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                          <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" onClick={() => setDialog({mode: "edit", brand})}>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="xs"
+                            className="h-auto p-0 text-sm font-medium"
+                            onClick={() => setDialog({mode: "edit", brand})}
+                          >
                             {tb("edit")}
                           </Button>
                           <ConfirmAction
@@ -112,7 +137,9 @@ export function BrandManagement() {
         )}
       </Card>
 
-      {dialog ? <BrandDialog key={dialog.mode === "edit" ? dialog.brand.id : "new"} state={dialog} onClose={() => setDialog(null)} /> : null}
+      {dialog ? (
+        <BrandDialog key={dialog.mode === "edit" ? dialog.brand.id : "new"} state={dialog} onClose={() => setDialog(null)} />
+      ) : null}
     </section>
   );
 }
@@ -160,7 +187,9 @@ function BrandDialog({state, onClose}: {state: DialogState; onClose: () => void}
       description={editing ? undefined : tb("addDescription")}
       footer={
         <>
-          <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>{t("cancel")}</Button>
+          <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>
+            {t("cancel")}
+          </Button>
           <Button type="submit" form={formId} disabled={mutation.isPending || !form.name.trim()}>
             {editing ? t("save") : tb("create")}
           </Button>
@@ -169,8 +198,17 @@ function BrandDialog({state, onClose}: {state: DialogState; onClose: () => void}
     >
       <form id={formId} className="grid grid-cols-[minmax(0,1fr)] gap-4" onSubmit={(event) => void submit(event)}>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-name`}>{t("name")} <span className="text-destructive">*</span></Label>
-          <Input id={`${formId}-name`} data-autofocus value={form.name} maxLength={255} required onChange={(event) => set({name: event.target.value})} />
+          <Label htmlFor={`${formId}-name`}>
+            {t("name")} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id={`${formId}-name`}
+            data-autofocus
+            value={form.name}
+            maxLength={255}
+            required
+            onChange={(event) => set({name: event.target.value})}
+          />
         </div>
         <FileUploadField
           id={`${formId}-file`}
@@ -183,7 +221,11 @@ function BrandDialog({state, onClose}: {state: DialogState; onClose: () => void}
         {editing ? (
           <div className="space-y-2">
             <Label htmlFor={`${formId}-status`}>{t("status")}</Label>
-            <Select id={`${formId}-status`} value={form.status} onChange={(event) => set({status: event.target.value as EditableResourceStatus})}>
+            <Select
+              id={`${formId}-status`}
+              value={form.status}
+              onChange={(event) => set({status: event.target.value as EditableResourceStatus})}
+            >
               <option value={ResourceStatus.Active}>{t(`statusValues.${ResourceStatus.Active}`)}</option>
               <option value={ResourceStatus.Inactive}>{t(`statusValues.${ResourceStatus.Inactive}`)}</option>
             </Select>

@@ -12,10 +12,7 @@ vi.mock("@/components/ui/error-message", () => ({ErrorMessage: () => <p role="al
 afterEach(cleanup);
 
 const category = (id: string, name: string, children: CategoryTree[] = []) => ({id, name, children}) as unknown as CategoryTree;
-const tree = [
-  category("cpu", "CPU"),
-  category("gpu", "Card đồ họa", [category("nv", "NVIDIA", [category("rtx", "RTX 4070")])]),
-];
+const tree = [category("cpu", "CPU"), category("gpu", "Card đồ họa", [category("nv", "NVIDIA", [category("rtx", "RTX 4070")])])];
 
 function setup(props: Partial<React.ComponentProps<typeof CategoryPicker>> = {}) {
   const onChange = vi.fn();

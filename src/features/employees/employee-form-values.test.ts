@@ -6,8 +6,16 @@ import {employeeFormValues, toCreateRequest, toUpdateRequest} from "./employee-f
 import type {Employee} from "./models";
 
 const employee: Employee = {
-  accountId: "a", email: "emp@pcshop.local", phone: "0900000002", status: "ACTIVE", firstName: "Minh", lastName: "Tran",
-  fullName: "Tran Minh", gender: "MALE", address: "Hanoi", avatarFileId: "f1",
+  accountId: "a",
+  email: "emp@pcshop.local",
+  phone: "0900000002",
+  status: "ACTIVE",
+  firstName: "Minh",
+  lastName: "Tran",
+  fullName: "Tran Minh",
+  gender: "MALE",
+  address: "Hanoi",
+  avatarFileId: "f1",
 };
 
 describe("employee form values", () => {
@@ -16,7 +24,13 @@ describe("employee form values", () => {
   });
 
   it("sends only the fields that changed, and an address emptied on purpose", () => {
-    const values = {...employeeFormValues(employee), phone: "0911111111", gender: Gender.Female as EmployeeGender, address: "  ", avatarFileId: "f2"};
+    const values = {
+      ...employeeFormValues(employee),
+      phone: "0911111111",
+      gender: Gender.Female as EmployeeGender,
+      address: "  ",
+      avatarFileId: "f2",
+    };
     expect(toUpdateRequest(values, employee)).toEqual({phone: "0911111111", gender: "FEMALE", address: "  ", avatarFileId: "f2"});
   });
 
@@ -27,6 +41,12 @@ describe("employee form values", () => {
 
   it("leaves the optional fields out of a new employee when they are blank", () => {
     const values = {...employeeFormValues(employee), password: "Passw0rdOk", address: " ", avatarFileId: undefined};
-    expect(toCreateRequest(values)).toMatchObject({email: "emp@pcshop.local", password: "Passw0rdOk", address: undefined, birthday: undefined, avatarFileId: undefined});
+    expect(toCreateRequest(values)).toMatchObject({
+      email: "emp@pcshop.local",
+      password: "Passw0rdOk",
+      address: undefined,
+      birthday: undefined,
+      avatarFileId: undefined,
+    });
   });
 });

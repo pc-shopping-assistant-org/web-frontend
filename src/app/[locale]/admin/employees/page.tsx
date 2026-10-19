@@ -1,3 +1,5 @@
 import {EmployeesRouteClient} from "../admin-route-client";
 
-export default function AdminEmployeesRoute() { return <EmployeesRouteClient />; }
+export default function AdminEmployeesRoute() {
+  return <EmployeesRouteClient />;
+}

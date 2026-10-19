@@ -1,16 +1,16 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { Link } from "@/i18n/navigation";
-import { formatMoney } from "@/lib/format";
-import { OrderStatus } from "@/lib/domain/commerce-enums";
-import { AdminOrderStatusControl } from "@/features/orders/admin-order-status";
-import { useAdminOrder, usePaymentMethods, useShippingMethods } from "@/features/orders/queries";
-import { BackLink, Loading, Failure, SummaryLine } from "./detail-kit";
+import {useLocale, useTranslations} from "next-intl";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {StatusBadge} from "@/components/ui/status-badge";
+import {Link} from "@/i18n/navigation";
+import {formatMoney} from "@/lib/format";
+import {OrderStatus} from "@/lib/domain/commerce-enums";
+import {AdminOrderStatusControl} from "@/features/orders/admin-order-status";
+import {useAdminOrder, usePaymentMethods, useShippingMethods} from "@/features/orders/queries";
+import {BackLink, Loading, Failure, SummaryLine} from "./detail-kit";
 
-export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
+export function AdminOrderDetailPage({orderId}: {orderId: string}) {
   const t = useTranslations("admin");
   const locale = useLocale();
   const order = useAdminOrder(orderId);
@@ -25,13 +25,10 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
       </>
     );
   const item = order.data;
-  const dateTime = (value?: string) =>
-    value ? new Date(value).toLocaleString(locale === "vi" ? "vi-VN" : "en-US") : "—";
-  const statusLabel = (status: string) =>
-    t.has(`statusValues.${status}`) ? t(`statusValues.${status}`) : status;
-  const cancellation = item.status === OrderStatus.Cancelled
-    ? item.statusHistory.findLast((change) => change.toStatus === OrderStatus.Cancelled)
-    : undefined;
+  const dateTime = (value?: string) => (value ? new Date(value).toLocaleString(locale === "vi" ? "vi-VN" : "en-US") : "—");
+  const statusLabel = (status: string) => (t.has(`statusValues.${status}`) ? t(`statusValues.${status}`) : status);
+  const cancellation =
+    item.status === OrderStatus.Cancelled ? item.statusHistory.findLast((change) => change.toStatus === OrderStatus.Cancelled) : undefined;
   const shippingMethod = shippingMethods.data?.find((method) => method.id === item.shippingMethodId);
   return (
     <div>
@@ -60,8 +57,7 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
       </div>
       {cancellation ? (
         <p className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm">
-          <span className="font-medium">{t("cancellationReason")}:</span>{" "}
-          {cancellation.reason ?? "—"}
+          <span className="font-medium">{t("cancellationReason")}:</span> {cancellation.reason ?? "—"}
         </p>
       ) : null}
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
@@ -73,15 +69,10 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
             <CardContent className="divide-y">
               {item.items.length ? (
                 item.items.map((line) => (
-                  <div
-                    key={line.id}
-                    className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
-                  >
+                  <div key={line.id} className="flex items-center justify-between gap-4 py-4 first:pt-0 last:pb-0">
                     <div className="min-w-0">
                       <p className="font-medium">{line.productName}</p>
-                      {line.variantLabel ? (
-                        <p className="text-sm text-muted-foreground">{line.variantLabel}</p>
-                      ) : null}
+                      {line.variantLabel ? <p className="text-sm text-muted-foreground">{line.variantLabel}</p> : null}
                       <p className="text-sm text-muted-foreground">
                         {line.sku ? `${line.sku} · ` : ""}
                         {line.quantity} × {formatMoney(line.unitPrice, locale)}
@@ -93,9 +84,7 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
                       ) : null}
                     </div>
                     <span className="shrink-0 text-right font-semibold">
-                      <span className="block text-xs font-normal text-muted-foreground">
-                        {t("itemNet")}
-                      </span>
+                      <span className="block text-xs font-normal text-muted-foreground">{t("itemNet")}</span>
                       {formatMoney(line.lineTotal, locale)}
                     </span>
                   </div>
@@ -152,7 +141,9 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
                         {dateTime(change.createdAt)} · {change.changedBy ? t("changedByStaff") : t("changedBySystem")}
                       </p>
                       {change.reason ? (
-                        <p className="mt-1 text-muted-foreground">{t("reason")}: {change.reason}</p>
+                        <p className="mt-1 text-muted-foreground">
+                          {t("reason")}: {change.reason}
+                        </p>
                       ) : null}
                     </li>
                   ))}
@@ -171,9 +162,7 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
             <CardContent className="space-y-2 text-sm">
               <p className="font-medium">{item.recipientName}</p>
               <p>{item.recipientPhone}</p>
-              <p className="leading-6 text-muted-foreground">
-                {item.deliveryAddress}
-              </p>
+              <p className="leading-6 text-muted-foreground">{item.deliveryAddress}</p>
               <div className="border-t pt-3 text-sm text-muted-foreground">
                 <p>
                   {t("shippingMethod")}: {shippingMethod?.name ?? "—"}
@@ -184,10 +173,7 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
               </div>
               {item.note ? (
                 <p className="border-t pt-3 text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    {t("note")}:
-                  </span>{" "}
-                  {item.note}
+                  <span className="font-medium text-foreground">{t("note")}:</span> {item.note}
                 </p>
               ) : null}
             </CardContent>
@@ -197,24 +183,11 @@ export function AdminOrderDetailPage({ orderId }: { orderId: string }) {
               <CardTitle>{t("summary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              <SummaryLine
-                label={t("subtotal")}
-                value={formatMoney(item.subtotalAmount, locale)}
-              />
-              <SummaryLine
-                label={t("discount")}
-                value={`− ${formatMoney(item.discountAmount, locale)}`}
-              />
-              <SummaryLine
-                label={t("shippingFee")}
-                value={formatMoney(item.shippingFee, locale)}
-              />
+              <SummaryLine label={t("subtotal")} value={formatMoney(item.subtotalAmount, locale)} />
+              <SummaryLine label={t("discount")} value={`− ${formatMoney(item.discountAmount, locale)}`} />
+              <SummaryLine label={t("shippingFee")} value={formatMoney(item.shippingFee, locale)} />
               <div className="border-t pt-3">
-                <SummaryLine
-                  label={t("total")}
-                  value={formatMoney(item.totalAmount, locale)}
-                  strong
-                />
+                <SummaryLine label={t("total")} value={formatMoney(item.totalAmount, locale)} strong />
               </div>
               {item.deliveredAt ? (
                 <p className="border-t pt-3 text-xs text-muted-foreground">

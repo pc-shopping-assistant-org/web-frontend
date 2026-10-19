@@ -9,12 +9,16 @@ describe("runtime public config", () => {
     vi.stubEnv("GOOGLE_CLIENT_ID", "first-client");
     vi.stubEnv("JWT_PRIVATE_KEY", "must-not-leak");
     expect(await (await GET()).json()).toEqual({
-      data: {googleClientId: "first-client"}, message: "SUCCESS", errors: [],
+      data: {googleClientId: "first-client"},
+      message: "SUCCESS",
+      errors: [],
     });
     vi.stubEnv("GOOGLE_CLIENT_ID", "second-client");
     const response = await GET();
     expect(await response.json()).toEqual({
-      data: {googleClientId: "second-client"}, message: "SUCCESS", errors: [],
+      data: {googleClientId: "second-client"},
+      message: "SUCCESS",
+      errors: [],
     });
     expect(response.headers.get("cache-control")).toBe("no-store");
   });

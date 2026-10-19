@@ -44,12 +44,39 @@ export function LoginForm({redirectTo, onSuccess}: {redirectTo?: string; onSucce
     }
   });
 
-  return <form method="post" className="mx-auto w-full max-w-[400px] space-y-5" onSubmit={(event) => void submit(event)} noValidate>
-    <div className="space-y-2"><Label htmlFor="identifier">{t("email")} / {t("phone")}</Label><Input id="identifier" autoComplete="username" {...form.register("identifier")} aria-invalid={Boolean(form.formState.errors.identifier)} />{form.formState.errors.identifier ? <p className="text-xs text-destructive">{t("identifierRequired")}</p> : null}</div>
-    <div className="space-y-2"><Label htmlFor="password">{t("password")}</Label><Input id="password" type="password" autoComplete="current-password" {...form.register("password")} aria-invalid={Boolean(form.formState.errors.password)} />{form.formState.errors.password ? <p className="text-xs text-destructive">{t("passwordRequired")}</p> : null}</div>
-    {error ? <ErrorMessage error={error} /> : null}
-    <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? common("loading") : t("login")}</Button>
-    <GoogleLoginButton redirectTo={redirectTo} onSuccess={onSuccess} />
-    <Link href="/forgot-password" className="block text-center text-sm text-muted-foreground hover:text-foreground hover:underline">{t("forgotPassword")}</Link>
-  </form>;
+  return (
+    <form method="post" className="mx-auto w-full max-w-[400px] space-y-5" onSubmit={(event) => void submit(event)} noValidate>
+      <div className="space-y-2">
+        <Label htmlFor="identifier">
+          {t("email")} / {t("phone")}
+        </Label>
+        <Input
+          id="identifier"
+          autoComplete="username"
+          {...form.register("identifier")}
+          aria-invalid={Boolean(form.formState.errors.identifier)}
+        />
+        {form.formState.errors.identifier ? <p className="text-xs text-destructive">{t("identifierRequired")}</p> : null}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">{t("password")}</Label>
+        <Input
+          id="password"
+          type="password"
+          autoComplete="current-password"
+          {...form.register("password")}
+          aria-invalid={Boolean(form.formState.errors.password)}
+        />
+        {form.formState.errors.password ? <p className="text-xs text-destructive">{t("passwordRequired")}</p> : null}
+      </div>
+      {error ? <ErrorMessage error={error} /> : null}
+      <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+        {form.formState.isSubmitting ? common("loading") : t("login")}
+      </Button>
+      <GoogleLoginButton redirectTo={redirectTo} onSuccess={onSuccess} />
+      <Link href="/forgot-password" className="block text-center text-sm text-muted-foreground hover:text-foreground hover:underline">
+        {t("forgotPassword")}
+      </Link>
+    </form>
+  );
 }

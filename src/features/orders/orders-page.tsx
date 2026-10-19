@@ -1,34 +1,27 @@
 "use client";
 
-import {
-  Ban,
-  ChevronLeft,
-  ChevronRight,
-  KeyRound,
-  Search,
-  X,
-} from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
-import { useState } from "react";
+import {Ban, ChevronLeft, ChevronRight, KeyRound, Search, X} from "lucide-react";
+import {useLocale, useTranslations} from "next-intl";
+import {useState} from "react";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ConfirmAction } from "@/components/ui/confirm-action";
-import { ErrorMessage } from "@/components/ui/error-message";
-import { OrdersPageSkeleton } from "@/components/ui/loading-skeletons";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { Link } from "@/i18n/navigation";
-import { ApiClientError } from "@/lib/api/envelope";
-import { isStaffRole } from "@/lib/auth/roles";
-import { formatMoney } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import {Card, CardContent} from "@/components/ui/card";
+import {Button} from "@/components/ui/button";
+import {ConfirmAction} from "@/components/ui/confirm-action";
+import {ErrorMessage} from "@/components/ui/error-message";
+import {OrdersPageSkeleton} from "@/components/ui/loading-skeletons";
+import {Input} from "@/components/ui/input";
+import {Select} from "@/components/ui/select";
+import {StatusBadge} from "@/components/ui/status-badge";
+import {Link} from "@/i18n/navigation";
+import {ApiClientError} from "@/lib/api/envelope";
+import {isStaffRole} from "@/lib/auth/roles";
+import {formatMoney} from "@/lib/format";
+import {cn} from "@/lib/utils";
 import {OrderStatus} from "@/lib/domain/commerce-enums";
 
-import { useProfile } from "@/features/auth/queries";
-import { useCursorTrail } from "@/lib/hooks/use-cursor-trail";
-import { useCancelOrder, useOrders } from "./queries";
+import {useProfile} from "@/features/auth/queries";
+import {useCursorTrail} from "@/lib/hooks/use-cursor-trail";
+import {useCancelOrder, useOrders} from "./queries";
 
 const statuses = ["", ...Object.values(OrderStatus)];
 
@@ -51,10 +44,7 @@ export function OrdersPage() {
   const trail = useCursorTrail(JSON.stringify({...filters, cursor: undefined}));
   const cancel = useCancelOrder();
   const orders = query.data?.items ?? [];
-  const requiresLogin =
-    profile.isError &&
-    profile.error instanceof ApiClientError &&
-    profile.error.status === 401;
+  const requiresLogin = profile.isError && profile.error instanceof ApiClientError && profile.error.status === 401;
   const hasFilters = Boolean(filters.keyword || filters.status);
 
   function applyFilters() {
@@ -96,9 +86,7 @@ export function OrdersPage() {
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <KeyRound className="size-10 text-primary" />
             <h1 className="mt-4 text-2xl font-semibold">{nav("login")}</h1>
-            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-              {t("loginRequired")}
-            </p>
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{t("loginRequired")}</p>
             <Link
               href="/login?redirect=%2Forders"
               className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/85"
@@ -118,9 +106,7 @@ export function OrdersPage() {
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
             <KeyRound className="size-10 text-primary" />
             <h1 className="mt-4 text-2xl font-semibold">{t("staffTitle")}</h1>
-            <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">
-              {t("staffDescription")}
-            </p>
+            <p className="mt-2 max-w-lg text-sm leading-6 text-muted-foreground">{t("staffDescription")}</p>
             <Link
               href="/admin/orders"
               className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
@@ -159,17 +145,10 @@ export function OrdersPage() {
               aria-label={t("searchPlaceholder")}
             />
           </div>
-          <Select
-            className="lg:w-64"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-            aria-label={t("allStatuses")}
-          >
+          <Select className="lg:w-64" value={status} onChange={(event) => setStatus(event.target.value)} aria-label={t("allStatuses")}>
             {statuses.map((value) => (
               <option key={value} value={value}>
-                {value
-                  ? t(`status.${value}`, { default: value })
-                  : t("allStatuses")}
+                {value ? t(`status.${value}`, {default: value}) : t("allStatuses")}
               </option>
             ))}
           </Select>
@@ -184,11 +163,7 @@ export function OrdersPage() {
             </Button>
           ) : null}
         </form>
-        {hasFilters ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {t("filteredResults")}
-          </p>
-        ) : null}
+        {hasFilters ? <p className="mt-3 text-xs text-muted-foreground">{t("filteredResults")}</p> : null}
       </div>
 
       {query.isPending ? <OrdersPageSkeleton /> : null}
@@ -204,29 +179,16 @@ export function OrdersPage() {
         </div>
       ) : null}
       {!query.isPending && !query.isError && orders.length > 0 ? (
-        <div
-          className={cn(
-            "space-y-3 transition-opacity duration-200",
-            query.isFetching && "opacity-60",
-          )}
-          aria-busy={query.isFetching}
-        >
+        <div className={cn("space-y-3 transition-opacity duration-200", query.isFetching && "opacity-60")} aria-busy={query.isFetching}>
           {orders.map((order, index) => (
-            <Card
-              key={order.id ?? index}
-              className="transition hover:border-primary/30 hover:shadow-md"
-            >
+            <Card key={order.id ?? index} className="transition hover:border-primary/30 hover:shadow-md">
               <CardContent className="flex flex-wrap items-center justify-between gap-4 p-5">
                 <div className="min-w-0">
                   <p className="font-semibold">
                     {t("orderNumber")}: {order.invoiceNumber}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {order.createdAt
-                      ? new Date(order.createdAt).toLocaleString(
-                          locale === "vi" ? "vi-VN" : "en-US",
-                        )
-                      : "—"}
+                    {order.createdAt ? new Date(order.createdAt).toLocaleString(locale === "vi" ? "vi-VN" : "en-US") : "—"}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
                     {order.itemCount} {t("items")}
@@ -250,9 +212,7 @@ export function OrdersPage() {
                           : undefined
                       }
                     />
-                    <p className="mt-2 font-semibold">
-                      {formatMoney(order.totalAmount, locale)}
-                    </p>
+                    <p className="mt-2 font-semibold">{formatMoney(order.totalAmount, locale)}</p>
                   </div>
                   {order.id ? (
                     <div className="flex items-center gap-2">
@@ -271,7 +231,7 @@ export function OrdersPage() {
                           confirmVariant="destructive"
                           variant="outline"
                           size="sm"
-                          onConfirm={() => cancel.mutateAsync({ orderId: order.id! })}
+                          onConfirm={() => cancel.mutateAsync({orderId: order.id!})}
                           disabled={cancel.isPending}
                         >
                           <Ban className="size-4" />
@@ -287,15 +247,13 @@ export function OrdersPage() {
         </div>
       ) : null}
 
-      {!query.isPending &&
-      !query.isError &&
-      (trail.hasPrev || query.data?.hasNext) ? (
+      {!query.isPending && !query.isError && (trail.hasPrev || query.data?.hasNext) ? (
         <div className="mt-8 flex justify-center gap-2">
           <Button
             variant="outline"
             disabled={!trail.hasPrev}
             onClick={() => {
-              setFilters((current) => ({ ...current, cursor: trail.prevCursor }));
+              setFilters((current) => ({...current, cursor: trail.prevCursor}));
               trail.pop();
             }}
           >

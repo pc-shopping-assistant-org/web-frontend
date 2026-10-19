@@ -5,7 +5,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const data: PublicConfig = {googleClientId: process.env.GOOGLE_CLIENT_ID?.trim() || null};
-  return Response.json({data, message: STATIC_MESSAGE_KEYS.SUCCESS, errors: []}, {
-    headers: {"Cache-Control": "no-store"},
-  });
+  return Response.json(
+    {data, message: STATIC_MESSAGE_KEYS.SUCCESS, errors: []},
+    {
+      headers: {"Cache-Control": "no-store"},
+    },
+  );
 }

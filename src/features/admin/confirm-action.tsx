@@ -1,1 +1,1 @@
-export { ConfirmAction } from "@/components/ui/confirm-action";
+export {ConfirmAction} from "@/components/ui/confirm-action";

@@ -35,7 +35,12 @@ export function SiteFooter() {
           <div className="max-w-sm">
             <p className="text-lg font-semibold tracking-tight text-white">{common("appName")}</p>
             <p className="mt-3 text-sm leading-6 text-slate-400">{common("footerDescription")}</p>
-            <Link href="/assistant" className="mt-5 inline-flex items-center rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/10">{t("assistant")}</Link>
+            <Link
+              href="/assistant"
+              className="mt-5 inline-flex items-center rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+            >
+              {t("assistant")}
+            </Link>
           </div>
           <FooterColumn title={common("footerShop")} links={shopLinks} />
           <FooterColumn title={common("footerAccount")} links={accountLinks} />
@@ -56,12 +61,22 @@ export function SiteFooter() {
   );
 }
 
-function FooterColumn({title, links}: {title: string; links: {href: "/products" | "/cart" | "/assistant" | "/account" | "/orders" | "/login" | "/register" | "/admin/orders"; label: string}[]}) {
+function FooterColumn({
+  title,
+  links,
+}: {
+  title: string;
+  links: {href: "/products" | "/cart" | "/assistant" | "/account" | "/orders" | "/login" | "/register" | "/admin/orders"; label: string}[];
+}) {
   return (
     <div>
       <p className="text-sm font-semibold text-white">{title}</p>
       <div className="mt-3 flex flex-col items-start gap-2 text-sm text-slate-400">
-        {links.map((link) => <Link key={link.href} href={link.href} className="transition hover:text-white">{link.label}</Link>)}
+        {links.map((link) => (
+          <Link key={link.href} href={link.href} className="transition hover:text-white">
+            {link.label}
+          </Link>
+        ))}
       </div>
     </div>
   );

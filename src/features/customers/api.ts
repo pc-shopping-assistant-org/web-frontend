@@ -20,8 +20,7 @@ const customerUrl = (accountId: string) => `${IDENTITY}/customers/${encodeURICom
 /** Customers by page, narrowed by what the employee typed; the empty filters are dropped. */
 export async function getCustomers(filters: CustomerFilters = {}) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters))
-    if (value !== undefined && value !== "") params.set(key, String(value));
+  for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value));
   return mapCustomerPage(await backendFetch<CustomerPageDto>(`${IDENTITY}/customers${params.size ? `?${params.toString()}` : ""}`));
 }
 

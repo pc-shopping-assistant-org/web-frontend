@@ -43,9 +43,7 @@ export async function getProducts(filters: ProductFilters = {}) {
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
   const query = params.toString();
-  const response = await backendFetch<ProductPageDto>(
-    `/catalog-service/products${query ? `?${query}` : ""}`,
-  );
+  const response = await backendFetch<ProductPageDto>(`/catalog-service/products${query ? `?${query}` : ""}`);
   return mapProductPage(response);
 }
 
@@ -72,7 +70,11 @@ const DEFAULT_SEARCH_SIZE = 12;
  */
 export async function searchProducts(keyword: string, filters: Omit<ProductFilters, "keyword"> = {}) {
   const page = Number.parseInt(filters.cursor ?? "0", 10);
-  const params = new URLSearchParams({q: keyword, page: String(Number.isNaN(page) ? 0 : page), size: String(filters.limit ?? DEFAULT_SEARCH_SIZE)});
+  const params = new URLSearchParams({
+    q: keyword,
+    page: String(Number.isNaN(page) ? 0 : page),
+    size: String(filters.limit ?? DEFAULT_SEARCH_SIZE),
+  });
   for (const key of ["categoryId", "brandId", "minPrice", "maxPrice"] as const) {
     const value = filters[key];
     if (value !== undefined && value !== "") params.set(key, String(value));
@@ -93,9 +95,7 @@ export function listProducts(filters: ProductFilters = {}) {
 }
 
 export async function getProductBySlug(seoName: string) {
-  const response = await backendFetch<ProductDetailDto>(
-    `/catalog-service/products/slug/${encodeURIComponent(seoName)}`,
-  );
+  const response = await backendFetch<ProductDetailDto>(`/catalog-service/products/slug/${encodeURIComponent(seoName)}`);
   return mapProductDetail(response);
 }
 
@@ -129,31 +129,37 @@ const CATALOG = "/catalog-service";
 
 export async function getProductReviews(productId: string, page = 0, size = 10) {
   const params = new URLSearchParams({page: String(page), size: String(size)});
-  return mapProductReviewPage(await backendFetch<ProductReviewPageDto>(
-    `${CATALOG}/products/${encodeURIComponent(productId)}/reviews?${params.toString()}`,
-  ));
+  return mapProductReviewPage(
+    await backendFetch<ProductReviewPageDto>(`${CATALOG}/products/${encodeURIComponent(productId)}/reviews?${params.toString()}`),
+  );
 }
 
 /** The reviews of the signed-in customer for this product, newest first: pinned above the public list. */
 export async function getMyProductReviews(productId: string) {
-  return (await backendFetch<ProductReviewDto[]>(`${CATALOG}/products/${encodeURIComponent(productId)}/reviews/mine`)).map(mapProductReview);
+  return (await backendFetch<ProductReviewDto[]>(`${CATALOG}/products/${encodeURIComponent(productId)}/reviews/mine`)).map(
+    mapProductReview,
+  );
 }
 
 export async function createProductReview(productId: string, request: CreateReviewRequest) {
   const payload = parseRequest(createReviewRequestSchema, request);
-  return mapProductReview(await backendFetch<ProductReviewDto>(`${CATALOG}/products/${encodeURIComponent(productId)}/reviews`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }));
+  return mapProductReview(
+    await backendFetch<ProductReviewDto>(`${CATALOG}/products/${encodeURIComponent(productId)}/reviews`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  );
 }
 
 /** Spends the single edit of the review; the backend refuses a second edit, one after 30 days, and one on a product no longer on sale. */
 export async function updateProductReview(productId: string, reviewId: string, request: EditReviewRequest) {
   const payload = parseRequest(editReviewRequestSchema, request);
-  return mapProductReview(await backendFetch<ProductReviewDto>(
-    `${CATALOG}/products/${encodeURIComponent(productId)}/reviews/${encodeURIComponent(reviewId)}`,
-    {method: "PATCH", body: JSON.stringify(payload)},
-  ));
+  return mapProductReview(
+    await backendFetch<ProductReviewDto>(`${CATALOG}/products/${encodeURIComponent(productId)}/reviews/${encodeURIComponent(reviewId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  );
 }
 
 /** Which of the given order lines the customer has reviewed. */

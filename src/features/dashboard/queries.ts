@@ -17,14 +17,11 @@ export const dashboardKeys = {
   all: ["dashboard"] as const,
 };
 
-export const useOrderDashboard = () =>
-  useQuery({queryKey: ["dashboard", "orders"], queryFn: getOrderDashboard, retry: false});
+export const useOrderDashboard = () => useQuery({queryKey: ["dashboard", "orders"], queryFn: getOrderDashboard, retry: false});
 
-export const useCustomerSummary = () =>
-  useQuery({queryKey: ["dashboard", "customers"], queryFn: getCustomerSummary, retry: false});
+export const useCustomerSummary = () => useQuery({queryKey: ["dashboard", "customers"], queryFn: getCustomerSummary, retry: false});
 
-export const useStockSummary = () =>
-  useQuery({queryKey: ["dashboard", "stock"], queryFn: getStockSummary, retry: false});
+export const useStockSummary = () => useQuery({queryKey: ["dashboard", "stock"], queryFn: getStockSummary, retry: false});
 
 export const useRevenue = (range: Required<DateRange>, granularity: RevenueGranularity) =>
   useQuery({

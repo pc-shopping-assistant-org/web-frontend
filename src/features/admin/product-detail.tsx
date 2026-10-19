@@ -1,28 +1,28 @@
 "use client";
 
-import { Save, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useMemo, useState, type FormEvent } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "@/i18n/navigation";
-import type { ProductDetail } from "@/features/catalog/contracts/responses";
-import { ResourceStatus } from "@/lib/domain/catalog-enums";
-import { ConfirmAction } from "./confirm-action";
-import { galleryFromProduct, galleryRequest, ProductGalleryEditor } from "./product-fields";
-import { SpecificationsEditor } from "./specifications-editor";
-import { StatusSelect } from "./status-select";
-import { ProductVariantsSection } from "./variant-table";
-import { CategoryPicker } from "./category-picker";
-import { useBrands, useCategories } from "@/features/catalog/queries";
-import { useAdminProduct, useAdminProductStatus, useDeleteAdminProduct, useUpdateAdminProduct } from "./queries";
-import { BackLink, Loading, Failure, Field, FormError } from "./detail-kit";
+import {Save, Trash2} from "lucide-react";
+import {useTranslations} from "next-intl";
+import {useMemo, useState, type FormEvent} from "react";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+import {Label} from "@/components/ui/label";
+import {Select} from "@/components/ui/select";
+import {StatusBadge} from "@/components/ui/status-badge";
+import {Textarea} from "@/components/ui/textarea";
+import {useRouter} from "@/i18n/navigation";
+import type {ProductDetail} from "@/features/catalog/contracts/responses";
+import {ResourceStatus} from "@/lib/domain/catalog-enums";
+import {ConfirmAction} from "./confirm-action";
+import {galleryFromProduct, galleryRequest, ProductGalleryEditor} from "./product-fields";
+import {SpecificationsEditor} from "./specifications-editor";
+import {StatusSelect} from "./status-select";
+import {ProductVariantsSection} from "./variant-table";
+import {CategoryPicker} from "./category-picker";
+import {useBrands, useCategories} from "@/features/catalog/queries";
+import {useAdminProduct, useAdminProductStatus, useDeleteAdminProduct, useUpdateAdminProduct} from "./queries";
+import {BackLink, Loading, Failure, Field, FormError} from "./detail-kit";
 
-export function AdminProductDetailPage({ productId }: { productId: string }) {
+export function AdminProductDetailPage({productId}: {productId: string}) {
   const t = useTranslations("admin");
   const router = useRouter();
   const product = useAdminProduct(productId);
@@ -42,9 +42,7 @@ export function AdminProductDetailPage({ productId }: { productId: string }) {
         <div>
           <p className="eyebrow">{t("productDetail")}</p>
           <h1 className="mt-2 text-3xl font-semibold">{product.data.name}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {product.data.id}
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{product.data.id}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={product.data.status} />
@@ -73,7 +71,7 @@ export function AdminProductDetailPage({ productId }: { productId: string }) {
   );
 }
 
-function ProductEditor({ product }: { product: ProductDetail }) {
+function ProductEditor({product}: {product: ProductDetail}) {
   const t = useTranslations("admin");
   const categories = useCategories();
   const brands = useBrands();
@@ -86,9 +84,7 @@ function ProductEditor({ product }: { product: ProductDetail }) {
       categoryId: product.category?.id ?? "",
       brandId: product.brand?.id ?? "",
       description: product.description ?? "",
-      specifications: product.specifications
-        ? JSON.stringify(product.specifications, null, 2)
-        : "{}",
+      specifications: product.specifications ? JSON.stringify(product.specifications, null, 2) : "{}",
       images: galleryFromProduct(product.images),
     }),
     [product],
@@ -96,11 +92,8 @@ function ProductEditor({ product }: { product: ProductDetail }) {
   const [draft, setDraft] = useState<typeof defaults | null>(null);
   const [formError, setFormError] = useState("");
   const form = draft ?? defaults;
-  function set<K extends keyof typeof defaults>(
-    key: K,
-    value: (typeof defaults)[K],
-  ) {
-    setDraft((current) => ({ ...(current ?? defaults), [key]: value }));
+  function set<K extends keyof typeof defaults>(key: K, value: (typeof defaults)[K]) {
+    setDraft((current) => ({...(current ?? defaults), [key]: value}));
   }
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -143,25 +136,13 @@ function ProductEditor({ product }: { product: ProductDetail }) {
         <CardDescription>{t("editProductDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form
-          className="grid gap-4 sm:grid-cols-2"
-          onSubmit={(event) => void submit(event)}
-        >
-          <Field
-            id="admin-product-name"
-            label={t("name")}
-            value={form.name}
-            onChange={(value) => set("name", value)}
-            required
-          />
-          <Field
-            id="admin-product-seo"
-            label={t("seoName")}
-            value={form.seoName}
-            onChange={(value) => set("seoName", value)}
-          />
+        <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
+          <Field id="admin-product-name" label={t("name")} value={form.name} onChange={(value) => set("name", value)} required />
+          <Field id="admin-product-seo" label={t("seoName")} value={form.seoName} onChange={(value) => set("seoName", value)} />
           <div className="space-y-2">
-            <Label htmlFor="admin-product-category">{t("category")} <span className="text-destructive">*</span></Label>
+            <Label htmlFor="admin-product-category">
+              {t("category")} <span className="text-destructive">*</span>
+            </Label>
             <CategoryPicker
               id="admin-product-category"
               value={form.categoryId}
@@ -175,11 +156,7 @@ function ProductEditor({ product }: { product: ProductDetail }) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="admin-product-brand">{t("brand")}</Label>
-            <Select
-              id="admin-product-brand"
-              value={form.brandId}
-              onChange={(event) => set("brandId", event.target.value)}
-            >
+            <Select id="admin-product-brand" value={form.brandId} onChange={(event) => set("brandId", event.target.value)}>
               <option value="">{t("noBrand")}</option>
               {(brands.data ?? [])
                 .filter((brand) => brand.status === ResourceStatus.Active)
@@ -190,15 +167,9 @@ function ProductEditor({ product }: { product: ProductDetail }) {
                 ))}
             </Select>
           </div>
-          <ProductGalleryEditor
-            id="admin-product-gallery"
-            items={form.images}
-            onChange={(images) => set("images", images)}
-          />
+          <ProductGalleryEditor id="admin-product-gallery" items={form.images} onChange={(images) => set("images", images)} />
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="admin-product-description">
-              {t("description")}
-            </Label>
+            <Label htmlFor="admin-product-description">{t("description")}</Label>
             <Textarea
               id="admin-product-description"
               value={form.description}
@@ -220,17 +191,12 @@ function ProductEditor({ product }: { product: ProductDetail }) {
               currentStatus={product.status ?? ResourceStatus.Active}
               options={[ResourceStatus.Active, ResourceStatus.Inactive]}
               label={t("status")}
-              onStatus={(nextStatus) =>
-                status.mutateAsync({ id: product.id!, status: nextStatus })
-              }
+              onStatus={(nextStatus) => status.mutateAsync({id: product.id!, status: nextStatus})}
               className="w-36"
               disabled={status.isPending}
             />
           </div>
-          <FormError
-            error={update.error ?? status.error}
-            formError={formError}
-          />
+          <FormError error={update.error ?? status.error} formError={formError} />
         </form>
       </CardContent>
     </Card>

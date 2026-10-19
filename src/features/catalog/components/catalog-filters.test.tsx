@@ -11,13 +11,17 @@ vi.mock("next-intl", () => ({useLocale: () => "vi", useTranslations: () => (key:
 afterEach(cleanup);
 
 const node = (id: string, name: string, children: CategoryTree[] = []) => ({id, name, children}) as unknown as CategoryTree;
-const many = (count: number): FilterOption[] => Array.from({length: count}, (_, index) => ({value: `c${index}`, label: `Category ${index}`}));
+const many = (count: number): FilterOption[] =>
+  Array.from({length: count}, (_, index) => ({value: `c${index}`, label: `Category ${index}`}));
 
 function setup(props: Partial<React.ComponentProps<typeof CatalogFilters>> = {}) {
   const handlers = {onCategory: vi.fn(), onBrand: vi.fn(), onPrice: vi.fn(), onClear: vi.fn()};
   render(
     <CatalogFilters
-      categories={[{value: "cpu", label: "CPU"}, {value: "gpu", label: "GPU"}]}
+      categories={[
+        {value: "cpu", label: "CPU"},
+        {value: "gpu", label: "GPU"},
+      ]}
       brands={[{value: "asus", label: "Asus"}]}
       loading={false}
       {...handlers}
@@ -30,7 +34,12 @@ function setup(props: Partial<React.ComponentProps<typeof CatalogFilters>> = {})
 it("lists the categories as a tree, each level indented one step deeper", () => {
   const options = categoryOptions([node("a", "Components", [node("b", "Memory", [node("c", "DDR5")])]), node("d", "Laptops")]);
 
-  expect(options.map((option) => [option.label, option.depth])).toEqual([["Components", 0], ["Memory", 1], ["DDR5", 2], ["Laptops", 0]]);
+  expect(options.map((option) => [option.label, option.depth])).toEqual([
+    ["Components", 0],
+    ["Memory", 1],
+    ["DDR5", 2],
+    ["Laptops", 0],
+  ]);
 });
 
 it("applies a category or a brand as soon as it is picked, and clears it with the first option", async () => {
@@ -99,7 +108,10 @@ it("offers to clear the filters only when something is set", () => {
   expect(screen.queryByRole("button", {name: "clearFilters"})).not.toBeInTheDocument();
 });
 
-const tree = categoryOptions([node("pc", "PC parts", [node("ram", "Memory", [node("ddr5", "DDR5")]), node("cpu", "Processors")]), node("lap", "Laptops")]);
+const tree = categoryOptions([
+  node("pc", "PC parts", [node("ram", "Memory", [node("ddr5", "DDR5")]), node("cpu", "Processors")]),
+  node("lap", "Laptops"),
+]);
 
 it("starts with the sub-categories folded behind their parent", () => {
   setup({categories: tree});

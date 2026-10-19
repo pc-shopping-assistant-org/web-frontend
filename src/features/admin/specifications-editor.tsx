@@ -1,15 +1,15 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { useEffect, useMemo } from "react";
+import {useTranslations} from "next-intl";
+import {useEffect, useMemo} from "react";
 
-import { ErrorMessage } from "@/components/ui/error-message";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+import {ErrorMessage} from "@/components/ui/error-message";
+import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
+import {Select} from "@/components/ui/select";
+import {Skeleton} from "@/components/ui/skeleton";
 
-import { useCategorySpecsSchema } from "./queries";
+import {useCategorySpecsSchema} from "./queries";
 
 type Specs = Record<string, unknown>;
 type SchemaAttribute = {
@@ -54,7 +54,7 @@ export function SpecificationsEditor({
               attribute: attribute as SchemaAttribute,
             })),
         )
-        .filter(({ attribute }) => Boolean(attribute.key)),
+        .filter(({attribute}) => Boolean(attribute.key)),
     [schema.data?.groups, t],
   );
 
@@ -62,14 +62,14 @@ export function SpecificationsEditor({
   const settled = Boolean(categoryId) && !schema.isPending && !schema.isError;
   useEffect(() => {
     if (!settled) return;
-    const allowed = new Set(attributes.map(({ attribute }) => attribute.key));
+    const allowed = new Set(attributes.map(({attribute}) => attribute.key));
     const entries = Object.entries(parsed);
     const kept = entries.filter(([key]) => allowed.has(key));
     if (kept.length !== entries.length) onChange(JSON.stringify(Object.fromEntries(kept), null, 2));
   }, [settled, attributes, parsed, onChange]);
 
   function setSpec(key: string, next: unknown) {
-    const nextSpecs = { ...parsed };
+    const nextSpecs = {...parsed};
     if (next === "" || next === undefined || next === null) delete nextSpecs[key];
     else nextSpecs[key] = next;
     onChange(JSON.stringify(nextSpecs, null, 2));
@@ -77,7 +77,12 @@ export function SpecificationsEditor({
 
   if (!categoryId) return null;
   if (schema.isPending) return <Skeleton className="h-24 rounded-xl sm:col-span-2" />;
-  if (schema.isError) return <div className="sm:col-span-2"><ErrorMessage error={schema.error} /></div>;
+  if (schema.isError)
+    return (
+      <div className="sm:col-span-2">
+        <ErrorMessage error={schema.error} />
+      </div>
+    );
   if (attributes.length === 0) return null;
 
   return (
@@ -90,7 +95,7 @@ export function SpecificationsEditor({
         <div key={groupName} className="space-y-3">
           <h4 className="border-b pb-2 text-sm font-medium text-muted-foreground">{groupName}</h4>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {groupItems.map(({ attribute }) => (
+            {groupItems.map(({attribute}) => (
               <SpecificationField
                 key={attribute.key}
                 attribute={attribute}
@@ -127,11 +132,7 @@ function SpecificationField({
       <Label htmlFor={id}>
         {label}
         {attribute.required ? <span className="ml-1 text-destructive">*</span> : null}
-        {attribute.unit ? (
-          <span className="ml-1 text-xs font-normal text-muted-foreground">
-            ({attribute.unit})
-          </span>
-        ) : null}
+        {attribute.unit ? <span className="ml-1 text-xs font-normal text-muted-foreground">({attribute.unit})</span> : null}
       </Label>
       {dataType === "ENUM" && attribute.allowedValues?.length ? (
         <Select id={id} value={stringValue} required={attribute.required} onChange={(event) => onChange(event.target.value)}>
@@ -147,13 +148,7 @@ function SpecificationField({
           id={id}
           value={stringValue}
           required={attribute.required}
-          onChange={(event) =>
-            onChange(
-              event.target.value === ""
-                ? ""
-                : event.target.value === "true",
-            )
-          }
+          onChange={(event) => onChange(event.target.value === "" ? "" : event.target.value === "true")}
         >
           <option value="">{t("chooseValue")}</option>
           <option value="true">{t("booleanTrue")}</option>
@@ -165,11 +160,7 @@ function SpecificationField({
           type={dataType === "NUMBER" ? "number" : "text"}
           value={stringValue}
           onChange={(event) =>
-            onChange(
-              dataType === "NUMBER" && event.target.value !== ""
-                ? Number(event.target.value)
-                : event.target.value,
-            )
+            onChange(dataType === "NUMBER" && event.target.value !== "" ? Number(event.target.value) : event.target.value)
           }
           required={attribute.required}
         />
@@ -178,10 +169,8 @@ function SpecificationField({
   );
 }
 
-function groupAttributes(
-  attributes: { groupName: string; attribute: SchemaAttribute }[],
-) {
-  const groups = new Map<string, { groupName: string; attribute: SchemaAttribute }[]>();
+function groupAttributes(attributes: {groupName: string; attribute: SchemaAttribute}[]) {
+  const groups = new Map<string, {groupName: string; attribute: SchemaAttribute}[]>();
   for (const item of attributes) {
     const entries = groups.get(item.groupName) ?? [];
     entries.push(item);
@@ -193,9 +182,7 @@ function groupAttributes(
 function parseSpecs(value: string): Specs {
   try {
     const parsed = JSON.parse(value || "{}");
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Specs)
-      : {};
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Specs) : {};
   } catch {
     return {};
   }

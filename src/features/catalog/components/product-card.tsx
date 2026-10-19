@@ -73,9 +73,7 @@ export function ProductCard({
   const [quickAddError, setQuickAddError] = useState<unknown>(null);
   const [quickAddMessage, setQuickAddMessage] = useState<string | null>(null);
   const name = product.name ?? t("productNotFound");
-  const productHref = product.seoName
-    ? `/products/${encodeURIComponent(product.seoName)}`
-    : undefined;
+  const productHref = product.seoName ? `/products/${encodeURIComponent(product.seoName)}` : undefined;
   const price = product.minPrice ?? product.maxPrice;
   const theme = productTheme(product.categoryName);
   const listing = variant === "listing";
@@ -93,9 +91,7 @@ export function ProductCard({
       // Resolve the detail lazily so browse pages do not issue one variant
       // request for every card during the initial render.
       const detail = await getProductBySlug(product.seoName);
-      const activeVariants = (detail.variants ?? []).filter(
-        (variant) => !variant.status || variant.status === ResourceStatus.Active,
-      );
+      const activeVariants = (detail.variants ?? []).filter((variant) => !variant.status || variant.status === ResourceStatus.Active);
       if (activeVariants.length !== 1) {
         router.push(productHref ?? "/products");
         return;
@@ -123,7 +119,8 @@ export function ProductCard({
 
   if (listing) {
     const hasRange = product.minPrice != null && product.maxPrice != null && product.maxPrice > product.minPrice;
-    const iconButton = "inline-flex size-8 items-center justify-center rounded-lg border bg-background text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:cursor-wait disabled:opacity-60";
+    const iconButton =
+      "inline-flex size-8 items-center justify-center rounded-lg border bg-background text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:cursor-wait disabled:opacity-60";
     return (
       <Card className="group flex h-full flex-col overflow-hidden rounded-xl border-border/70 shadow-none transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
         {productHref ? (
@@ -136,8 +133,16 @@ export function ProductCard({
         <CardContent className="flex flex-1 flex-col gap-2 p-3">
           <h3 className="line-clamp-2 min-h-10 text-sm font-medium leading-5">
             {productHref ? (
-              <Link href={productHref} prefetch={false} className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">{name}</Link>
-            ) : name}
+              <Link
+                href={productHref}
+                prefetch={false}
+                className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
+                {name}
+              </Link>
+            ) : (
+              name
+            )}
           </h3>
           <p className="truncate text-xs text-muted-foreground">{product.brandName ?? t("brandFallback")}</p>
           <p className="text-base font-semibold text-primary">
@@ -152,7 +157,9 @@ export function ProductCard({
           ) : null}
           <div className="mt-auto space-y-2 pt-1">
             {addToCart.isError || quickAddError ? <ErrorMessage error={quickAddError ?? addToCart.error} /> : null}
-            {quickAddMessage ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{quickAddMessage}</p> : null}
+            {quickAddMessage ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{quickAddMessage}</p>
+            ) : null}
             {added ? (
               <p className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
                 <IconCheck className="size-3.5" />
@@ -161,14 +168,25 @@ export function ProductCard({
             ) : null}
             <div className="flex items-center gap-1.5">
               {productHref ? (
-                <button type="button" className={iconButton} onClick={(event) => void quickAdd(event)} disabled={addToCart.isPending} aria-label={addToCart.isPending ? t("addingToCart") : t("quickAdd")} title={addToCart.isPending ? t("addingToCart") : t("quickAdd")}>
+                <button
+                  type="button"
+                  className={iconButton}
+                  onClick={(event) => void quickAdd(event)}
+                  disabled={addToCart.isPending}
+                  aria-label={addToCart.isPending ? t("addingToCart") : t("quickAdd")}
+                  title={addToCart.isPending ? t("addingToCart") : t("quickAdd")}
+                >
                   {addToCart.isPending ? <IconLoader2 className="size-4 animate-spin" /> : <IconShoppingCart className="size-4" />}
                 </button>
               ) : null}
               {onCompareToggle && product.id ? (
                 <button
                   type="button"
-                  className={cn(iconButton, compareSelected && "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground")}
+                  className={cn(
+                    iconButton,
+                    compareSelected &&
+                      "border-primary bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
+                  )}
                   onClick={(event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -183,7 +201,12 @@ export function ProductCard({
                 </button>
               ) : null}
               {product.id ? (
-                <Link href={`/assistant?productId=${encodeURIComponent(product.id)}`} className={iconButton} aria-label={t("askAssistant")} title={t("askAssistant")}>
+                <Link
+                  href={`/assistant?productId=${encodeURIComponent(product.id)}`}
+                  className={iconButton}
+                  aria-label={t("askAssistant")}
+                  title={t("askAssistant")}
+                >
                   <IconSparkles className="size-4" />
                 </Link>
               ) : null}
@@ -195,7 +218,12 @@ export function ProductCard({
   }
 
   return (
-    <Card className={cn("group overflow-hidden border-border/70 transition duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-xl", compact && "hover:-translate-y-0.5 hover:shadow-lg")}>
+    <Card
+      className={cn(
+        "group overflow-hidden border-border/70 transition duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-xl",
+        compact && "hover:-translate-y-0.5 hover:shadow-lg",
+      )}
+    >
       {productHref ? (
         <Link href={productHref} prefetch={false} className="block" aria-label={`${t("productDetails")}: ${name}`}>
           <ProductVisual product={product} name={name} theme={theme} interactive compact={compact} />
@@ -210,10 +238,16 @@ export function ProductCard({
           </p>
           <h3 className={cn("line-clamp-2 font-semibold tracking-tight", compact ? "text-sm leading-5" : "text-lg")}>
             {productHref ? (
-              <Link href={productHref} prefetch={false} className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+              <Link
+                href={productHref}
+                prefetch={false}
+                className="rounded-sm hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              >
                 {name}
               </Link>
-            ) : name}
+            ) : (
+              name
+            )}
           </h3>
         </div>
         <div className="mt-auto flex items-end justify-between gap-3">
@@ -229,7 +263,9 @@ export function ProductCard({
         {productHref || product.id ? (
           <div className={cn("space-y-2 border-t pt-3", compact && "pt-2")}>
             {addToCart.isError || quickAddError ? <ErrorMessage error={quickAddError ?? addToCart.error} /> : null}
-            {quickAddMessage ? <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{quickAddMessage}</p> : null}
+            {quickAddMessage ? (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">{quickAddMessage}</p>
+            ) : null}
             {added ? (
               <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-700">
                 <IconCheck className="size-3.5" />
@@ -237,7 +273,14 @@ export function ProductCard({
               </div>
             ) : null}
             {productHref ? (
-              <Link href={productHref} prefetch={false} className={cn("inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/85", compact ? "h-8 text-xs" : "h-9")}>
+              <Link
+                href={productHref}
+                prefetch={false}
+                className={cn(
+                  "inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/85",
+                  compact ? "h-8 text-xs" : "h-9",
+                )}
+              >
                 {t("productDetails")}
                 <IconArrowUpRight className="size-4 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </Link>
@@ -246,7 +289,10 @@ export function ProductCard({
               {productHref ? (
                 <button
                   type="button"
-                  className={cn("inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60", compact ? "h-8" : "h-9")}
+                  className={cn(
+                    "inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60",
+                    compact ? "h-8" : "h-9",
+                  )}
                   onClick={(event) => void quickAdd(event)}
                   disabled={addToCart.isPending}
                   aria-label={addToCart.isPending ? t("addingToCart") : t("quickAdd")}
@@ -254,7 +300,9 @@ export function ProductCard({
                 >
                   {addToCart.isPending ? <IconLoader2 className="size-4 animate-spin" /> : <IconShoppingCart className="size-4" />}
                 </button>
-              ) : <span />}
+              ) : (
+                <span />
+              )}
               {onCompareToggle && product.id ? (
                 <button
                   type="button"
@@ -272,34 +320,41 @@ export function ProductCard({
                   }}
                   disabled={compareDisabled && !compareSelected}
                   aria-pressed={compareSelected}
-                  aria-label={
-                    compareSelected
-                      ? t("removeFromCompare")
-                      : t("addToCompare")
-                  }
-                  title={
-                    compareSelected
-                      ? t("removeFromCompare")
-                      : t("addToCompare")
-                  }
+                  aria-label={compareSelected ? t("removeFromCompare") : t("addToCompare")}
+                  title={compareSelected ? t("removeFromCompare") : t("addToCompare")}
                 >
                   <IconArrowsLeftRight className="size-4" />
                 </button>
               ) : product.id ? (
                 <Link
                   href={`/assistant?productIds=${encodeURIComponent(product.id)}`}
-                  className={cn("inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10", compact ? "h-8" : "h-9")}
+                  className={cn(
+                    "inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10",
+                    compact ? "h-8" : "h-9",
+                  )}
                   aria-label={t("addToCompare")}
                   title={t("addToCompare")}
                 >
                   <IconArrowsLeftRight className="size-4" />
                 </Link>
-              ) : <span />}
+              ) : (
+                <span />
+              )}
               {product.id ? (
-                <Link href={`/assistant?productId=${encodeURIComponent(product.id)}`} className={cn("inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10", compact ? "h-8" : "h-9")} aria-label={t("askAssistant")} title={t("askAssistant")}>
+                <Link
+                  href={`/assistant?productId=${encodeURIComponent(product.id)}`}
+                  className={cn(
+                    "inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10",
+                    compact ? "h-8" : "h-9",
+                  )}
+                  aria-label={t("askAssistant")}
+                  title={t("askAssistant")}
+                >
                   <IconSparkles className="size-4" />
                 </Link>
-              ) : <span />}
+              ) : (
+                <span />
+              )}
             </div>
           </div>
         ) : null}
@@ -387,10 +442,22 @@ function ProductFallbackArt({
   const kind = productArtKind(category);
 
   return (
-    <div className={cn("relative flex w-full items-center justify-center transition duration-300", compact ? "h-32 max-w-[14rem]" : "h-44 max-w-[18rem]", interactive && "group-hover:scale-[1.04]")} aria-hidden="true">
+    <div
+      className={cn(
+        "relative flex w-full items-center justify-center transition duration-300",
+        compact ? "h-32 max-w-[14rem]" : "h-44 max-w-[18rem]",
+        interactive && "group-hover:scale-[1.04]",
+      )}
+      aria-hidden="true"
+    >
       <span className="absolute inset-8 rounded-full bg-white/60 blur-3xl" />
       <span className="absolute inset-x-8 bottom-3 h-8 rounded-[50%] bg-slate-900/15 blur-xl" />
-      <div className={cn("relative z-10 w-full rounded-[2.25rem] border border-white/80 bg-white/35 p-2 shadow-inner backdrop-blur-[2px]", compact ? "h-28 max-w-[14rem]" : "h-40 max-w-[18rem]")}>
+      <div
+        className={cn(
+          "relative z-10 w-full rounded-[2.25rem] border border-white/80 bg-white/35 p-2 shadow-inner backdrop-blur-[2px]",
+          compact ? "h-28 max-w-[14rem]" : "h-40 max-w-[18rem]",
+        )}
+      >
         <div className="flex h-full items-center justify-center overflow-hidden rounded-[1.85rem] border border-white/70 bg-white/30">
           <ProductIllustration kind={kind} />
         </div>
@@ -402,7 +469,8 @@ function ProductFallbackArt({
   );
 }
 
-export type ProductArtKind = "laptop" | "phone" | "monitor" | "desktop" | "audio" | "keyboard" | "mouse" | "storage" | "chair" | "network" | "generic";
+export type ProductArtKind =
+  "laptop" | "phone" | "monitor" | "desktop" | "audio" | "keyboard" | "mouse" | "storage" | "chair" | "network" | "generic";
 
 export function productArtKind(value: string): ProductArtKind {
   if (/phone|điện thoại|mobile/i.test(value)) return "phone";
@@ -434,79 +502,112 @@ export function ProductIllustration({kind}: {kind: ProductArtKind}) {
           <stop offset="1" stopColor="#cbd5e1" />
         </linearGradient>
       </defs>
-      {kind === "laptop" ? <>
-        <rect x="69" y="29" width="182" height="104" rx="15" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <rect x="82" y="42" width="156" height="78" rx="8" fill={screen} />
-        <path d="M47 146h226l-18 17H65z" fill="#475569" stroke="#1e293b" strokeWidth="3" />
-        <path d="M137 149h46l6 7h-58z" fill="#94a3b8" />
-        <path d="M95 62h54" stroke="#e0f2fe" strokeWidth="4" strokeLinecap="round" opacity=".75" />
-        <circle cx="213" cy="105" r="4" fill="#67e8f9" />
-      </> : null}
-      {kind === "phone" ? <>
-        <rect x="112" y="12" width="96" height="166" rx="20" fill="#172033" stroke="#64748b" strokeWidth="7" />
-        <rect x="123" y="28" width="74" height="131" rx="12" fill={screen} />
-        <rect x="150" y="18" width="20" height="4" rx="2" fill="#94a3b8" />
-        <circle cx="160" cy="168" r="4" fill="#94a3b8" />
-        <path d="M136 58h38" stroke="#e0f2fe" strokeWidth="4" strokeLinecap="round" opacity=".8" />
-        <circle cx="178" cy="56" r="5" fill="#67e8f9" />
-      </> : null}
-      {kind === "monitor" ? <>
-        <rect x="52" y="31" width="216" height="113" rx="13" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <rect x="66" y="45" width="188" height="85" rx="6" fill={screen} />
-        <path d="M160 145v25" stroke="#475569" strokeWidth="8" strokeLinecap="round" />
-        <path d="M121 173h78" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
-        <path d="M83 64h54" stroke="#e0f2fe" strokeWidth="4" strokeLinecap="round" opacity=".75" />
-      </> : null}
-      {kind === "desktop" ? <>
-        <rect x="100" y="17" width="120" height="155" rx="19" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <rect x="118" y="37" width="84" height="91" rx="9" fill="#263752" stroke="#475569" strokeWidth="3" />
-        <path d="M128 54h64M128 66h64M128 78h42" stroke="#64748b" strokeWidth="4" strokeLinecap="round" opacity=".8" />
-        <circle cx="122" cy="145" r="5" fill="#67e8f9" />
-        <path d="M135 145h55" stroke="#a78bfa" strokeWidth="4" strokeLinecap="round" />
-      </> : null}
-      {kind === "audio" ? <>
-        <circle cx="160" cy="95" r="66" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <circle cx="160" cy="95" r="43" fill="#263752" stroke="#94a3b8" strokeWidth="4" />
-        <circle cx="160" cy="95" r="22" fill={screen} />
-        <path d="M160 73v44M138 95h44" stroke="#e0f2fe" strokeWidth="4" strokeLinecap="round" opacity=".75" />
-      </> : null}
-      {kind === "keyboard" ? <>
-        <rect x="38" y="60" width="244" height="80" rx="18" fill="#172033" stroke="#64748b" strokeWidth="7" />
-        <g fill="#94a3b8">{Array.from({length: 48}, (_, index) => { const x = 58 + (index % 12) * 18; const y = 79 + Math.floor(index / 12) * 14; return <rect key={index} x={x} y={y} width="11" height="7" rx="2" />; })}</g>
-        <rect x="126" y="121" width="68" height="7" rx="3" fill="#67e8f9" />
-      </> : null}
-      {kind === "mouse" ? <>
-        <path d="M160 20c-36 0-57 29-57 71s21 75 57 75 57-33 57-75-21-71-57-71z" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <path d="M160 23v64" stroke="#94a3b8" strokeWidth="5" />
-        <rect x="154" y="41" width="12" height="22" rx="6" fill="#67e8f9" />
-        <path d="M118 118c18 17 66 17 84 0" stroke="#475569" strokeWidth="5" fill="none" />
-      </> : null}
-      {kind === "storage" ? <>
-        <rect x="76" y="35" width="168" height="120" rx="18" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <rect x="98" y="57" width="124" height="54" rx="9" fill="#263752" />
-        <circle cx="118" cy="84" r="12" fill={screen} />
-        <path d="M146 78h53M146 92h33" stroke="#94a3b8" strokeWidth="6" strokeLinecap="round" />
-        <path d="M104 132h112" stroke="#67e8f9" strokeWidth="5" strokeLinecap="round" />
-      </> : null}
-      {kind === "chair" ? <>
-        <path d="M100 34c0-10 8-18 18-18h83c13 0 23 10 23 23v62c0 10-8 18-18 18h-88c-10 0-18-8-18-18z" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <path d="M112 120h98l20 18H92z" fill="#475569" />
-        <path d="M160 138v28M126 176h68" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
-        <path d="M122 61h78" stroke="#a78bfa" strokeWidth="5" strokeLinecap="round" />
-      </> : null}
-      {kind === "network" ? <>
-        <rect x="64" y="57" width="192" height="83" rx="17" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <circle cx="100" cy="98" r="9" fill="#67e8f9" />
-        <circle cx="128" cy="98" r="9" fill="#a78bfa" />
-        <circle cx="156" cy="98" r="9" fill="#34d399" />
-        <path d="M194 84h34M194 100h34M194 116h22" stroke="#94a3b8" strokeWidth="5" strokeLinecap="round" />
-        <path d="M94 148h132" stroke="#475569" strokeWidth="5" strokeLinecap="round" />
-      </> : null}
-      {kind === "generic" ? <>
-        <rect x="91" y="36" width="138" height="118" rx="24" fill="#172033" stroke="#64748b" strokeWidth="8" />
-        <path d="M117 72h86M117 95h62M117 118h75" stroke="#94a3b8" strokeWidth="7" strokeLinecap="round" />
-        <circle cx="201" cy="119" r="8" fill="#67e8f9" />
-      </> : null}
+      {kind === "laptop" ? (
+        <>
+          <rect x="69" y="29" width="182" height="104" rx="15" fill="#172033" stroke="#64748b" strokeWidth="8" />
+          <rect x="82" y="42" width="156" height="78" rx="8" fill={screen} />
+          <path d="M47 146h226l-18 17H65z" fill="#475569" stroke="#1e293b" strokeWidth="3" />
+          <path d="M137 149h46l6 7h-58z" fill="#94a3b8" />
+          <path d="M95 62h54" stroke="#e0f2fe" strokeWidth="4" strokeLinecap="round" opacity=".75" />
+          <circle cx="213" cy="105" r="4" fill="#67e8f9" />
+        </>
+      ) : null}
+      {kind === "phone" ? (
+        <>
+          <rect x="112" y="12" width="96" height="166" rx="20" fill="#172033" stroke="#64748b" strokeWidth="7" />
+          <rect x="123" y="28" width="74" height="131" rx="12" fill={screen} />
+          <rect x="150" y="18" width="20" height="4" rx="2" fill="#94a3b8" />
+          <circle cx="160" cy="168" r="4" fill="#94a3b8" />
+          <path d="M136 58h38" stroke="#e0f2fe" strokeWidth="4" strokeLinecap="round" opacity=".8" />
+          <circle cx="178" cy="56" r="5" fill="#67e8f9" />
+        </>
+      ) : null}
+      {kind === "monitor" ? (
+        <>
+          <rect x="52" y="31" width="216" height="113" rx="13" fill="#172033" stroke="#64748b" strokeWidth="8" />
+          <rect x="66" y="45" width="188" height="85" rx="6" fill={screen} />
+          <path d="M160 145v25" stroke="#475569" strokeWidth="8" strokeLinecap="round" />
+          <path d="M121 173h78" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
+          <path d="M83 64h54" stroke="#e0f2fe" strokeWidth="4" strokeLinecap="round" opacity=".75" />
+        </>
+      ) : null}
+      {kind === "desktop" ? (
+        <>
+          <rect x="100" y="17" width="120" height="155" rx="19" fill="#172033" stroke="#64748b" strokeWidth="8" />
+          <rect x="118" y="37" width="84" height="91" rx="9" fill="#263752" stroke="#475569" strokeWidth="3" />
+          <path d="M128 54h64M128 66h64M128 78h42" stroke="#64748b" strokeWidth="4" strokeLinecap="round" opacity=".8" />
+          <circle cx="122" cy="145" r="5" fill="#67e8f9" />
+          <path d="M135 145h55" stroke="#a78bfa" strokeWidth="4" strokeLinecap="round" />
+        </>
+      ) : null}
+      {kind === "audio" ? (
+        <>
+          <circle cx="160" cy="95" r="66" fill="#172033" stroke="#64748b" strokeWidth="8" />
+          <circle cx="160" cy="95" r="43" fill="#263752" stroke="#94a3b8" strokeWidth="4" />
+          <circle cx="160" cy="95" r="22" fill={screen} />
+          <path d="M160 73v44M138 95h44" stroke="#e0f2fe" strokeWidth="4" strokeLinecap="round" opacity=".75" />
+        </>
+      ) : null}
+      {kind === "keyboard" ? (
+        <>
+          <rect x="38" y="60" width="244" height="80" rx="18" fill="#172033" stroke="#64748b" strokeWidth="7" />
+          <g fill="#94a3b8">
+            {Array.from({length: 48}, (_, index) => {
+              const x = 58 + (index % 12) * 18;
+              const y = 79 + Math.floor(index / 12) * 14;
+              return <rect key={index} x={x} y={y} width="11" height="7" rx="2" />;
+            })}
+          </g>
+          <rect x="126" y="121" width="68" height="7" rx="3" fill="#67e8f9" />
+        </>
+      ) : null}
+      {kind === "mouse" ? (
+        <>
+          <path d="M160 20c-36 0-57 29-57 71s21 75 57 75 57-33 57-75-21-71-57-71z" fill="#172033" stroke="#64748b" strokeWidth="8" />
+          <path d="M160 23v64" stroke="#94a3b8" strokeWidth="5" />
+          <rect x="154" y="41" width="12" height="22" rx="6" fill="#67e8f9" />
+          <path d="M118 118c18 17 66 17 84 0" stroke="#475569" strokeWidth="5" fill="none" />
+        </>
+      ) : null}
+      {kind === "storage" ? (
+        <>
+          <rect x="76" y="35" width="168" height="120" rx="18" fill="#172033" stroke="#64748b" strokeWidth="8" />
+          <rect x="98" y="57" width="124" height="54" rx="9" fill="#263752" />
+          <circle cx="118" cy="84" r="12" fill={screen} />
+          <path d="M146 78h53M146 92h33" stroke="#94a3b8" strokeWidth="6" strokeLinecap="round" />
+          <path d="M104 132h112" stroke="#67e8f9" strokeWidth="5" strokeLinecap="round" />
+        </>
+      ) : null}
+      {kind === "chair" ? (
+        <>
+          <path
+            d="M100 34c0-10 8-18 18-18h83c13 0 23 10 23 23v62c0 10-8 18-18 18h-88c-10 0-18-8-18-18z"
+            fill="#172033"
+            stroke="#64748b"
+            strokeWidth="8"
+          />
+          <path d="M112 120h98l20 18H92z" fill="#475569" />
+          <path d="M160 138v28M126 176h68" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
+          <path d="M122 61h78" stroke="#a78bfa" strokeWidth="5" strokeLinecap="round" />
+        </>
+      ) : null}
+      {kind === "network" ? (
+        <>
+          <rect x="64" y="57" width="192" height="83" rx="17" fill="#172033" stroke="#64748b" strokeWidth="8" />
+          <circle cx="100" cy="98" r="9" fill="#67e8f9" />
+          <circle cx="128" cy="98" r="9" fill="#a78bfa" />
+          <circle cx="156" cy="98" r="9" fill="#34d399" />
+          <path d="M194 84h34M194 100h34M194 116h22" stroke="#94a3b8" strokeWidth="5" strokeLinecap="round" />
+          <path d="M94 148h132" stroke="#475569" strokeWidth="5" strokeLinecap="round" />
+        </>
+      ) : null}
+      {kind === "generic" ? (
+        <>
+          <rect x="91" y="36" width="138" height="118" rx="24" fill="#172033" stroke="#64748b" strokeWidth="8" />
+          <path d="M117 72h86M117 95h62M117 118h75" stroke="#94a3b8" strokeWidth="7" strokeLinecap="round" />
+          <circle cx="201" cy="119" r="8" fill="#67e8f9" />
+        </>
+      ) : null}
     </svg>
   );
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { X } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useEffect, useId, useState, type ComponentProps, type ReactNode } from "react";
+import {X} from "lucide-react";
+import {useTranslations} from "next-intl";
+import {useEffect, useId, useState, type ComponentProps, type ReactNode} from "react";
 
-import { ErrorMessage } from "@/components/ui/error-message";
+import {ErrorMessage} from "@/components/ui/error-message";
 
-import { Button } from "./button";
+import {Button} from "./button";
 
 type ButtonProps = ComponentProps<typeof Button>;
 
@@ -106,11 +106,7 @@ export function ConfirmAction({
                 <h2 id={titleId} className="text-lg font-semibold">
                   {title}
                 </h2>
-                {description ? (
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {description}
-                  </p>
-                ) : null}
+                {description ? <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p> : null}
               </div>
               <Button
                 type="button"
@@ -129,20 +125,10 @@ export function ConfirmAction({
               </div>
             ) : null}
             <div className="mt-6 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={pending}
-              >
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>
                 {cancelLabel}
               </Button>
-              <Button
-                type="button"
-                variant={confirmVariant}
-                onClick={() => void confirm()}
-                disabled={pending}
-              >
+              <Button type="button" variant={confirmVariant} onClick={() => void confirm()} disabled={pending}>
                 {pending ? common("loading") : confirmLabel}
               </Button>
             </div>

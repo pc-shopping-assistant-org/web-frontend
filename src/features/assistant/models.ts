@@ -20,7 +20,11 @@ export type ChatData = {
     revision: number;
     proposal: {proposalId: string; proposalHash: string; targetRevision: number; baseRequirementsHash: string; changes: string[]} | null;
     clarificationOptions: string[];
-    build: {totalSpending: number; stale: boolean; parts: {slot: string; name: string; variantId: string | null; spending: number; owned: boolean; pinned: boolean}[]} | null;
+    build: {
+      totalSpending: number;
+      stale: boolean;
+      parts: {slot: string; name: string; variantId: string | null; spending: number; owned: boolean; pinned: boolean}[];
+    } | null;
   };
 };
 

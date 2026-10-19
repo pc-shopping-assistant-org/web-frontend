@@ -73,7 +73,9 @@ export function CatalogSettingsPage() {
             onClick={() => setMode(tab.value)}
             className={cn(
               "-mb-px shrink-0 border-b-2 px-1 pb-3 text-sm transition",
-              mode === tab.value ? "border-primary font-medium text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
+              mode === tab.value
+                ? "border-primary font-medium text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
             {tab.label}
@@ -122,7 +124,9 @@ function AttributesPanel() {
         <Select className="w-full sm:w-48" aria-label={tc("type")} value={type} onChange={(event) => setType(event.target.value)}>
           <option value="">{tc("allTypes")}</option>
           {ATTRIBUTE_DATA_TYPE_VALUES.map((value) => (
-            <option key={value} value={value}>{tc(`dataTypes.${value}`)}</option>
+            <option key={value} value={value}>
+              {tc(`dataTypes.${value}`)}
+            </option>
           ))}
         </Select>
         <Button type="button" size="lg" onClick={() => setDialog({mode: "create"})}>
@@ -145,11 +149,21 @@ function AttributesPanel() {
             <table className="w-full min-w-[52rem] border-collapse text-sm">
               <thead className="bg-muted/50 text-left text-muted-foreground">
                 <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">{tc("attribute")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tc("type")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tc("values")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tc("usage")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tc("actions")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tc("attribute")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tc("type")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tc("values")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tc("usage")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tc("actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -157,7 +171,9 @@ function AttributesPanel() {
                   <tr key={attribute.id} className="border-t align-top transition hover:bg-muted/20">
                     <td className="max-w-xs px-4 py-3">
                       <p className="font-medium">{attribute.displayName}</p>
-                      <span className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{attribute.key}</span>
+                      <span className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+                        {attribute.key}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -172,14 +188,24 @@ function AttributesPanel() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
-                        {attribute.filterable ? <Badge className="border-primary/30 bg-primary/5 text-primary">{tc("filterable")}</Badge> : null}
-                        {attribute.comparable ? <Badge className="border-primary/30 bg-primary/5 text-primary">{tc("comparable")}</Badge> : null}
+                        {attribute.filterable ? (
+                          <Badge className="border-primary/30 bg-primary/5 text-primary">{tc("filterable")}</Badge>
+                        ) : null}
+                        {attribute.comparable ? (
+                          <Badge className="border-primary/30 bg-primary/5 text-primary">{tc("comparable")}</Badge>
+                        ) : null}
                         {!attribute.filterable && !attribute.comparable ? <span className="text-muted-foreground">—</span> : null}
                       </div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                        <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" onClick={() => setDialog({mode: "edit", attribute})}>
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="xs"
+                          className="h-auto p-0 text-sm font-medium"
+                          onClick={() => setDialog({mode: "edit", attribute})}
+                        >
                           {tc("edit")}
                         </Button>
                         <ConfirmAction
@@ -202,10 +228,14 @@ function AttributesPanel() {
             </table>
           </div>
         )}
-        {attributes.data && rows.length > 0 ? <p className="mt-3 text-xs text-muted-foreground">{tc("count", {count: rows.length})}</p> : null}
+        {attributes.data && rows.length > 0 ? (
+          <p className="mt-3 text-xs text-muted-foreground">{tc("count", {count: rows.length})}</p>
+        ) : null}
       </div>
 
-      {dialog ? <AttributeDialog key={dialog.mode === "edit" ? dialog.attribute.id : "new"} state={dialog} onClose={() => setDialog(null)} /> : null}
+      {dialog ? (
+        <AttributeDialog key={dialog.mode === "edit" ? dialog.attribute.id : "new"} state={dialog} onClose={() => setDialog(null)} />
+      ) : null}
     </Card>
   );
 }
@@ -216,15 +246,22 @@ function ValueChips({values}: {values: string[]}) {
   return (
     <div className="flex max-w-sm flex-wrap gap-1.5">
       {values.slice(0, MAX_CHIPS).map((value) => (
-        <span key={value} className="rounded-md bg-muted px-2 py-0.5 text-xs">{value}</span>
+        <span key={value} className="rounded-md bg-muted px-2 py-0.5 text-xs">
+          {value}
+        </span>
       ))}
-      {values.length > MAX_CHIPS ? <span className="px-1 py-0.5 text-xs text-muted-foreground">{tc("more", {count: values.length - MAX_CHIPS})}</span> : null}
+      {values.length > MAX_CHIPS ? (
+        <span className="px-1 py-0.5 text-xs text-muted-foreground">{tc("more", {count: values.length - MAX_CHIPS})}</span>
+      ) : null}
     </div>
   );
 }
 
 function lines(value: string) {
-  return value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+  return value
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose: () => void}) {
@@ -259,7 +296,10 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
       displayName: form.displayName.trim(),
       unit: form.unit.trim() || undefined,
       allowedValues,
-      aliases: form.aliases.split(",").map((item) => item.trim()).filter(Boolean),
+      aliases: form.aliases
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
       filterable: form.filterable,
       comparable: form.comparable,
     };
@@ -282,7 +322,9 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
       description={editing ? undefined : tc("addDescription")}
       footer={
         <>
-          <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>{t("cancel")}</Button>
+          <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>
+            {t("cancel")}
+          </Button>
           <Button type="submit" form={formId} disabled={mutation.isPending || !form.displayName.trim() || (!editing && !form.key.trim())}>
             {editing ? t("save") : tc("create")}
           </Button>
@@ -291,12 +333,22 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
     >
       <form id={formId} className="grid grid-cols-[minmax(0,1fr)] gap-4" noValidate onSubmit={(event) => void submit(event)}>
         <div className="space-y-2">
-          <Label htmlFor={`${formId}-name`}>{tc("displayName")} <span className="text-destructive">*</span></Label>
-          <Input id={`${formId}-name`} data-autofocus value={form.displayName} maxLength={255} onChange={(event) => set({displayName: event.target.value})} />
+          <Label htmlFor={`${formId}-name`}>
+            {tc("displayName")} <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id={`${formId}-name`}
+            data-autofocus
+            value={form.displayName}
+            maxLength={255}
+            onChange={(event) => set({displayName: event.target.value})}
+          />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor={`${formId}-key`}>{tc("key")} {editing ? null : <span className="text-destructive">*</span>}</Label>
+            <Label htmlFor={`${formId}-key`}>
+              {tc("key")} {editing ? null : <span className="text-destructive">*</span>}
+            </Label>
             <Input
               id={`${formId}-key`}
               className="font-mono"
@@ -317,7 +369,9 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
               onChange={(event) => set({dataType: event.target.value as AttributeDataType})}
             >
               {ATTRIBUTE_DATA_TYPE_VALUES.map((value) => (
-                <option key={value} value={value}>{tc(`dataTypes.${value}`)}</option>
+                <option key={value} value={value}>
+                  {tc(`dataTypes.${value}`)}
+                </option>
               ))}
             </Select>
             {editing ? <p className="text-xs text-muted-foreground">{tc("lockedHint")}</p> : null}
@@ -330,8 +384,15 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
         </div>
         {isEnum ? (
           <div className="space-y-2">
-            <Label htmlFor={`${formId}-values`}>{tc("allowedValues")} <span className="text-destructive">*</span></Label>
-            <Textarea id={`${formId}-values`} rows={4} value={form.allowedValues} onChange={(event) => set({allowedValues: event.target.value})} />
+            <Label htmlFor={`${formId}-values`}>
+              {tc("allowedValues")} <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id={`${formId}-values`}
+              rows={4}
+              value={form.allowedValues}
+              onChange={(event) => set({allowedValues: event.target.value})}
+            />
             <p className="text-xs text-muted-foreground">{tc("allowedValuesHint")}</p>
           </div>
         ) : null}
@@ -342,15 +403,29 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
         </div>
         <div className="space-y-2.5">
           <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-            <input type="checkbox" className="size-4 accent-primary" checked={form.filterable} onChange={(event) => set({filterable: event.target.checked})} />
+            <input
+              type="checkbox"
+              className="size-4 accent-primary"
+              checked={form.filterable}
+              onChange={(event) => set({filterable: event.target.checked})}
+            />
             {tc("filterableLabel")}
           </label>
           <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-            <input type="checkbox" className="size-4 accent-primary" checked={form.comparable} onChange={(event) => set({comparable: event.target.checked})} />
+            <input
+              type="checkbox"
+              className="size-4 accent-primary"
+              checked={form.comparable}
+              onChange={(event) => set({comparable: event.target.checked})}
+            />
             {tc("comparableLabel")}
           </label>
         </div>
-        {problem ? <p role="alert" className="text-sm text-destructive">{problem}</p> : null}
+        {problem ? (
+          <p role="alert" className="text-sm text-destructive">
+            {problem}
+          </p>
+        ) : null}
         {mutation.isError ? <ErrorMessage error={mutation.error} /> : null}
       </form>
     </Dialog>
@@ -383,10 +458,20 @@ function SpecsPanel({onGoAttributes}: {onGoAttributes: () => void}) {
       <Card className="p-3 lg:self-start">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input className="pl-9" value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder={tc("searchCategory")} aria-label={tc("searchCategory")} />
+          <Input
+            className="pl-9"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            placeholder={tc("searchCategory")}
+            aria-label={tc("searchCategory")}
+          />
         </div>
         <ul className="mt-3 max-h-[28rem] space-y-0.5 overflow-y-auto" aria-label={tc("category")}>
-          {categories.isPending ? <li><Skeleton className="h-40 rounded-lg" /></li> : null}
+          {categories.isPending ? (
+            <li>
+              <Skeleton className="h-40 rounded-lg" />
+            </li>
+          ) : null}
           {visible.map((row) => (
             <li key={row.id}>
               <button
@@ -435,7 +520,15 @@ function plain(groups: DraftGroup[]) {
   return JSON.stringify(groups.map((group) => ({n: group.name.trim(), i: group.items.map((item) => [item.attributeId, item.required])})));
 }
 
-function TemplateEditor({categoryId, categoryName, onGoAttributes}: {categoryId: string; categoryName: string; onGoAttributes: () => void}) {
+function TemplateEditor({
+  categoryId,
+  categoryName,
+  onGoAttributes,
+}: {
+  categoryId: string;
+  categoryName: string;
+  onGoAttributes: () => void;
+}) {
   const specs = useCategorySpecsSchema(categoryId);
   // The save lives here: the form below is rebuilt from the saved data, and its own state would be lost with it.
   const save = useReplaceAdminCategorySpecs();
@@ -446,7 +539,16 @@ function TemplateEditor({categoryId, categoryName, onGoAttributes}: {categoryId:
     name: group.groupName,
     items: group.attributes.map((attribute) => ({uid: uid(), attributeId: attribute.attributeId, required: attribute.required})),
   }));
-  return <TemplateForm key={`${categoryId}-${specs.dataUpdatedAt}`} categoryId={categoryId} categoryName={categoryName} initial={initial} save={save} onGoAttributes={onGoAttributes} />;
+  return (
+    <TemplateForm
+      key={`${categoryId}-${specs.dataUpdatedAt}`}
+      categoryId={categoryId}
+      categoryName={categoryName}
+      initial={initial}
+      save={save}
+      onGoAttributes={onGoAttributes}
+    />
+  );
 }
 
 function TemplateForm({
@@ -497,7 +599,11 @@ function TemplateForm({
           groups: groups.map((group, groupIndex) => ({
             name: group.name.trim(),
             displayOrder: groupIndex,
-            attributes: group.items.map((item, itemIndex) => ({attributeId: item.attributeId, required: item.required, displayOrder: itemIndex})),
+            attributes: group.items.map((item, itemIndex) => ({
+              attributeId: item.attributeId,
+              required: item.required,
+              displayOrder: itemIndex,
+            })),
           })),
         },
       });
@@ -514,9 +620,21 @@ function TemplateForm({
           <p className="mt-0.5 text-sm text-muted-foreground">{tc("summary", {groups: groups.length, items: itemCount})}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {dirty ? <span className="text-xs text-amber-600">{tc("unsaved")}</span> : save.isSuccess ? <span className="text-xs text-emerald-600">{tc("saved")}</span> : null}
           {dirty ? (
-            <Button type="button" variant="outline" disabled={save.isPending} onClick={() => { setGroups(initial); setProblem(null); }}>
+            <span className="text-xs text-amber-600">{tc("unsaved")}</span>
+          ) : save.isSuccess ? (
+            <span className="text-xs text-emerald-600">{tc("saved")}</span>
+          ) : null}
+          {dirty ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={save.isPending}
+              onClick={() => {
+                setGroups(initial);
+                setProblem(null);
+              }}
+            >
               {tc("revert")}
             </Button>
           ) : null}
@@ -529,7 +647,9 @@ function TemplateForm({
       {definitions.isSuccess && defs.length === 0 ? (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
           {tc("noDefinitions")}
-          <Button type="button" size="sm" variant="outline" onClick={onGoAttributes}>{tc("goAttributes")}</Button>
+          <Button type="button" size="sm" variant="outline" onClick={onGoAttributes}>
+            {tc("goAttributes")}
+          </Button>
         </div>
       ) : null}
 
@@ -545,10 +665,24 @@ function TemplateForm({
           <div key={group.uid} className="rounded-xl border">
             <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-3 py-2.5">
               <div className="flex">
-                <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("moveUp")} disabled={groupIndex === 0} onClick={() => setGroups((current) => move(current, groupIndex, -1))}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={tc("moveUp")}
+                  disabled={groupIndex === 0}
+                  onClick={() => setGroups((current) => move(current, groupIndex, -1))}
+                >
                   <ChevronUp className="size-4" />
                 </Button>
-                <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("moveDown")} disabled={groupIndex === groups.length - 1} onClick={() => setGroups((current) => move(current, groupIndex, 1))}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={tc("moveDown")}
+                  disabled={groupIndex === groups.length - 1}
+                  onClick={() => setGroups((current) => move(current, groupIndex, 1))}
+                >
                   <ChevronDown className="size-4" />
                 </Button>
               </div>
@@ -560,7 +694,13 @@ function TemplateForm({
                 aria-label={tc("groupName")}
                 onChange={(event) => patchGroup(groupIndex, {name: event.target.value})}
               />
-              <Button type="button" variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setGroups((current) => current.filter((_, at) => at !== groupIndex))}>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => setGroups((current) => current.filter((_, at) => at !== groupIndex))}
+              >
                 <Trash2 className="size-4" />
                 {tc("removeGroup")}
               </Button>
@@ -574,30 +714,64 @@ function TemplateForm({
                 return (
                   <li key={item.uid} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
                     <div className="flex">
-                      <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("moveUp")} disabled={itemIndex === 0} onClick={() => patchGroup(groupIndex, {items: move(group.items, itemIndex, -1)})}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={tc("moveUp")}
+                        disabled={itemIndex === 0}
+                        onClick={() => patchGroup(groupIndex, {items: move(group.items, itemIndex, -1)})}
+                      >
                         <ChevronUp className="size-4" />
                       </Button>
-                      <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("moveDown")} disabled={itemIndex === group.items.length - 1} onClick={() => patchGroup(groupIndex, {items: move(group.items, itemIndex, 1)})}>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={tc("moveDown")}
+                        disabled={itemIndex === group.items.length - 1}
+                        onClick={() => patchGroup(groupIndex, {items: move(group.items, itemIndex, 1)})}
+                      >
                         <ChevronDown className="size-4" />
                       </Button>
                     </div>
-                    <Select className="h-9 min-w-52 flex-1" aria-label={tc("pickAttribute")} value={item.attributeId} onChange={(event) => setItem({attributeId: event.target.value})}>
+                    <Select
+                      className="h-9 min-w-52 flex-1"
+                      aria-label={tc("pickAttribute")}
+                      value={item.attributeId}
+                      onChange={(event) => setItem({attributeId: event.target.value})}
+                    >
                       <option value="">{tc("pickAttribute")}</option>
                       {defs
                         .filter((definition) => definition.id === item.attributeId || !used.has(definition.id))
                         .map((definition) => (
-                          <option key={definition.id} value={definition.id}>{definition.displayName} ({definition.key})</option>
+                          <option key={definition.id} value={definition.id}>
+                            {definition.displayName} ({definition.key})
+                          </option>
                         ))}
                     </Select>
                     <span className="flex w-28 items-center gap-1.5 text-xs text-muted-foreground">
-                      {definition?.dataType ? <Badge className={cn("px-2 py-0", TYPE_TONE[definition.dataType])}>{tc(`dataTypes.${definition.dataType}`)}</Badge> : null}
+                      {definition?.dataType ? (
+                        <Badge className={cn("px-2 py-0", TYPE_TONE[definition.dataType])}>{tc(`dataTypes.${definition.dataType}`)}</Badge>
+                      ) : null}
                       {definition?.unit}
                     </span>
                     <label className="flex cursor-pointer items-center gap-2 text-sm">
-                      <input type="checkbox" className="size-4 accent-primary" checked={item.required} onChange={(event) => setItem({required: event.target.checked})} />
+                      <input
+                        type="checkbox"
+                        className="size-4 accent-primary"
+                        checked={item.required}
+                        onChange={(event) => setItem({required: event.target.checked})}
+                      />
                       {tc("required")}
                     </label>
-                    <Button type="button" variant="ghost" size="icon-sm" aria-label={tc("removeItem")} onClick={() => patchGroup(groupIndex, {items: group.items.filter((_, at) => at !== itemIndex)})}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={tc("removeItem")}
+                      onClick={() => patchGroup(groupIndex, {items: group.items.filter((_, at) => at !== itemIndex)})}
+                    >
                       <X className="size-4" />
                     </Button>
                   </li>

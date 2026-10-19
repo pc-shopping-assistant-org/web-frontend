@@ -8,9 +8,7 @@ export type SseFrame<T> = {
  * Parse a server-sent event stream without coupling the transport to a
  * feature. The caller owns JSON/schema validation for each data payload.
  */
-export async function* parseSse<T>(
-  body: ReadableStream<Uint8Array>,
-): AsyncGenerator<SseFrame<T>> {
+export async function* parseSse<T>(body: ReadableStream<Uint8Array>): AsyncGenerator<SseFrame<T>> {
   const reader = body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";

@@ -89,9 +89,19 @@ export function OrderListPage() {
         tabs={[{value: "", label: tl("all")}, ...ORDER_STATUSES.map((value) => ({value, label: t(`statusValues.${value}`)}))]}
       />
 
-      <FilterPanel onSubmit={search} onReset={reset} error={rangeError ? tl("rangeError") : undefined} className="xl:grid-cols-[minmax(0,1fr)_11rem_11rem]">
+      <FilterPanel
+        onSubmit={search}
+        onReset={reset}
+        error={rangeError ? tl("rangeError") : undefined}
+        className="xl:grid-cols-[minmax(0,1fr)_11rem_11rem]"
+      >
         <FilterField label={t("search")}>
-          <Input aria-label={t("searchOrders")} placeholder={t("searchOrders")} value={draft.keyword} onChange={(event) => set("keyword", event.target.value)} />
+          <Input
+            aria-label={t("searchOrders")}
+            placeholder={t("searchOrders")}
+            value={draft.keyword}
+            onChange={(event) => set("keyword", event.target.value)}
+          />
         </FilterField>
         <FilterField label={t("fromDate")}>
           <Input type="date" value={draft.fromDate} onChange={(event) => set("fromDate", event.target.value)} />
@@ -102,7 +112,11 @@ export function OrderListPage() {
       </FilterPanel>
 
       <Card className="p-4 sm:p-5">
-        {actionError ? <div className="mb-4"><ErrorMessage error={actionError} /></div> : null}
+        {actionError ? (
+          <div className="mb-4">
+            <ErrorMessage error={actionError} />
+          </div>
+        ) : null}
         {query.isPending ? (
           <Skeleton className="h-64 rounded-xl" />
         ) : query.isError ? (
@@ -124,8 +138,12 @@ export function OrderListPage() {
             {items.map((order) => (
               <tr key={order.id} className="border-t align-top transition hover:bg-muted/20">
                 <td className="whitespace-nowrap px-4 py-3">
-                  <Link href={`/admin/orders/${order.id}`} className="font-medium hover:text-primary hover:underline">{order.invoiceNumber}</Link>
-                  <p className="mt-0.5 text-xs text-muted-foreground">{order.createdAt ? dateTime.format(new Date(order.createdAt)) : "—"}</p>
+                  <Link href={`/admin/orders/${order.id}`} className="font-medium hover:text-primary hover:underline">
+                    {order.invoiceNumber}
+                  </Link>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {order.createdAt ? dateTime.format(new Date(order.createdAt)) : "—"}
+                  </p>
                 </td>
                 <td className="px-4 py-3">
                   <p className="font-medium">{order.recipientName ?? t("guestCustomer")}</p>
@@ -133,16 +151,22 @@ export function OrderListPage() {
                 </td>
                 <td className="max-w-[16rem] px-4 py-3">
                   <p className="truncate">{order.firstProductName ?? "—"}</p>
-                  {order.itemCount > 1 ? <p className="mt-0.5 text-xs text-muted-foreground">{t("moreItems", {count: order.itemCount - 1})}</p> : null}
+                  {order.itemCount > 1 ? (
+                    <p className="mt-0.5 text-xs text-muted-foreground">{t("moreItems", {count: order.itemCount - 1})}</p>
+                  ) : null}
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatMoney(order.totalAmount, locale)}</td>
-                <td className="px-4 py-3"><StatusBadge status={order.status} /></td>
+                <td className="px-4 py-3">
+                  <StatusBadge status={order.status} />
+                </td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     {(ORDER_STATUS_TRANSITIONS[order.status as OrderStatus]?.length ?? 0) > 1 ? (
                       <AdminOrderStatusControl orderId={order.id} status={order.status} onError={setActionError} className="h-9 w-44" />
                     ) : null}
-                    <Link href={`/admin/orders/${order.id}`} className="text-sm font-medium text-primary hover:underline">{t("view")}</Link>
+                    <Link href={`/admin/orders/${order.id}`} className="text-sm font-medium text-primary hover:underline">
+                      {t("view")}
+                    </Link>
                   </div>
                 </td>
               </tr>
@@ -151,8 +175,22 @@ export function OrderListPage() {
         )}
         {page && items.length > 0 ? (
           <ListFooter
-            summary={<>{t("totalOrders", {count: page.totalElements})}{page.totalPages > 1 ? ` · ${t("pageOf", {page: page.page + 1, total: page.totalPages})}` : ""}</>}
-            pager={page.totalPages > 1 ? <AdminPagination hasPrev={page.page > 0} hasNext={!page.last} onPrev={() => go(pageNumber - 1)} onNext={() => go(pageNumber + 1)} /> : undefined}
+            summary={
+              <>
+                {t("totalOrders", {count: page.totalElements})}
+                {page.totalPages > 1 ? ` · ${t("pageOf", {page: page.page + 1, total: page.totalPages})}` : ""}
+              </>
+            }
+            pager={
+              page.totalPages > 1 ? (
+                <AdminPagination
+                  hasPrev={page.page > 0}
+                  hasNext={!page.last}
+                  onPrev={() => go(pageNumber - 1)}
+                  onNext={() => go(pageNumber + 1)}
+                />
+              ) : undefined
+            }
           />
         ) : null}
       </Card>

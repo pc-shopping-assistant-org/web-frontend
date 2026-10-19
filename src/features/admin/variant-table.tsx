@@ -121,9 +121,7 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
           description: row.description.trim() || undefined,
           warrantyMonths: Number(row.warranty),
           imageFileId: row.image?.fileId,
-          options: names
-            .map((name) => ({name, value: (row.options[name] ?? "").trim()}))
-            .filter((option) => option.value),
+          options: names.map((name) => ({name, value: (row.options[name] ?? "").trim()})).filter((option) => option.value),
           status: row.status,
         },
       });
@@ -140,7 +138,9 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
         <thead className="bg-muted/50 text-left text-muted-foreground">
           <tr>
             <Th>{tv("image")}</Th>
-            {names.map((name) => <Th key={name}>{name}</Th>)}
+            {names.map((name) => (
+              <Th key={name}>{name}</Th>
+            ))}
             <Th>{tv("price")}</Th>
             <Th>{tv("stock")}</Th>
             <Th>{tv("warranty")}</Th>
@@ -159,12 +159,7 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
             const edited = dirty(variant);
             const label = variant.options.map((option) => option.value).join(" / ") || variant.sku;
             return (
-              <VariantRow
-                key={variant.id}
-                columns={columns}
-                edited={edited}
-                error={errors[variant.id]}
-              >
+              <VariantRow key={variant.id} columns={columns} edited={edited} error={errors[variant.id]}>
                 <td className="px-3 py-3">
                   <ValueImage label={label} image={row.image} onChange={(image) => patch(variant, {image: image ?? undefined})} />
                 </td>
@@ -182,25 +177,65 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
                   <MoneyInput label={tv("priceOf", {name: label})} value={row.price} onChange={(price) => patch(variant, {price})} />
                 </td>
                 <td className="min-w-24 px-3 py-3">
-                  <Input aria-label={tv("stockOf", {name: label})} type="number" min="0" step="1" inputMode="numeric" value={row.quantity} onChange={(event) => patch(variant, {quantity: event.target.value})} />
+                  <Input
+                    aria-label={tv("stockOf", {name: label})}
+                    type="number"
+                    min="0"
+                    step="1"
+                    inputMode="numeric"
+                    value={row.quantity}
+                    onChange={(event) => patch(variant, {quantity: event.target.value})}
+                  />
                 </td>
                 <td className="min-w-28 px-3 py-3">
-                  <Input aria-label={tv("warrantyOf", {name: label})} type="number" min="1" step="1" inputMode="numeric" value={row.warranty} onChange={(event) => patch(variant, {warranty: event.target.value})} />
+                  <Input
+                    aria-label={tv("warrantyOf", {name: label})}
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputMode="numeric"
+                    value={row.warranty}
+                    onChange={(event) => patch(variant, {warranty: event.target.value})}
+                  />
                 </td>
                 <td className="min-w-56 px-3 py-3">
-                  <Input aria-label={tv("skuOf", {name: label})} value={row.sku} maxLength={100} onChange={(event) => patch(variant, {sku: event.target.value})} />
+                  <Input
+                    aria-label={tv("skuOf", {name: label})}
+                    value={row.sku}
+                    maxLength={100}
+                    onChange={(event) => patch(variant, {sku: event.target.value})}
+                  />
                 </td>
                 <td className="min-w-36 px-3 py-3">
-                  <Input aria-label={tv("modelOf", {name: label})} value={row.model} maxLength={100} onChange={(event) => patch(variant, {model: event.target.value})} />
+                  <Input
+                    aria-label={tv("modelOf", {name: label})}
+                    value={row.model}
+                    maxLength={100}
+                    onChange={(event) => patch(variant, {model: event.target.value})}
+                  />
                 </td>
                 <td className="min-w-40 px-3 py-3">
-                  <Input aria-label={tv("barcodeOf", {name: label})} value={row.barcode} maxLength={100} onChange={(event) => patch(variant, {barcode: event.target.value})} />
+                  <Input
+                    aria-label={tv("barcodeOf", {name: label})}
+                    value={row.barcode}
+                    maxLength={100}
+                    onChange={(event) => patch(variant, {barcode: event.target.value})}
+                  />
                 </td>
                 <td className="min-w-40 px-3 py-3">
-                  <Input aria-label={tv("releaseAtOf", {name: label})} type="date" value={row.releaseAt} onChange={(event) => patch(variant, {releaseAt: event.target.value})} />
+                  <Input
+                    aria-label={tv("releaseAtOf", {name: label})}
+                    type="date"
+                    value={row.releaseAt}
+                    onChange={(event) => patch(variant, {releaseAt: event.target.value})}
+                  />
                 </td>
                 <td className="min-w-56 px-3 py-3">
-                  <Input aria-label={tv("variantDescriptionOf", {name: label})} value={row.description} onChange={(event) => patch(variant, {description: event.target.value})} />
+                  <Input
+                    aria-label={tv("variantDescriptionOf", {name: label})}
+                    value={row.description}
+                    onChange={(event) => patch(variant, {description: event.target.value})}
+                  />
                 </td>
                 <td className="px-3 py-3">
                   <Select
@@ -220,7 +255,13 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
                         <Button type="button" size="xs" disabled={update.isPending} onClick={() => void save(variant)}>
                           {tv("saveRow")}
                         </Button>
-                        <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" onClick={() => drop(variant.id)}>
+                        <Button
+                          type="button"
+                          variant="link"
+                          size="xs"
+                          className="h-auto p-0 text-sm font-medium"
+                          onClick={() => drop(variant.id)}
+                        >
                           <Undo2 className="size-3.5" />
                           {tv("undo")}
                         </Button>
@@ -256,7 +297,13 @@ function VariantRow({columns, edited, error, children}: {columns: number; edited
       {error ? (
         <tr className="bg-destructive/5">
           <td colSpan={columns + 1} className="px-3 py-2">
-            {typeof error === "string" ? <p role="alert" className="text-sm text-destructive">{error}</p> : <ErrorMessage error={error} />}
+            {typeof error === "string" ? (
+              <p role="alert" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : (
+              <ErrorMessage error={error} />
+            )}
           </td>
         </tr>
       ) : null}
@@ -265,7 +312,11 @@ function VariantRow({columns, edited, error, children}: {columns: number; edited
 }
 
 function Th({children}: {children: ReactNode}) {
-  return <th scope="col" className="whitespace-nowrap px-3 py-3 font-medium">{children}</th>;
+  return (
+    <th scope="col" className="whitespace-nowrap px-3 py-3 font-medium">
+      {children}
+    </th>
+  );
 }
 
 /**

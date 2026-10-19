@@ -46,20 +46,18 @@ export function ProductDetailPage({slug}: {slug: string}) {
   );
 
   const variants = useMemo(
-    () =>
-      (product?.variants ?? []).filter(
-        (variant) => !variant.status || variant.status === ResourceStatus.Active,
-      ),
+    () => (product?.variants ?? []).filter((variant) => !variant.status || variant.status === ResourceStatus.Active),
     [product?.variants],
   );
-  const selected =
-    variants.find((variant) => variant.id === selectedId) ?? variants[0];
+  const selected = variants.find((variant) => variant.id === selectedId) ?? variants[0];
   // The one thing the variants differ by ("Màu"), when there is just one: it titles the row and the buttons say only the value
   const optionAxis = singleOptionName(variants);
   const reviews = useProductReviews(product?.id ?? "");
   const images = product?.images ?? [];
   // A variant with its own image shows it until the shopper picks a gallery image
-  const activeImage = images.find((image) => image.id === selectedImageId) ?? (selected?.imageUrl ? undefined : images.find((image) => image.main) ?? images[0]);
+  const activeImage =
+    images.find((image) => image.id === selectedImageId) ??
+    (selected?.imageUrl ? undefined : (images.find((image) => image.main) ?? images[0]));
   const heroImage = activeImage?.imageUrl ?? selected?.imageUrl ?? product?.imageUrl;
   const specLabels = useCategorySpecLabels(product?.category?.id).data;
   const specifications = Object.entries(product?.specifications ?? {})
@@ -77,7 +75,9 @@ export function ProductDetailPage({slug}: {slug: string}) {
         <div className="rounded-2xl border border-dashed p-12 text-center">
           <h1 className="text-2xl font-semibold">{notFound ? t("productNotFound") : t("loadError")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{notFound ? null : common("unknownError")}</p>
-          <Link href="/products" className="mt-6 inline-flex text-sm font-medium text-primary hover:underline">{common("back")}</Link>
+          <Link href="/products" className="mt-6 inline-flex text-sm font-medium text-primary hover:underline">
+            {common("back")}
+          </Link>
         </div>
       </section>
     );
@@ -110,21 +110,42 @@ export function ProductDetailPage({slug}: {slug: string}) {
   return (
     <section className="page-wrap py-6 sm:py-8">
       <nav aria-label="breadcrumb" className="mb-4 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-        <Link href="/products" className="hover:text-primary">{t("title")}</Link>
-        {categoryHref ? <><ChevronRight className="size-3.5 shrink-0" aria-hidden="true" /><Link href={categoryHref} className="hover:text-primary">{product.category?.name}</Link></> : null}
+        <Link href="/products" className="hover:text-primary">
+          {t("title")}
+        </Link>
+        {categoryHref ? (
+          <>
+            <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
+            <Link href={categoryHref} className="hover:text-primary">
+              {product.category?.name}
+            </Link>
+          </>
+        ) : null}
         <ChevronRight className="size-3.5 shrink-0" aria-hidden="true" />
-        <span className="min-w-0 truncate text-foreground" aria-current="page">{product.name}</span>
+        <span className="min-w-0 truncate text-foreground" aria-current="page">
+          {product.name}
+        </span>
       </nav>
 
       <div className="grid gap-6 rounded-xl border bg-card p-4 sm:p-6 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] lg:gap-10">
         <div className="min-w-0 space-y-3">
           <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border bg-muted/20">
             {heroImage ? (
-              <Image src={heroImage} alt={product.name ?? ""} fill sizes="(min-width: 1024px) 27rem, 100vw" priority unoptimized className="object-contain p-4" />
+              <Image
+                src={heroImage}
+                alt={product.name ?? ""}
+                fill
+                sizes="(min-width: 1024px) 27rem, 100vw"
+                priority
+                unoptimized
+                className="object-contain p-4"
+              />
             ) : (
               <div className="relative flex h-64 w-full max-w-[24rem] items-center justify-center">
                 <ProductIllustration kind={productArtKind(`${product.category?.name ?? ""} ${product.name ?? ""}`)} />
-                <span className="absolute bottom-0 rounded-full bg-slate-950/75 px-3 py-1 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-white/85">{product.category?.name ?? "gearPC"}</span>
+                <span className="absolute bottom-0 rounded-full bg-slate-950/75 px-3 py-1 text-[0.62rem] font-bold uppercase tracking-[0.2em] text-white/85">
+                  {product.category?.name ?? "gearPC"}
+                </span>
               </div>
             )}
           </div>
@@ -134,12 +155,21 @@ export function ProductDetailPage({slug}: {slug: string}) {
                 <button
                   type="button"
                   key={image.id ?? index}
-                  className={cn("relative aspect-square overflow-hidden rounded-md border bg-muted/20 transition", activeImage?.id === image.id ? "border-primary ring-1 ring-primary" : "hover:border-primary/50")}
+                  className={cn(
+                    "relative aspect-square overflow-hidden rounded-md border bg-muted/20 transition",
+                    activeImage?.id === image.id ? "border-primary ring-1 ring-primary" : "hover:border-primary/50",
+                  )}
                   onClick={() => setSelectedImageId(image.id)}
                   aria-label={`${t("viewImage")} ${index + 1}`}
                   aria-pressed={activeImage?.id === image.id}
                 >
-                  {image.imageUrl ? <Image src={image.imageUrl} alt={product.name ?? ""} fill sizes="6rem" unoptimized className="object-cover" /> : <span className="flex h-full items-center justify-center"><CatalogCategoryIcon categoryName={product.category?.name ?? product.name} className="size-6 text-primary/45" /></span>}
+                  {image.imageUrl ? (
+                    <Image src={image.imageUrl} alt={product.name ?? ""} fill sizes="6rem" unoptimized className="object-cover" />
+                  ) : (
+                    <span className="flex h-full items-center justify-center">
+                      <CatalogCategoryIcon categoryName={product.category?.name ?? product.name} className="size-6 text-primary/45" />
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -149,7 +179,9 @@ export function ProductDetailPage({slug}: {slug: string}) {
         <div className="min-w-0">
           <h1 className="text-xl font-medium leading-snug sm:text-2xl">{product.name}</h1>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            {product.brand?.name ? <span className="font-medium uppercase tracking-wide text-foreground/70">{product.brand.name}</span> : null}
+            {product.brand?.name ? (
+              <span className="font-medium uppercase tracking-wide text-foreground/70">{product.brand.name}</span>
+            ) : null}
             <span className="inline-flex items-center gap-1.5">
               <Star className="size-4 fill-amber-400 text-amber-400" aria-hidden="true" />
               {reviews.data && reviews.data.totalElements > 0 ? t("reviewsCount", {count: reviews.data.totalElements}) : t("noReviews")}
@@ -176,7 +208,11 @@ export function ProductDetailPage({slug}: {slug: string}) {
                           type="button"
                           role="radio"
                           aria-checked={active}
-                          title={soldOut ? `${variantChipLabel(variant, optionAxis)} · ${t("outOfStock")}` : variantChipLabel(variant, optionAxis)}
+                          title={
+                            soldOut
+                              ? `${variantChipLabel(variant, optionAxis)} · ${t("outOfStock")}`
+                              : variantChipLabel(variant, optionAxis)
+                          }
                           className={cn(
                             "relative max-w-full overflow-hidden rounded-md border px-3 py-1.5 text-left text-sm transition",
                             active ? "border-primary text-primary" : "bg-background hover:border-primary hover:text-primary",
@@ -190,7 +226,14 @@ export function ProductDetailPage({slug}: {slug: string}) {
                           }}
                         >
                           <span className="block truncate">{variantChipLabel(variant, optionAxis)}</span>
-                          {active ? <span className="absolute bottom-0 right-0 flex size-4 items-center justify-center rounded-tl-md bg-primary text-primary-foreground" aria-hidden="true"><Check className="size-3" /></span> : null}
+                          {active ? (
+                            <span
+                              className="absolute bottom-0 right-0 flex size-4 items-center justify-center rounded-tl-md bg-primary text-primary-foreground"
+                              aria-hidden="true"
+                            >
+                              <Check className="size-3" />
+                            </span>
+                          ) : null}
                         </button>
                       );
                     })}
@@ -201,7 +244,15 @@ export function ProductDetailPage({slug}: {slug: string}) {
               <Row label={t("quantity")} center>
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="inline-flex h-9 items-stretch overflow-hidden rounded-md border">
-                    <button type="button" className="flex w-9 items-center justify-center transition hover:bg-muted disabled:opacity-40" aria-label={t("decreaseQuantity")} disabled={quantity <= 1} onClick={() => setQuantity((value) => Math.max(1, value - 1))}><Minus className="size-4" /></button>
+                    <button
+                      type="button"
+                      className="flex w-9 items-center justify-center transition hover:bg-muted disabled:opacity-40"
+                      aria-label={t("decreaseQuantity")}
+                      disabled={quantity <= 1}
+                      onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                    >
+                      <Minus className="size-4" />
+                    </button>
                     <input
                       id="quantity"
                       aria-label={t("quantity")}
@@ -213,7 +264,15 @@ export function ProductDetailPage({slug}: {slug: string}) {
                       onChange={(event) => setQuantity(Math.max(1, Math.min(Number(event.target.value) || 1, maxQuantity)))}
                       className="w-14 border-x bg-background text-center text-sm outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
-                    <button type="button" className="flex w-9 items-center justify-center transition hover:bg-muted disabled:opacity-40" aria-label={t("increaseQuantity")} disabled={quantity >= maxQuantity} onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))}><Plus className="size-4" /></button>
+                    <button
+                      type="button"
+                      className="flex w-9 items-center justify-center transition hover:bg-muted disabled:opacity-40"
+                      aria-label={t("increaseQuantity")}
+                      disabled={quantity >= maxQuantity}
+                      onClick={() => setQuantity((value) => Math.min(maxQuantity, value + 1))}
+                    >
+                      <Plus className="size-4" />
+                    </button>
                   </div>
                   <span className={cn("text-sm", stock > 0 ? "text-muted-foreground" : "font-medium text-destructive")}>
                     {stock > 0 ? t("inStockCount", {count: stock}) : t("outOfStock")}
@@ -221,8 +280,14 @@ export function ProductDetailPage({slug}: {slug: string}) {
                 </div>
               </Row>
 
-              {selected.warrantyMonths ? <Row label={t("warranty")} center><span className="text-sm">{t("warrantyMonths", {count: selected.warrantyMonths})}</span></Row> : null}
-              <Row label={t("sku")} center><span className="text-sm text-muted-foreground">{selected.sku ?? "—"}</span></Row>
+              {selected.warrantyMonths ? (
+                <Row label={t("warranty")} center>
+                  <span className="text-sm">{t("warrantyMonths", {count: selected.warrantyMonths})}</span>
+                </Row>
+              ) : null}
+              <Row label={t("sku")} center>
+                <span className="text-sm text-muted-foreground">{selected.sku ?? "—"}</span>
+              </Row>
             </div>
           ) : null}
 
@@ -232,22 +297,51 @@ export function ProductDetailPage({slug}: {slug: string}) {
               {addMutation.isSuccess ? (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                   <span>{t("addedToCart")}</span>
-                  <Link href="/cart" className="font-semibold underline underline-offset-2">{t("viewCart")}</Link>
+                  <Link href="/cart" className="font-semibold underline underline-offset-2">
+                    {t("viewCart")}
+                  </Link>
                 </div>
               ) : null}
               <div className="flex flex-wrap gap-3">
-                <Button size="lg" variant="outline" className="h-11 min-w-44 flex-1 border-primary bg-primary/5 text-primary hover:bg-primary/10 sm:flex-none sm:px-6" disabled={addMutation.isPending || !canBuy} onClick={() => void add()}>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-11 min-w-44 flex-1 border-primary bg-primary/5 text-primary hover:bg-primary/10 sm:flex-none sm:px-6"
+                  disabled={addMutation.isPending || !canBuy}
+                  onClick={() => void add()}
+                >
                   <ShoppingCart className="size-4" />
                   {addMutation.isPending ? common("loading") : t("addToCart")}
                 </Button>
-                <Button size="lg" className="h-11 min-w-36 flex-1 sm:flex-none sm:px-10" disabled={addMutation.isPending || !canBuy} onClick={() => void buyNow()}>
+                <Button
+                  size="lg"
+                  className="h-11 min-w-36 flex-1 sm:flex-none sm:px-10"
+                  disabled={addMutation.isPending || !canBuy}
+                  onClick={() => void buyNow()}
+                >
                   {t("buyNow")}
                 </Button>
               </div>
               {assistantHref || compareHref ? (
                 <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-                  {assistantHref ? <Link href={assistantHref} className="inline-flex items-center gap-1.5 text-muted-foreground transition hover:text-primary"><Sparkles className="size-4" />{t("askAssistant")}</Link> : null}
-                  {compareHref ? <Link href={compareHref} className="inline-flex items-center gap-1.5 text-muted-foreground transition hover:text-primary"><ArrowLeftRight className="size-4" />{t("addToCompare")}</Link> : null}
+                  {assistantHref ? (
+                    <Link
+                      href={assistantHref}
+                      className="inline-flex items-center gap-1.5 text-muted-foreground transition hover:text-primary"
+                    >
+                      <Sparkles className="size-4" />
+                      {t("askAssistant")}
+                    </Link>
+                  ) : null}
+                  {compareHref ? (
+                    <Link
+                      href={compareHref}
+                      className="inline-flex items-center gap-1.5 text-muted-foreground transition hover:text-primary"
+                    >
+                      <ArrowLeftRight className="size-4" />
+                      {t("addToCompare")}
+                    </Link>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -262,9 +356,15 @@ export function ProductDetailPage({slug}: {slug: string}) {
           ) : (
             <dl className="text-sm">
               {specifications.map(([key, value]) => (
-                <div key={key} className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-4 border-b border-border/60 py-2.5 last:border-b-0 sm:grid-cols-[11rem_minmax(0,1fr)]">
+                <div
+                  key={key}
+                  className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-4 border-b border-border/60 py-2.5 last:border-b-0 sm:grid-cols-[11rem_minmax(0,1fr)]"
+                >
                   <dt className="text-muted-foreground">{specLabels?.[key]?.label ?? formatSpecificationLabel(key)}</dt>
-                  <dd className="break-words">{formatSpecificationValue(value)}{specLabels?.[key]?.unit ? ` ${specLabels[key].unit}` : ""}</dd>
+                  <dd className="break-words">
+                    {formatSpecificationValue(value)}
+                    {specLabels?.[key]?.unit ? ` ${specLabels[key].unit}` : ""}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -280,11 +380,20 @@ export function ProductDetailPage({slug}: {slug: string}) {
         {related.length ? (
           <section className="mt-6" aria-labelledby="related-products-title">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <h2 id="related-products-title" className="text-base font-medium uppercase tracking-wide text-muted-foreground">{t("relatedProducts")}</h2>
-              {categoryHref ? <Link href={categoryHref} className="inline-flex items-center gap-1 text-sm text-primary hover:underline">{t("viewCategory")}<ChevronRight className="size-4" /></Link> : null}
+              <h2 id="related-products-title" className="text-base font-medium uppercase tracking-wide text-muted-foreground">
+                {t("relatedProducts")}
+              </h2>
+              {categoryHref ? (
+                <Link href={categoryHref} className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                  {t("viewCategory")}
+                  <ChevronRight className="size-4" />
+                </Link>
+              ) : null}
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-              {related.map((item) => <ProductCard key={item.id} product={item} variant="listing" />)}
+              {related.map((item) => (
+                <ProductCard key={item.id} product={item} variant="listing" />
+              ))}
             </div>
           </section>
         ) : null}
@@ -354,8 +463,14 @@ function singleOptionName(variants: Variant[]) {
 function variantChipLabel(variant: Variant, optionAxis?: string) {
   const options = variant.options ?? [];
   const text = optionAxis
-    ? options.map((option) => option.value).filter(Boolean).join(" · ")
-    : options.map((option) => [option.name, option.value].filter(Boolean).join(": ")).filter(Boolean).join(" · ");
+    ? options
+        .map((option) => option.value)
+        .filter(Boolean)
+        .join(" · ")
+    : options
+        .map((option) => [option.name, option.value].filter(Boolean).join(": "))
+        .filter(Boolean)
+        .join(" · ");
   return text || variant.model || variant.sku || "SKU";
 }
 

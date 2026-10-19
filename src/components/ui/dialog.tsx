@@ -7,7 +7,8 @@ import {createPortal} from "react-dom";
 import {Button} from "@/components/ui/button";
 import {cn} from "@/lib/utils";
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * A modal over the page: closes on Escape, on a click outside, or on the cross, keeps the Tab key inside, and gives
@@ -93,11 +94,16 @@ export function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={cn("flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col rounded-2xl border bg-card shadow-2xl outline-none", className)}
+        className={cn(
+          "flex max-h-[calc(100dvh-2rem)] w-full max-w-xl flex-col rounded-2xl border bg-card shadow-2xl outline-none",
+          className,
+        )}
       >
         <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
           <div className="min-w-0">
-            <h2 id={titleId} className="text-lg font-semibold">{title}</h2>
+            <h2 id={titleId} className="text-lg font-semibold">
+              {title}
+            </h2>
             {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
           </div>
           <Button type="button" variant="ghost" size="icon-sm" aria-label={closeLabel} disabled={busy} onClick={onClose}>

@@ -8,7 +8,16 @@ const DEFAULT_WARRANTY_MONTHS = "12";
 export type VariantValue = {id: string; text: string};
 export type VariantGroup = {id: string; name: string; values: VariantValue[]};
 /** The model, the barcode and the release date (a `yyyy-mm-dd` day) and the description are optional; an empty one is left out of the request. */
-export type VariantCell = {price: string; quantity: string; sku: string; warranty: string; model?: string; barcode?: string; releaseAt?: string; description?: string};
+export type VariantCell = {
+  price: string;
+  quantity: string;
+  sku: string;
+  warranty: string;
+  model?: string;
+  barcode?: string;
+  releaseAt?: string;
+  description?: string;
+};
 export type VariantImage = {fileId: string; url?: string};
 
 export type VariantMatrixState = {

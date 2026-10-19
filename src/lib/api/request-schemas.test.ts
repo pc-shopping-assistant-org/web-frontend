@@ -32,9 +32,13 @@ describe("request schemas", () => {
     expect(createOrderRequestSchema.safeParse(order).success).toBe(false);
     // a saved address, or the whole recipient, is enough; a mix is not
     expect(createOrderRequestSchema.safeParse({...order, customerAddressId: id}).success).toBe(true);
-    expect(createOrderRequestSchema.safeParse({...order, recipientName: "A", recipientPhone: "0912345678", deliveryAddress: "1 Street"}).success).toBe(true);
+    expect(
+      createOrderRequestSchema.safeParse({...order, recipientName: "A", recipientPhone: "0912345678", deliveryAddress: "1 Street"}).success,
+    ).toBe(true);
     expect(createOrderRequestSchema.safeParse({...order, customerAddressId: id, recipientName: "A"}).success).toBe(false);
-    expect(createOrderRequestSchema.safeParse({...order, recipientName: "A", recipientPhone: "123", deliveryAddress: "1 Street"}).success).toBe(false);
+    expect(
+      createOrderRequestSchema.safeParse({...order, recipientName: "A", recipientPhone: "123", deliveryAddress: "1 Street"}).success,
+    ).toBe(false);
   });
 
   it("enforces discount type and scope invariants", () => {
@@ -50,13 +54,21 @@ describe("request schemas", () => {
     const categoryId = "550e8400-e29b-41d4-a716-446655440000";
     expect(createDiscountRequestSchema.safeParse({...base, categoryIds: [categoryId]}).success).toBe(true);
     expect(createDiscountRequestSchema.safeParse({...base, value: 101, categoryIds: [categoryId]}).success).toBe(false);
-    expect(createDiscountRequestSchema.safeParse({...base, applicationScope: DiscountScope.Order, categoryIds: [categoryId]}).success).toBe(false);
+    expect(createDiscountRequestSchema.safeParse({...base, applicationScope: DiscountScope.Order, categoryIds: [categoryId]}).success).toBe(
+      false,
+    );
   });
 
   it("prices a cart only with real line items", () => {
     const id = "550e8400-e29b-41d4-a716-446655440000";
     expect(discountPreviewRequestSchema.safeParse({orderAmount: 1000, items: []}).success).toBe(false);
-    expect(discountPreviewRequestSchema.safeParse({code: "FE10", orderAmount: 1000, items: [{productVariantId: id, quantity: 1, unitPrice: 1000}]}).success).toBe(true);
+    expect(
+      discountPreviewRequestSchema.safeParse({
+        code: "FE10",
+        orderAmount: 1000,
+        items: [{productVariantId: id, quantity: 1, unitPrice: 1000}],
+      }).success,
+    ).toBe(true);
   });
 
   it("matches the AI request contract instead of accepting arbitrary IDs", () => {
