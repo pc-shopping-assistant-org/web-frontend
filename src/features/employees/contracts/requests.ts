@@ -19,29 +19,34 @@ const address = z.string().trim().max(EMPLOYEE_ADDRESS_MAX_LENGTH);
 const avatarFileId = z.uuid();
 
 /** The role is fixed to employee by the backend, so it is not a field. */
-export const createEmployeeRequestSchema = z.object({
-  email,
-  phone,
-  password: z.string().min(EMPLOYEE_PASSWORD_MIN_LENGTH).max(EMPLOYEE_PASSWORD_MAX_LENGTH).regex(PASSWORD_PATTERN),
-  firstName: name,
-  lastName: name,
-  gender,
-  birthday: birthday.optional(),
-  address: address.optional(),
-  avatarFileId: avatarFileId.optional(),
-}).strict();
+export const createEmployeeRequestSchema = z
+  .object({
+    email,
+    phone,
+    password: z.string().min(EMPLOYEE_PASSWORD_MIN_LENGTH).max(EMPLOYEE_PASSWORD_MAX_LENGTH).regex(PASSWORD_PATTERN),
+    firstName: name,
+    lastName: name,
+    gender,
+    birthday: birthday.optional(),
+    address: address.optional(),
+    avatarFileId: avatarFileId.optional(),
+  })
+  .strict();
 
 /** A field left out keeps its value; an edit that changes nothing is not sent. */
-export const updateEmployeeRequestSchema = z.object({
-  email: email.optional(),
-  phone: phone.optional(),
-  firstName: name.optional(),
-  lastName: name.optional(),
-  gender: gender.optional(),
-  birthday: birthday.optional(),
-  address: address.optional(),
-  avatarFileId: avatarFileId.optional(),
-}).strict().refine((request) => Object.values(request).some((value) => value !== undefined));
+export const updateEmployeeRequestSchema = z
+  .object({
+    email: email.optional(),
+    phone: phone.optional(),
+    firstName: name.optional(),
+    lastName: name.optional(),
+    gender: gender.optional(),
+    birthday: birthday.optional(),
+    address: address.optional(),
+    avatarFileId: avatarFileId.optional(),
+  })
+  .strict()
+  .refine((request) => Object.values(request).some((value) => value !== undefined));
 
 export type CreateEmployeeRequest = z.input<typeof createEmployeeRequestSchema>;
 export type UpdateEmployeeRequest = z.input<typeof updateEmployeeRequestSchema>;

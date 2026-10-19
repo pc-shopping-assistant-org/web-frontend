@@ -25,20 +25,37 @@ const ORDERS_PAGE_SIZE = 10;
 
 /** One customer: the profile, the saved addresses, the orders, and the lock. Only the employee runs them. */
 export function CustomerDetailPage({customerId}: {customerId: string}) {
-  return <EmployeeOnly><CustomerLoader customerId={customerId} /></EmployeeOnly>;
+  return (
+    <EmployeeOnly>
+      <CustomerLoader customerId={customerId} />
+    </EmployeeOnly>
+  );
 }
 
 function CustomerLoader({customerId}: {customerId: string}) {
   const t = useTranslations("customers");
   const customer = useCustomer(customerId);
-  const back = <Link href="/admin/customers" className="mb-7 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"><ArrowLeft className="size-4" />{t("back")}</Link>;
+  const back = (
+    <Link href="/admin/customers" className="mb-7 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+      <ArrowLeft className="size-4" />
+      {t("back")}
+    </Link>
+  );
 
   if (customer.isPending) return <Skeleton className="h-96 rounded-2xl" />;
-  if (customer.isError) return <>{back}<ErrorMessage error={customer.error} /></>;
-  return <div>
-    {back}
-    <CustomerCard key={customer.data.accountId} customer={customer.data} />
-  </div>;
+  if (customer.isError)
+    return (
+      <>
+        {back}
+        <ErrorMessage error={customer.error} />
+      </>
+    );
+  return (
+    <div>
+      {back}
+      <CustomerCard key={customer.data.accountId} customer={customer.data} />
+    </div>
+  );
 }
 
 function CustomerCard({customer}: {customer: CustomerDetail}) {
@@ -65,59 +82,87 @@ function CustomerCard({customer}: {customer: CustomerDetail}) {
     {icon: Cake, label: t("birthday"), value: customer.birthday ? date(customer.birthday) : "—"},
   ];
 
-  return <div className="space-y-5">
-    <Card className="p-5 sm:p-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <PersonAvatar person={customer} className="size-16 text-xl" />
-        <div className="min-w-0 flex-1">
-          <h1 className="break-words text-2xl font-semibold tracking-tight">{customer.fullName}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-            <StatusBadge status={customer.status} label={t(`statuses.${customer.status}`)} />
-            {customer.createdAt ? <span>{t("registeredAt", {date: date(customer.createdAt)})}</span> : null}
+  return (
+    <div className="space-y-5">
+      <Card className="p-5 sm:p-6">
+        <div className="flex flex-wrap items-center gap-4">
+          <PersonAvatar person={customer} className="size-16 text-xl" />
+          <div className="min-w-0 flex-1">
+            <h1 className="break-words text-2xl font-semibold tracking-tight">{customer.fullName}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <StatusBadge status={customer.status} label={t(`statuses.${customer.status}`)} />
+              {customer.createdAt ? <span>{t("registeredAt", {date: date(customer.createdAt)})}</span> : null}
+            </div>
           </div>
+          {locked ? null : (
+            <ConfirmAction
+              title={t("lockTitle")}
+              description={t("lockDescription", {name: customer.fullName})}
+              confirmLabel={t("lock")}
+              cancelLabel={t("cancel")}
+              onConfirm={lockCustomer}
+              variant="outline"
+              className="text-destructive"
+            >
+              <Lock className="size-4" />
+              {t("lock")}
+            </ConfirmAction>
+          )}
         </div>
-        {locked ? null : <ConfirmAction
-          title={t("lockTitle")}
-          description={t("lockDescription", {name: customer.fullName})}
-          confirmLabel={t("lock")}
-          cancelLabel={t("cancel")}
-          onConfirm={lockCustomer}
-          variant="outline"
-          className="text-destructive"
-        ><Lock className="size-4" />{t("lock")}</ConfirmAction>}
-      </div>
-      {lockError ? <div className="mt-4"><ErrorMessage error={lockError} /></div> : null}
-      {locked ? <p role="status" className="mt-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">{t("lockedNotice")}</p> : null}
-    </Card>
-
-    <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
-      <div className="space-y-5">
-        <Card className="p-5">
-          <h2 className="text-base font-semibold">{t("profileTitle")}</h2>
-          <dl className="mt-4 space-y-4">
-            {facts.map(({icon: Icon, label, value}) => <div key={label} className="flex items-start gap-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground"><Icon className="size-4" /></span>
-              <div className="min-w-0">
-                <dt className="text-xs text-muted-foreground">{label}</dt>
-                <dd className="break-words text-sm font-medium">{value || "—"}</dd>
-              </div>
-            </div>)}
-          </dl>
-        </Card>
-        <Card className="p-5">
-          <h2 className="text-base font-semibold">{t("addressesTitle")}</h2>
-          <div className="mt-4 space-y-3">
-            {customer.addresses.length ? customer.addresses.map((address) => <div key={address.id} className="rounded-xl border p-3 text-sm">
-              <p className="flex flex-wrap items-center gap-2 font-medium">{address.recipientName}{address.isDefault ? <Badge>{t("defaultAddress")}</Badge> : null}</p>
-              <p className="mt-1 text-muted-foreground">{address.phone}</p>
-              <p className="text-muted-foreground">{address.addressLine}</p>
-            </div>) : <p className="text-sm text-muted-foreground">{t("noAddresses")}</p>}
+        {lockError ? (
+          <div className="mt-4">
+            <ErrorMessage error={lockError} />
           </div>
-        </Card>
+        ) : null}
+        {locked ? (
+          <p role="status" className="mt-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">
+            {t("lockedNotice")}
+          </p>
+        ) : null}
+      </Card>
+
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-5 lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start">
+        <div className="space-y-5">
+          <Card className="p-5">
+            <h2 className="text-base font-semibold">{t("profileTitle")}</h2>
+            <dl className="mt-4 space-y-4">
+              {facts.map(({icon: Icon, label, value}) => (
+                <div key={label} className="flex items-start gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <Icon className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="break-words text-sm font-medium">{value || "—"}</dd>
+                  </div>
+                </div>
+              ))}
+            </dl>
+          </Card>
+          <Card className="p-5">
+            <h2 className="text-base font-semibold">{t("addressesTitle")}</h2>
+            <div className="mt-4 space-y-3">
+              {customer.addresses.length ? (
+                customer.addresses.map((address) => (
+                  <div key={address.id} className="rounded-xl border p-3 text-sm">
+                    <p className="flex flex-wrap items-center gap-2 font-medium">
+                      {address.recipientName}
+                      {address.isDefault ? <Badge>{t("defaultAddress")}</Badge> : null}
+                    </p>
+                    <p className="mt-1 text-muted-foreground">{address.phone}</p>
+                    <p className="text-muted-foreground">{address.addressLine}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">{t("noAddresses")}</p>
+              )}
+            </div>
+          </Card>
+        </div>
+        <CustomerOrders customerId={customer.accountId} />
       </div>
-      <CustomerOrders customerId={customer.accountId} />
     </div>
-  </div>;
+  );
 }
 
 /** The orders of the customer, newest first, from the same list the shop uses for every order. */
@@ -128,35 +173,59 @@ function CustomerOrders({customerId}: {customerId: string}) {
   const orders = useAdminOrders({customerId, page: pageNumber, size: ORDERS_PAGE_SIZE});
   const page = orders.data;
 
-  return <Card className="p-5">
-    <div className="flex flex-wrap items-baseline justify-between gap-2">
-      <h2 className="text-base font-semibold">{t("ordersTitle")}</h2>
-      {page ? <p className="text-sm text-muted-foreground">{t("totalOrders", {count: page.totalElements})}</p> : null}
-    </div>
-    <div className="mt-4">
-      {orders.isPending ? <Skeleton className="h-24 rounded-xl" /> : orders.isError ? <ErrorMessage error={orders.error} /> : page && page.items.length ? <>
-        <ul className="divide-y overflow-hidden rounded-xl border">
-          {page.items.map((order) => <li key={order.id}>
-            <Link href={`/admin/orders/${order.id}`} className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm transition hover:bg-muted/30">
-              <span className="min-w-0 max-w-full">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold">{order.invoiceNumber}</span>
-                  <StatusBadge status={order.status} />
-                </span>
-                <span className="mt-1 block truncate text-muted-foreground">
-                  {order.createdAt ? new Date(order.createdAt).toLocaleString(locale === "vi" ? "vi-VN" : "en-US") : "—"}
-                  {order.firstProductName ? ` · ${order.firstProductName}${order.itemCount > 1 ? ` ${t("moreItems", {count: order.itemCount - 1})}` : ""}` : ""}
-                </span>
-              </span>
-              <span className="font-semibold">{formatMoney(order.totalAmount, locale)}</span>
-            </Link>
-          </li>)}
-        </ul>
-        {page.totalPages > 1 ? <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">{t("pageOf", {page: page.page + 1, total: page.totalPages})}</p>
-          <AdminPagination hasPrev={page.page > 0} hasNext={!page.last} onPrev={() => setPageNumber((current) => Math.max(0, current - 1))} onNext={() => setPageNumber((current) => current + 1)} />
-        </div> : null}
-      </> : <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{t("noOrders")}</p>}
-    </div>
-  </Card>;
+  return (
+    <Card className="p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-base font-semibold">{t("ordersTitle")}</h2>
+        {page ? <p className="text-sm text-muted-foreground">{t("totalOrders", {count: page.totalElements})}</p> : null}
+      </div>
+      <div className="mt-4">
+        {orders.isPending ? (
+          <Skeleton className="h-24 rounded-xl" />
+        ) : orders.isError ? (
+          <ErrorMessage error={orders.error} />
+        ) : page && page.items.length ? (
+          <>
+            <ul className="divide-y overflow-hidden rounded-xl border">
+              {page.items.map((order) => (
+                <li key={order.id}>
+                  <Link
+                    href={`/admin/orders/${order.id}`}
+                    className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm transition hover:bg-muted/30"
+                  >
+                    <span className="min-w-0 max-w-full">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold">{order.invoiceNumber}</span>
+                        <StatusBadge status={order.status} />
+                      </span>
+                      <span className="mt-1 block truncate text-muted-foreground">
+                        {order.createdAt ? new Date(order.createdAt).toLocaleString(locale === "vi" ? "vi-VN" : "en-US") : "—"}
+                        {order.firstProductName
+                          ? ` · ${order.firstProductName}${order.itemCount > 1 ? ` ${t("moreItems", {count: order.itemCount - 1})}` : ""}`
+                          : ""}
+                      </span>
+                    </span>
+                    <span className="font-semibold">{formatMoney(order.totalAmount, locale)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {page.totalPages > 1 ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-muted-foreground">{t("pageOf", {page: page.page + 1, total: page.totalPages})}</p>
+                <AdminPagination
+                  hasPrev={page.page > 0}
+                  hasNext={!page.last}
+                  onPrev={() => setPageNumber((current) => Math.max(0, current - 1))}
+                  onNext={() => setPageNumber((current) => current + 1)}
+                />
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{t("noOrders")}</p>
+        )}
+      </div>
+    </Card>
+  );
 }

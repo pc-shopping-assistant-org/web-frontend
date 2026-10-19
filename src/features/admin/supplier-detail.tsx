@@ -1,25 +1,21 @@
 "use client";
 
-import { Save, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useState, type FormEvent } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "@/i18n/navigation";
-import type { UpdateSupplierRequest } from "@/features/admin/contracts/requests";
-import { ResourceStatus, type EditableResourceStatus } from "@/lib/domain/catalog-enums";
-import { ConfirmAction } from "./confirm-action";
-import { useAdminSupplier, useDeleteAdminSupplier, useUpdateAdminSupplier } from "./queries";
-import { BackLink, Loading, Failure, Field, FormError } from "./detail-kit";
+import {Save, Trash2} from "lucide-react";
+import {useTranslations} from "next-intl";
+import {useState, type FormEvent} from "react";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Label} from "@/components/ui/label";
+import {Select} from "@/components/ui/select";
+import {Textarea} from "@/components/ui/textarea";
+import {useRouter} from "@/i18n/navigation";
+import type {UpdateSupplierRequest} from "@/features/admin/contracts/requests";
+import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
+import {ConfirmAction} from "./confirm-action";
+import {useAdminSupplier, useDeleteAdminSupplier, useUpdateAdminSupplier} from "./queries";
+import {BackLink, Loading, Failure, Field, FormError} from "./detail-kit";
 
-export function AdminSupplierDetailPage({
-  supplierId,
-}: {
-  supplierId: string;
-}) {
+export function AdminSupplierDetailPage({supplierId}: {supplierId: string}) {
   const t = useTranslations("admin");
   const router = useRouter();
   const supplier = useAdminSupplier(supplierId);
@@ -48,7 +44,7 @@ export function AdminSupplierDetailPage({
       <h1 className="mb-8 text-3xl font-semibold">{t("supplierDetail")}</h1>
       <SupplierForm
         defaults={defaults}
-        onSave={(request) => update.mutateAsync({ id: supplierId, request })}
+        onSave={(request) => update.mutateAsync({id: supplierId, request})}
         loading={update.isPending}
         error={update.error}
         onDelete={() =>
@@ -103,17 +99,12 @@ function SupplierForm({
         <CardTitle>{t("editSupplier")}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form
-          className="grid gap-4 sm:grid-cols-2"
-          onSubmit={(event) => void submit(event)}
-        >
+        <form className="grid gap-4 sm:grid-cols-2" onSubmit={(event) => void submit(event)}>
           <Field
             id="supplier-name"
             label={t("name")}
             value={form.name}
-            onChange={(next) =>
-              setForm((current) => ({ ...current, name: next }))
-            }
+            onChange={(next) => setForm((current) => ({...current, name: next}))}
             required
           />
           <Field
@@ -121,25 +112,19 @@ function SupplierForm({
             label={t("email")}
             type="email"
             value={form.email}
-            onChange={(next) =>
-              setForm((current) => ({ ...current, email: next }))
-            }
+            onChange={(next) => setForm((current) => ({...current, email: next}))}
           />
           <Field
             id="supplier-phone"
             label={t("phone")}
             value={form.phone}
-            onChange={(next) =>
-              setForm((current) => ({ ...current, phone: next }))
-            }
+            onChange={(next) => setForm((current) => ({...current, phone: next}))}
           />
           <Field
             id="supplier-address"
             label={t("address")}
             value={form.address}
-            onChange={(next) =>
-              setForm((current) => ({ ...current, address: next }))
-            }
+            onChange={(next) => setForm((current) => ({...current, address: next}))}
           />
           <div className="space-y-2 sm:col-span-2">
             <Label htmlFor="supplier-description">{t("description")}</Label>

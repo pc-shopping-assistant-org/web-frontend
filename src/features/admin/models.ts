@@ -1,7 +1,4 @@
-import type {
-  Review,
-  Supplier as CatalogSupplier,
-} from "@/features/catalog/models";
+import type {Review, Supplier as CatalogSupplier} from "@/features/catalog/models";
 import type {PaymentStatus} from "@/lib/domain/commerce-enums";
 
 export type AttributeDefinition = {

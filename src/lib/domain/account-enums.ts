@@ -31,11 +31,7 @@ export type UserStatus = AccountStatus.Active | AccountStatus.Locked | AccountSt
 export type EmployeeGender = Gender.Male | Gender.Female;
 
 export const ACCOUNT_STATUS_VALUES = enumValues(AccountStatus);
-export const USER_STATUS_VALUES = [
-  AccountStatus.Active,
-  AccountStatus.Locked,
-  AccountStatus.Deleted,
-] as const;
+export const USER_STATUS_VALUES = [AccountStatus.Active, AccountStatus.Locked, AccountStatus.Deleted] as const;
 export const GENDER_VALUES = enumValues(Gender);
 export const EMPLOYEE_GENDER_VALUES = [Gender.Male, Gender.Female] as const;
 export const OTP_PURPOSE_VALUES = enumValues(OtpPurpose);

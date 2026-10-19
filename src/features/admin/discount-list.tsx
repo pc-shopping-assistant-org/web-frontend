@@ -79,12 +79,24 @@ export function DiscountListPage() {
             <table className="w-full min-w-[56rem] border-collapse text-sm">
               <thead className="bg-muted/50 text-left text-muted-foreground">
                 <tr>
-                  <th scope="col" className="px-4 py-3 font-medium">{tl("name")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tl("scope")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tl("value")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tl("period")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{t("discountState")}</th>
-                  <th scope="col" className="px-4 py-3 font-medium">{tl("actions")}</th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tl("name")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tl("scope")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tl("value")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tl("period")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {t("discountState")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tl("actions")}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -171,7 +183,10 @@ function DiscountRow({
       </td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-          <Link href={`/admin/discounts/${discount.id}`} className={cn(buttonVariants({variant: "link", size: "xs"}), "h-auto p-0 text-sm font-medium")}>
+          <Link
+            href={`/admin/discounts/${discount.id}`}
+            className={cn(buttonVariants({variant: "link", size: "xs"}), "h-auto p-0 text-sm font-medium")}
+          >
             {tl("edit")}
           </Link>
           {active ? (
@@ -188,7 +203,14 @@ function DiscountRow({
               {tl("deactivate")}
             </ConfirmAction>
           ) : (
-            <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" disabled={busy} onClick={() => void onStatus(DiscountStatus.Active)}>
+            <Button
+              type="button"
+              variant="link"
+              size="xs"
+              className="h-auto p-0 text-sm font-medium"
+              disabled={busy}
+              onClick={() => void onStatus(DiscountStatus.Active)}
+            >
               {tl("activate")}
             </Button>
           )}

@@ -195,15 +195,41 @@ function CellFields({id, cell, onChange}: {id: string; cell: VariantCell; onChan
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${id}-stock`}>{t("stock")}</Label>
-        <Input id={`${id}-stock`} type="number" min="0" step="1" inputMode="numeric" value={cell.quantity} onChange={(event) => onChange({quantity: event.target.value})} />
+        <Input
+          id={`${id}-stock`}
+          type="number"
+          min="0"
+          step="1"
+          inputMode="numeric"
+          value={cell.quantity}
+          onChange={(event) => onChange({quantity: event.target.value})}
+        />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${id}-warranty`}>{t("warranty")} <span className="text-destructive">*</span></Label>
-        <Input id={`${id}-warranty`} type="number" min="1" step="1" inputMode="numeric" value={cell.warranty} onChange={(event) => onChange({warranty: event.target.value})} />
+        <Label htmlFor={`${id}-warranty`}>
+          {t("warranty")} <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id={`${id}-warranty`}
+          type="number"
+          min="1"
+          step="1"
+          inputMode="numeric"
+          value={cell.warranty}
+          onChange={(event) => onChange({warranty: event.target.value})}
+        />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${id}-sku`}>{t("sku")} <span className="text-destructive">*</span></Label>
-        <Input id={`${id}-sku`} value={cell.sku} maxLength={100} placeholder={t("skuPlaceholder")} onChange={(event) => onChange({sku: event.target.value})} />
+        <Label htmlFor={`${id}-sku`}>
+          {t("sku")} <span className="text-destructive">*</span>
+        </Label>
+        <Input
+          id={`${id}-sku`}
+          value={cell.sku}
+          maxLength={100}
+          placeholder={t("skuPlaceholder")}
+          onChange={(event) => onChange({sku: event.target.value})}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${id}-model`}>{t("model")}</Label>
@@ -211,11 +237,21 @@ function CellFields({id, cell, onChange}: {id: string; cell: VariantCell; onChan
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${id}-barcode`}>{t("barcode")}</Label>
-        <Input id={`${id}-barcode`} value={cell.barcode ?? ""} maxLength={100} onChange={(event) => onChange({barcode: event.target.value})} />
+        <Input
+          id={`${id}-barcode`}
+          value={cell.barcode ?? ""}
+          maxLength={100}
+          onChange={(event) => onChange({barcode: event.target.value})}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor={`${id}-release`}>{t("releaseAt")}</Label>
-        <Input id={`${id}-release`} type="date" value={cell.releaseAt ?? ""} onChange={(event) => onChange({releaseAt: event.target.value})} />
+        <Input
+          id={`${id}-release`}
+          type="date"
+          value={cell.releaseAt ?? ""}
+          onChange={(event) => onChange({releaseAt: event.target.value})}
+        />
       </div>
     </>
   );
@@ -224,7 +260,12 @@ function CellFields({id, cell, onChange}: {id: string; cell: VariantCell; onChan
 export function MoneyInput({id, value, onChange, label}: {id?: string; value: string; onChange: (value: string) => void; label?: string}) {
   return (
     <div className="relative">
-      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 border-r pr-2 text-sm text-muted-foreground" aria-hidden="true">₫</span>
+      <span
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 border-r pr-2 text-sm text-muted-foreground"
+        aria-hidden="true"
+      >
+        ₫
+      </span>
       <Input
         id={id}
         aria-label={label}
@@ -276,18 +317,45 @@ function VariantTable({
     <div className="space-y-3">
       <div className="flex flex-wrap items-end gap-3 rounded-xl border bg-muted/20 p-3">
         <div className="w-40 space-y-1">
-          <Label htmlFor="variant-bulk-price" className="text-xs">{t("price")}</Label>
+          <Label htmlFor="variant-bulk-price" className="text-xs">
+            {t("price")}
+          </Label>
           <MoneyInput id="variant-bulk-price" value={bulk.price} onChange={(price) => setBulk((current) => ({...current, price}))} />
         </div>
         <div className="w-32 space-y-1">
-          <Label htmlFor="variant-bulk-stock" className="text-xs">{t("stock")}</Label>
-          <Input id="variant-bulk-stock" type="number" min="0" step="1" inputMode="numeric" value={bulk.quantity} onChange={(event) => setBulk((current) => ({...current, quantity: event.target.value}))} />
+          <Label htmlFor="variant-bulk-stock" className="text-xs">
+            {t("stock")}
+          </Label>
+          <Input
+            id="variant-bulk-stock"
+            type="number"
+            min="0"
+            step="1"
+            inputMode="numeric"
+            value={bulk.quantity}
+            onChange={(event) => setBulk((current) => ({...current, quantity: event.target.value}))}
+          />
         </div>
         <div className="w-32 space-y-1">
-          <Label htmlFor="variant-bulk-warranty" className="text-xs">{t("warranty")}</Label>
-          <Input id="variant-bulk-warranty" type="number" min="1" step="1" inputMode="numeric" value={bulk.warranty} onChange={(event) => setBulk((current) => ({...current, warranty: event.target.value}))} />
+          <Label htmlFor="variant-bulk-warranty" className="text-xs">
+            {t("warranty")}
+          </Label>
+          <Input
+            id="variant-bulk-warranty"
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
+            value={bulk.warranty}
+            onChange={(event) => setBulk((current) => ({...current, warranty: event.target.value}))}
+          />
         </div>
-        <Button type="button" variant="outline" onClick={applyAll} disabled={!bulk.price.trim() && !bulk.quantity.trim() && !bulk.warranty.trim()}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={applyAll}
+          disabled={!bulk.price.trim() && !bulk.quantity.trim() && !bulk.warranty.trim()}
+        >
           {t("applyAll")}
         </Button>
         <p className="ml-auto text-xs text-muted-foreground">{t("rowCount", {count: rows.length})}</p>
@@ -332,7 +400,11 @@ function VariantTable({
                   ) : null}
                   {second ? <td className="w-28 border-r px-3 py-3 text-center">{row.values[1].text.trim()}</td> : null}
                   <td className="border-r px-3 py-3">
-                    <MoneyInput label={t("priceOf", {name: row.options.map((option) => option.value).join(" / ")})} value={cell.price} onChange={(price) => setCell(row.key, {price})} />
+                    <MoneyInput
+                      label={t("priceOf", {name: row.options.map((option) => option.value).join(" / ")})}
+                      value={cell.price}
+                      onChange={(price) => setCell(row.key, {price})}
+                    />
                   </td>
                   <td className="border-r px-3 py-3">
                     <Input

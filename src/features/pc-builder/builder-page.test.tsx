@@ -9,17 +9,30 @@ import {toPart, toQuote} from "./mappers";
 import {quoteBuild, validateCandidates} from "./service";
 
 vi.mock("next-intl", () => ({useLocale: () => "vi"}));
-vi.mock("@/i18n/navigation", () => ({Link: ({children, href, ...props}: {children: React.ReactNode; href: string}) => <a href={href} {...props}>{children}</a>}));
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({children, href, ...props}: {children: React.ReactNode; href: string}) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  ),
+}));
 vi.mock("./api", () => ({
-  getComponents: async (slot: string) => components.filter(p => p.slot === slot).map(toPart),
-  getAccessories: async () => components.filter(p => ["MOUSE", "KEYBOARD", "MONITOR", "HEADSET"].includes(p.slot)).map(toPart),
+  getComponents: async (slot: string) => components.filter((p) => p.slot === slot).map(toPart),
+  getAccessories: async () => components.filter((p) => ["MOUSE", "KEYBOARD", "MONITOR", "HEADSET"].includes(p.slot)).map(toPart),
   getQuote: async (selection: Parameters<typeof quoteBuild>[0]) => toQuote(quoteBuild(selection)),
   getCandidates: async (...args: Parameters<typeof validateCandidates>) => validateCandidates(...args),
 }));
 
-afterEach(() => {cleanup(); localStorage.clear();});
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+});
 function mount() {
-  return render(<QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}><BuilderPage /></QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
+      <BuilderPage />
+    </QueryClientProvider>,
+  );
 }
 
 describe("PC builder interactions", () => {
@@ -69,7 +82,10 @@ describe("PC builder interactions", () => {
     await user.click(within(screen.getByRole("navigation", {name: "Chọn linh kiện"})).getByRole("button", {name: "Chuột"}));
     await user.click(screen.getByRole("tab", {name: "Core"}));
     await user.click(screen.getByRole("tab", {name: "Phụ kiện"}));
-    expect(within(screen.getByRole("navigation", {name: "Chọn linh kiện"})).getByRole("button", {name: "Chuột"})).toHaveAttribute("aria-pressed", "true");
+    expect(within(screen.getByRole("navigation", {name: "Chọn linh kiện"})).getByRole("button", {name: "Chuột"})).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
   it("switches Core and peripherals tabs while keeping the build and supports editing from setup", async () => {
     const user = userEvent.setup();

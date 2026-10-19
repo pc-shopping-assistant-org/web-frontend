@@ -9,8 +9,12 @@ export function ErrorMessage({error, fallback = ApiMessageKey.UNKNOWN}: {error: 
   const t = useTranslations("errors");
   const common = useTranslations("common");
   const key = error instanceof ApiClientError ? error.messageKey : fallback;
-  const translated = t.has(String(key)) ? t(String(key)) : common("unknownError");
-  const detail = error instanceof ApiClientError ? error.errors.find((item) => item.message)?.message : undefined;
+  const hasTranslation = t.has(String(key));
+  const translated = hasTranslation ? t(String(key)) : common("unknownError");
+  // The backend's own wording is English, so it is shown only where it adds something the translation cannot:
+  // an error nobody translated, or the validation message that says which field is wrong
+  const showDetail = !hasTranslation || key === ApiMessageKey.VALIDATION_ERROR;
+  const detail = showDetail && error instanceof ApiClientError ? error.errors.find((item) => item.message)?.message : undefined;
 
   return (
     <div role="alert" className="rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-sm text-destructive">

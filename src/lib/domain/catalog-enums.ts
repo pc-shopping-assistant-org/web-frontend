@@ -27,9 +27,6 @@ export enum SortDirection {
 export type EditableResourceStatus = ResourceStatus.Active | ResourceStatus.Inactive;
 
 export const RESOURCE_STATUS_VALUES = enumValues(ResourceStatus);
-export const EDITABLE_RESOURCE_STATUS_VALUES = [
-  ResourceStatus.Active,
-  ResourceStatus.Inactive,
-] as const;
+export const EDITABLE_RESOURCE_STATUS_VALUES = [ResourceStatus.Active, ResourceStatus.Inactive] as const;
 export const REVIEW_STATUS_VALUES = enumValues(ReviewStatus);
 export const ATTRIBUTE_DATA_TYPE_VALUES = enumValues(AttributeDataType);

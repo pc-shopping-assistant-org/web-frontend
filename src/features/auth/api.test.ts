@@ -7,9 +7,11 @@ import {changePassword, getProfile, login, register, verifyPasswordChange} from 
 afterEach(() => vi.restoreAllMocks());
 
 function stubFetch(data: unknown, message = "SUCCESS", status = 200) {
-  const fetchMock = vi.fn().mockImplementation(async () =>
-    new Response(JSON.stringify({data, message, errors: []}), {status, headers: {"content-type": "application/json"}}),
-  );
+  const fetchMock = vi
+    .fn()
+    .mockImplementation(
+      async () => new Response(JSON.stringify({data, message, errors: []}), {status, headers: {"content-type": "application/json"}}),
+    );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
@@ -47,9 +49,24 @@ describe("auth API", () => {
   it("registers with separate first and last names", async () => {
     const fetchMock = stubFetch(null);
 
-    await register({firstName: "An", lastName: "Nguyễn", email: "an@example.com", phone: "0911222333", password: "Passw0rdA", address: "12 Lê Lợi"});
+    await register({
+      firstName: "An",
+      lastName: "Nguyễn",
+      email: "an@example.com",
+      phone: "0911222333",
+      password: "Passw0rdA",
+      address: "12 Lê Lợi",
+    });
 
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({firstName: "An", lastName: "Nguyễn"});
+  });
+
+  it("lets an account that signed up with Google set its first password without a current one", async () => {
+    const fetchMock = stubFetch(null);
+
+    await changePassword({newPassword: "NewPassw0rd"});
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({newPassword: "NewPassw0rd"});
   });
 
   it("changes a password in two steps", async () => {
@@ -74,6 +91,9 @@ describe("auth API", () => {
   it("keeps the backend error key for the UI to translate", async () => {
     stubFetch(null, "INVALID_CREDENTIALS", 401);
 
-    await expect(login({identifier: "an@example.com", password: "x"})).rejects.toMatchObject({status: 401, messageKey: "INVALID_CREDENTIALS"});
+    await expect(login({identifier: "an@example.com", password: "x"})).rejects.toMatchObject({
+      status: 401,
+      messageKey: "INVALID_CREDENTIALS",
+    });
   });
 });

@@ -18,8 +18,7 @@ export type DateRange = {from?: string; to?: string};
 
 function withQuery(path: string, values: Record<string, string | number | undefined>) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(values))
-    if (value !== undefined && value !== "") params.set(key, String(value));
+  for (const [key, value] of Object.entries(values)) if (value !== undefined && value !== "") params.set(key, String(value));
   return params.size ? `${path}?${params.toString()}` : path;
 }
 

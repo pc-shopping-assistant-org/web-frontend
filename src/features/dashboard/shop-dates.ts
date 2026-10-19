@@ -33,8 +33,6 @@ export type RangeProblem = "order" | "tooLong";
 /** What the backend would refuse in a chart range, found before asking it. */
 export function rangeProblem(from: string, to: string, granularity: "DAY" | "MONTH"): RangeProblem | undefined {
   if (from > to) return "order";
-  const tooLong = granularity === "DAY"
-    ? daysInRange(from, to) > MAX_DAILY_RANGE_DAYS
-    : monthsInRange(from, to) > MAX_MONTHLY_RANGE_MONTHS;
+  const tooLong = granularity === "DAY" ? daysInRange(from, to) > MAX_DAILY_RANGE_DAYS : monthsInRange(from, to) > MAX_MONTHLY_RANGE_MONTHS;
   return tooLong ? "tooLong" : undefined;
 }

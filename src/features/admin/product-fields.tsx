@@ -1,27 +1,27 @@
 "use client";
 
-import { ImagePlus, LoaderCircle, X } from "lucide-react";
+import {ImagePlus, LoaderCircle, X} from "lucide-react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import {useTranslations} from "next-intl";
+import {useEffect, useRef, useState, type ChangeEvent} from "react";
 
-import { ErrorMessage } from "@/components/ui/error-message";
-import type { ProductImage } from "@/features/catalog/models";
-import { cn } from "@/lib/utils";
+import {ErrorMessage} from "@/components/ui/error-message";
+import type {ProductImage} from "@/features/catalog/models";
+import {cn} from "@/lib/utils";
 
-import { useUploadAdminFile } from "./queries";
+import {useUploadAdminFile} from "./queries";
 
 /** One gallery entry while a product form is being edited; `url` is only known for stored or just uploaded files. */
-export type GalleryItem = { fileId: string; url?: string; main: boolean };
+export type GalleryItem = {fileId: string; url?: string; main: boolean};
 
 export function galleryFromProduct(images: ProductImage[]): GalleryItem[] {
-  return images.map((image) => ({ fileId: image.fileId, url: image.imageUrl, main: image.main }));
+  return images.map((image) => ({fileId: image.fileId, url: image.imageUrl, main: image.main}));
 }
 
 /** The request form of the gallery; the first image becomes the main one when none was picked. */
 export function galleryRequest(items: GalleryItem[]) {
   const hasMain = items.some((item) => item.main);
-  return items.map((item, index) => ({ fileId: item.fileId, main: hasMain ? item.main : index === 0 }));
+  return items.map((item, index) => ({fileId: item.fileId, main: hasMain ? item.main : index === 0}));
 }
 
 /** Most pictures a product can have; the first one uploaded is its cover. */
@@ -31,15 +31,7 @@ export const MAX_GALLERY_IMAGES = 9;
  * The pictures of a product as a row of squares and one tile to add more. The cover is the first square; another
  * picture becomes the cover by moving to the front.
  */
-export function ProductGalleryEditor({
-  id,
-  items,
-  onChange,
-}: {
-  id: string;
-  items: GalleryItem[];
-  onChange: (items: GalleryItem[]) => void;
-}) {
+export function ProductGalleryEditor({id, items, onChange}: {id: string; items: GalleryItem[]; onChange: (items: GalleryItem[]) => void}) {
   const t = useTranslations("admin");
   const upload = useUploadAdminFile();
   const [error, setError] = useState<unknown>(null);
@@ -59,7 +51,7 @@ export function ProductGalleryEditor({
       try {
         const uploaded = await upload.mutateAsync(file);
         if (!uploaded.id || latest.current.some((item) => item.fileId === uploaded.id)) continue;
-        const next = [...latest.current, { fileId: uploaded.id, url: uploaded.publicUrl, main: latest.current.length === 0 }];
+        const next = [...latest.current, {fileId: uploaded.id, url: uploaded.publicUrl, main: latest.current.length === 0}];
         latest.current = next;
         onChange(next);
       } catch (uploadError) {
@@ -70,12 +62,12 @@ export function ProductGalleryEditor({
   }
   function remove(fileId: string) {
     const rest = items.filter((item) => item.fileId !== fileId);
-    onChange(rest.some((item) => item.main) || rest.length === 0 ? rest : rest.map((item, index) => ({ ...item, main: index === 0 })));
+    onChange(rest.some((item) => item.main) || rest.length === 0 ? rest : rest.map((item, index) => ({...item, main: index === 0})));
   }
   function makeCover(fileId: string) {
     const chosen = items.find((item) => item.fileId === fileId);
     if (!chosen) return;
-    onChange([{ ...chosen, main: true }, ...items.filter((item) => item.fileId !== fileId).map((item) => ({ ...item, main: false }))]);
+    onChange([{...chosen, main: true}, ...items.filter((item) => item.fileId !== fileId).map((item) => ({...item, main: false}))]);
   }
 
   return (
@@ -123,7 +115,7 @@ export function ProductGalleryEditor({
             )}
           >
             {upload.isPending ? <LoaderCircle className="size-6 animate-spin" /> : <ImagePlus className="size-6" />}
-            {upload.isPending ? t("uploading") : t("addImageTile", { count: items.length, max: MAX_GALLERY_IMAGES })}
+            {upload.isPending ? t("uploading") : t("addImageTile", {count: items.length, max: MAX_GALLERY_IMAGES})}
             <input
               id={id}
               type="file"

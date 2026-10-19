@@ -4,12 +4,7 @@ import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack
 
 import {orderKeys} from "@/features/orders/queries";
 
-import {
-  getAdminPaymentMethods,
-  getAdminPayments,
-  updateAdminPaymentStatus,
-  type AdminPaymentFilters,
-} from "./api";
+import {getAdminPaymentMethods, getAdminPayments, updateAdminPaymentStatus, type AdminPaymentFilters} from "./api";
 
 export function useAdminPayments(filters: AdminPaymentFilters = {}) {
   return useQuery({
@@ -33,10 +28,11 @@ export function useUpdateAdminPaymentStatus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({paymentId, status}: {paymentId: string; status: string}) => updateAdminPaymentStatus(paymentId, status),
-    onSettled: () => Promise.all([
-      qc.invalidateQueries({queryKey: ["payments", "admin", "list"]}),
-      qc.invalidateQueries({queryKey: orderKeys.all}),
-      qc.invalidateQueries({queryKey: ["admin"]}),
-    ]),
+    onSettled: () =>
+      Promise.all([
+        qc.invalidateQueries({queryKey: ["payments", "admin", "list"]}),
+        qc.invalidateQueries({queryKey: orderKeys.all}),
+        qc.invalidateQueries({queryKey: ["admin"]}),
+      ]),
   });
 }

@@ -1,19 +1,15 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { useId, useState } from "react";
+import {useTranslations} from "next-intl";
+import {useId, useState} from "react";
 
-import { Button } from "@/components/ui/button";
-import { ErrorMessage } from "@/components/ui/error-message";
-import { Select } from "@/components/ui/select";
+import {Button} from "@/components/ui/button";
+import {ErrorMessage} from "@/components/ui/error-message";
+import {Select} from "@/components/ui/select";
 import {AccountStatus} from "@/lib/domain/account-enums";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-const CONFIRMABLE_STATUSES = new Set<string>([
-  AccountStatus.Inactive,
-  AccountStatus.Locked,
-  ResourceStatus.Deleted,
-]);
+const CONFIRMABLE_STATUSES = new Set<string>([AccountStatus.Inactive, AccountStatus.Locked, ResourceStatus.Deleted]);
 
 /**
  * Status mutations that disable or hide data always require an explicit
@@ -39,10 +35,7 @@ export function StatusSelect({
   const titleId = useId();
   const [nextStatus, setNextStatus] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
-  const labelFor = (status: string) =>
-    t.has(`statusValues.${status}`)
-      ? t(`statusValues.${status}`)
-      : status;
+  const labelFor = (status: string) => (t.has(`statusValues.${status}`) ? t(`statusValues.${status}`) : status);
 
   async function confirmStatus() {
     if (!nextStatus) return;
@@ -123,18 +116,10 @@ export function StatusSelect({
               </div>
             ) : null}
             <div className="mt-6 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setNextStatus(null)}
-              >
+              <Button type="button" variant="outline" onClick={() => setNextStatus(null)}>
                 {t("cancel")}
               </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => void confirmStatus()}
-              >
+              <Button type="button" variant="destructive" onClick={() => void confirmStatus()}>
                 {labelFor(nextStatus)}
               </Button>
             </div>

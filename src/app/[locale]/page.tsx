@@ -16,7 +16,9 @@ export default function HomePage() {
         <div className="storefront-wrap py-14 sm:py-20">
           <div className="flex max-w-3xl flex-col gap-3">
             <p className="eyebrow">{t("whyEyebrow")}</p>
-            <h2 id="why-title" className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("whyTitle")}</h2>
+            <h2 id="why-title" className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              {t("whyTitle")}
+            </h2>
             <p className="text-sm leading-6 text-muted-foreground">{t("whyDescription")}</p>
           </div>
           <div className="mt-9 grid gap-4 md:grid-cols-3">

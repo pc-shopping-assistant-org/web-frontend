@@ -74,10 +74,12 @@ export async function getProfile() {
 
 export async function updateProfile(request: UpdateProfileRequest) {
   const payload = parseRequest(updateProfileRequestSchema, request);
-  return mapUserProfile(await backendFetch<UserSummaryDto>("/identity-service/profile", {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  }));
+  return mapUserProfile(
+    await backendFetch<UserSummaryDto>("/identity-service/profile", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  );
 }
 
 /** Step 1 of a password change: checks the current password and emails the confirmation OTP. */

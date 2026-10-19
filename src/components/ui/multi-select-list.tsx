@@ -45,18 +45,12 @@ export function MultiSelectList({
   const normalizedQuery = query.trim().toLowerCase();
   const filtered = normalizedQuery
     ? options.filter((option) =>
-        [option.label, option.description]
-          .filter(Boolean)
-          .some((text) => text!.toLowerCase().includes(normalizedQuery)),
+        [option.label, option.description].filter(Boolean).some((text) => text!.toLowerCase().includes(normalizedQuery)),
       )
     : options;
 
   function toggle(optionValue: string) {
-    onChange(
-      value.includes(optionValue)
-        ? value.filter((item) => item !== optionValue)
-        : [...value, optionValue],
-    );
+    onChange(value.includes(optionValue) ? value.filter((item) => item !== optionValue) : [...value, optionValue]);
   }
 
   return (
@@ -65,14 +59,15 @@ export function MultiSelectList({
         <legend id={`${id}-label`} className="text-sm font-medium">
           {label}
         </legend>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {selectedLabel ?? `${value.length} selected`}
-        </span>
+        <span className="text-xs tabular-nums text-muted-foreground">{selectedLabel ?? `${value.length} selected`}</span>
       </div>
       {hint ? <p className="text-xs leading-5 text-muted-foreground">{hint}</p> : null}
       {options.length > 8 ? (
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -83,9 +78,7 @@ export function MultiSelectList({
         </div>
       ) : null}
       {filtered.length === 0 ? (
-        <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
-          {emptyLabel}
-        </p>
+        <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">{emptyLabel}</p>
       ) : (
         <div
           id={id}
@@ -113,9 +106,7 @@ export function MultiSelectList({
                 <span
                   className={cn(
                     "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border transition",
-                    selected
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-input bg-background text-transparent",
+                    selected ? "border-primary bg-primary text-primary-foreground" : "border-input bg-background text-transparent",
                   )}
                   aria-hidden="true"
                 >
@@ -124,9 +115,7 @@ export function MultiSelectList({
                 <span className="min-w-0">
                   <span className="block truncate font-medium">{option.label}</span>
                   {option.description ? (
-                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                      {option.description}
-                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">{option.description}</span>
                   ) : null}
                 </span>
               </button>

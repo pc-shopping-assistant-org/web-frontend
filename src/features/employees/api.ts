@@ -1,7 +1,12 @@
 import {backendFetch} from "@/lib/api/client";
 import {parseRequest} from "@/lib/api/parse-request";
 
-import {createEmployeeRequestSchema, updateEmployeeRequestSchema, type CreateEmployeeRequest, type UpdateEmployeeRequest} from "./contracts/requests";
+import {
+  createEmployeeRequestSchema,
+  updateEmployeeRequestSchema,
+  type CreateEmployeeRequest,
+  type UpdateEmployeeRequest,
+} from "./contracts/requests";
 import type {EmployeeDto, EmployeePageDto} from "./contracts/dto";
 import {mapEmployee, mapEmployeePage} from "./mappers";
 
@@ -19,8 +24,7 @@ const employeeUrl = (accountId: string) => `${IDENTITY}/employees/${encodeURICom
 /** Employees by page, narrowed by the keyword and status the admin typed; the empty ones are dropped. */
 export async function getEmployees(filters: EmployeeFilters = {}) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters))
-    if (value !== undefined && value !== "") params.set(key, String(value));
+  for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value));
   return mapEmployeePage(await backendFetch<EmployeePageDto>(`${IDENTITY}/employees${params.size ? `?${params.toString()}` : ""}`));
 }
 

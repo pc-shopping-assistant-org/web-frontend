@@ -1,6 +1,13 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 
-import {createProductReview, getMyProductReviews, getOrderLineProduct, getProductReviews, getReviewedOrderItems, updateProductReview} from "./api";
+import {
+  createProductReview,
+  getMyProductReviews,
+  getOrderLineProduct,
+  getProductReviews,
+  getReviewedOrderItems,
+  updateProductReview,
+} from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -11,18 +18,37 @@ const ITEM = "00000000-0000-4000-8000-000000000003";
 function stubFetch(...payloads: unknown[]) {
   const fetchMock = vi.fn();
   for (const payload of payloads)
-    fetchMock.mockImplementationOnce(async () =>
-      new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {status: 200, headers: {"content-type": "application/json"}}),
+    fetchMock.mockImplementationOnce(
+      async () =>
+        new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {
+          status: 200,
+          headers: {"content-type": "application/json"},
+        }),
     );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
-const review = {id: REVIEW, productId: PRODUCT, reviewerName: null, rating: 4, comment: "Good", createdAt: "2026-10-08T00:00:00Z", editedAt: null};
+const review = {
+  id: REVIEW,
+  productId: PRODUCT,
+  reviewerName: null,
+  rating: 4,
+  comment: "Good",
+  createdAt: "2026-10-08T00:00:00Z",
+  editedAt: null,
+};
 
 describe("review api", () => {
   it("lists the public reviews by page with the reviewer names", async () => {
-    const fetchMock = stubFetch({content: [{...review, reviewerName: "An Nguyen"}], page: 1, size: 10, totalElements: 21, totalPages: 3, last: false});
+    const fetchMock = stubFetch({
+      content: [{...review, reviewerName: "An Nguyen"}],
+      page: 1,
+      size: 10,
+      totalElements: 21,
+      totalPages: 3,
+      last: false,
+    });
     const page = await getProductReviews(PRODUCT, 1);
     expect(fetchMock.mock.calls[0][0]).toBe(`/api/backend/catalog-service/products/${PRODUCT}/reviews?page=1&size=10`);
     expect(page).toMatchObject({page: 1, totalPages: 3, totalElements: 21, last: false});
@@ -39,7 +65,10 @@ describe("review api", () => {
   it("creates a review with the order item and drops a blank comment", async () => {
     const fetchMock = stubFetch(review);
     await createProductReview(PRODUCT, {orderItemId: ITEM, rating: 5, comment: "  "});
-    expect(fetchMock.mock.calls[0]).toEqual([`/api/backend/catalog-service/products/${PRODUCT}/reviews`, expect.objectContaining({method: "POST", body: JSON.stringify({orderItemId: ITEM, rating: 5})})]);
+    expect(fetchMock.mock.calls[0]).toEqual([
+      `/api/backend/catalog-service/products/${PRODUCT}/reviews`,
+      expect.objectContaining({method: "POST", body: JSON.stringify({orderItemId: ITEM, rating: 5})}),
+    ]);
 
     await expect(createProductReview(PRODUCT, {orderItemId: ITEM, rating: 6})).rejects.toThrow();
     await expect(createProductReview(PRODUCT, {orderItemId: ITEM, rating: 3, comment: "x".repeat(2001)})).rejects.toThrow();
@@ -49,7 +78,10 @@ describe("review api", () => {
   it("edits with a PATCH, sends an empty comment to clear it, and needs at least one field", async () => {
     const fetchMock = stubFetch(review);
     await updateProductReview(PRODUCT, REVIEW, {rating: 2, comment: ""});
-    expect(fetchMock.mock.calls[0]).toEqual([`/api/backend/catalog-service/products/${PRODUCT}/reviews/${REVIEW}`, expect.objectContaining({method: "PATCH", body: JSON.stringify({rating: 2, comment: ""})})]);
+    expect(fetchMock.mock.calls[0]).toEqual([
+      `/api/backend/catalog-service/products/${PRODUCT}/reviews/${REVIEW}`,
+      expect.objectContaining({method: "PATCH", body: JSON.stringify({rating: 2, comment: ""})}),
+    ]);
 
     await expect(updateProductReview(PRODUCT, REVIEW, {})).rejects.toThrow();
     await expect(updateProductReview(PRODUCT, REVIEW, {rating: 0})).rejects.toThrow();

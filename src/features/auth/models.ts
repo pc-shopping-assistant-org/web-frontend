@@ -14,6 +14,7 @@ export type UserProfile = UserSummary & {
   gender?: string;
   avatarFileId?: string;
   avatarUrl?: string;
+  hasPassword: boolean;
 };
 
 export type UploadedImage = {
@@ -29,7 +30,4 @@ export type AuthResponse = {
   user?: UserSummary;
 };
 
-export type AuthTokenPair = Pick<
-  AuthResponse,
-  "accessToken" | "refreshToken" | "expiresIn" | "tokenType"
->;
+export type AuthTokenPair = Pick<AuthResponse, "accessToken" | "refreshToken" | "expiresIn" | "tokenType">;

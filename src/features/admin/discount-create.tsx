@@ -64,7 +64,19 @@ function initialForm(discount?: DiscountDetail) {
 }
 
 /** A label on the left and the control on the right, as in the Shopee seller centre; stacked on a narrow screen. */
-function FormRow({label, htmlFor, required, hint, children}: {label: string; htmlFor?: string; required?: boolean; hint?: ReactNode; children: ReactNode}) {
+function FormRow({
+  label,
+  htmlFor,
+  required,
+  hint,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  required?: boolean;
+  hint?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <div className="grid gap-2 sm:grid-cols-[13rem_minmax(0,1fr)] sm:gap-x-6">
       <Label htmlFor={htmlFor} className="sm:pt-2.5 sm:text-right">
@@ -89,7 +101,23 @@ function Section({title, children}: {title: string; children: ReactNode}) {
 }
 
 /** An input with its length counter on the right ("12/255"). */
-function CountedInput({id, value, max, onChange, placeholder, upper, disabled}: {id: string; value: string; max: number; onChange: (value: string) => void; placeholder?: string; upper?: boolean; disabled?: boolean}) {
+function CountedInput({
+  id,
+  value,
+  max,
+  onChange,
+  placeholder,
+  upper,
+  disabled,
+}: {
+  id: string;
+  value: string;
+  max: number;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  upper?: boolean;
+  disabled?: boolean;
+}) {
   return (
     <div className="relative">
       <Input
@@ -132,7 +160,8 @@ export function DiscountForm({discount}: {discount?: DiscountDetail}) {
   function validate(): string | null {
     const value = Number(form.value);
     if (!form.title.trim()) return td("problem.name");
-    if (!Number.isInteger(value) || value <= 0 || (percent && value > MAX_PERCENT)) return td(percent ? "problem.percent" : "problem.amount");
+    if (!Number.isInteger(value) || value <= 0 || (percent && value > MAX_PERCENT))
+      return td(percent ? "problem.percent" : "problem.amount");
     if (!form.startAt || !form.endAt || new Date(form.endAt) <= new Date(form.startAt)) return td("problem.period");
     if (form.applicationScope === DiscountScope.Category && form.categoryIds.length === 0) return td("problem.categories");
     return null;
@@ -144,16 +173,16 @@ export function DiscountForm({discount}: {discount?: DiscountDetail}) {
     setProblem(found);
     if (found) return;
     const request = {
-        title: form.title.trim(),
-        code: isOrder ? form.code.trim() || undefined : undefined,
-        discountType: form.discountType,
-        value: Number(form.value),
-        applicationScope: form.applicationScope,
-        minOrderAmount: Number(form.minOrderAmount || 0),
-        startAt: new Date(form.startAt).toISOString(),
-        endAt: new Date(form.endAt).toISOString(),
-        description: form.description.trim() || undefined,
-        categoryIds: form.applicationScope === DiscountScope.Category ? form.categoryIds : [],
+      title: form.title.trim(),
+      code: isOrder ? form.code.trim() || undefined : undefined,
+      discountType: form.discountType,
+      value: Number(form.value),
+      applicationScope: form.applicationScope,
+      minOrderAmount: Number(form.minOrderAmount || 0),
+      startAt: new Date(form.startAt).toISOString(),
+      endAt: new Date(form.endAt).toISOString(),
+      description: form.description.trim() || undefined,
+      categoryIds: form.applicationScope === DiscountScope.Category ? form.categoryIds : [],
     };
     try {
       if (discount?.id) await update.mutateAsync({id: discount.id, request});
@@ -189,9 +218,24 @@ export function DiscountForm({discount}: {discount?: DiscountDetail}) {
         </FormRow>
         <FormRow label={td("period")} htmlFor="discount-start" required>
           <div className="flex flex-wrap items-center gap-3">
-            <Input id="discount-start" type="datetime-local" className="w-full sm:w-56" value={form.startAt} onChange={(event) => set({startAt: event.target.value})} />
-            <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">—</span>
-            <Input id="discount-end" type="datetime-local" aria-label={t("endAt")} className="w-full sm:w-56" value={form.endAt} onChange={(event) => set({endAt: event.target.value})} />
+            <Input
+              id="discount-start"
+              type="datetime-local"
+              className="w-full sm:w-56"
+              value={form.startAt}
+              onChange={(event) => set({startAt: event.target.value})}
+            />
+            <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+              —
+            </span>
+            <Input
+              id="discount-end"
+              type="datetime-local"
+              aria-label={t("endAt")}
+              className="w-full sm:w-56"
+              value={form.endAt}
+              onChange={(event) => set({endAt: event.target.value})}
+            />
           </div>
         </FormRow>
         <FormRow label={t("description")} htmlFor="discount-description">
@@ -200,7 +244,12 @@ export function DiscountForm({discount}: {discount?: DiscountDetail}) {
       </Section>
 
       <Section title={td("settingsTitle")}>
-        <FormRow label={td("valueLabel")} htmlFor="discount-value" required hint={percent ? td("percentHint") : td(isOrder ? "amountHintOrder" : "amountHintItem")}>
+        <FormRow
+          label={td("valueLabel")}
+          htmlFor="discount-value"
+          required
+          hint={percent ? td("percentHint") : td(isOrder ? "amountHintOrder" : "amountHintItem")}
+        >
           <div className="flex flex-col gap-2 sm:flex-row">
             <Select
               aria-label={t("discountType")}
@@ -225,7 +274,12 @@ export function DiscountForm({discount}: {discount?: DiscountDetail}) {
                     value={form.value}
                     onChange={(event) => set({value: event.target.value})}
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground" aria-hidden="true">%</span>
+                  <span
+                    className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground"
+                    aria-hidden="true"
+                  >
+                    %
+                  </span>
                 </div>
               ) : (
                 <MoneyInput id="discount-value" value={form.value} onChange={(value) => set({value})} />

@@ -1,43 +1,26 @@
 "use client";
 
-import {
-  KeyRound,
-  LoaderCircle,
-  LogOut,
-  Pencil,
-  Plus,
-  Save,
-  ShieldCheck,
-  Trash2,
-  Upload,
-  X,
-} from "lucide-react";
+import {KeyRound, LoaderCircle, LogOut, Pencil, Plus, Save, ShieldCheck, Trash2, Upload, X} from "lucide-react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {useTranslations} from "next-intl";
+import {useMemo, useState, type ChangeEvent, type FormEvent} from "react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ConfirmAction } from "@/components/ui/confirm-action";
-import { ErrorMessage } from "@/components/ui/error-message";
-import { AccountPageSkeleton } from "@/components/ui/loading-skeletons";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
-import { Link, useRouter } from "@/i18n/navigation";
-import { ApiClientError } from "@/lib/api/envelope";
+import {Button} from "@/components/ui/button";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+import {ConfirmAction} from "@/components/ui/confirm-action";
+import {ErrorMessage} from "@/components/ui/error-message";
+import {AccountPageSkeleton} from "@/components/ui/loading-skeletons";
+import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
+import {Select} from "@/components/ui/select";
+import {Skeleton} from "@/components/ui/skeleton";
+import {Textarea} from "@/components/ui/textarea";
+import {Link, useRouter} from "@/i18n/navigation";
+import {ApiClientError} from "@/lib/api/envelope";
 import type {CustomerAddress} from "@/features/account/contracts/responses";
 import type {CustomerAddressRequest} from "@/features/account/contracts/requests";
 import type {UploadedImage} from "@/features/auth/models";
-import { isStaffRole } from "@/lib/auth/roles";
+import {isStaffRole} from "@/lib/auth/roles";
 import {Gender} from "@/lib/domain/account-enums";
 
 import {
@@ -48,13 +31,7 @@ import {
   useUploadAvatar,
   useVerifyPasswordChange,
 } from "@/features/auth/queries";
-import {
-  useAddresses,
-  useCreateAddress,
-  useDeleteAddress,
-  useSetDefaultAddress,
-  useUpdateAddress,
-} from "./queries";
+import {useAddresses, useCreateAddress, useDeleteAddress, useSetDefaultAddress, useUpdateAddress} from "./queries";
 
 type ProfileDraft = {
   firstName: string;
@@ -66,7 +43,7 @@ type ProfileDraft = {
   avatarUrl?: string;
 };
 
-type AddressDraft = CustomerAddressRequest & { id?: string };
+type AddressDraft = CustomerAddressRequest & {id?: string};
 
 export function AccountPage() {
   const t = useTranslations("account");
@@ -98,14 +75,16 @@ export function AccountPage() {
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    await updateProfile.mutateAsync({
-      firstName: draft.firstName.trim(),
-      lastName: draft.lastName.trim(),
-      phone: draft.phone.trim() || undefined,
-      gender: draft.gender || undefined,
-      birthday: draft.birthday || undefined,
-      avatarFileId: draft.avatarFileId,
-    }).catch(() => undefined);
+    await updateProfile
+      .mutateAsync({
+        firstName: draft.firstName.trim(),
+        lastName: draft.lastName.trim(),
+        phone: draft.phone.trim() || undefined,
+        gender: draft.gender || undefined,
+        birthday: draft.birthday || undefined,
+        avatarFileId: draft.avatarFileId,
+      })
+      .catch(() => undefined);
   }
 
   async function signOut() {
@@ -121,10 +100,7 @@ export function AccountPage() {
     return <AccountPageSkeleton />;
   }
 
-  const requiresLogin =
-    profile.isError &&
-    profile.error instanceof ApiClientError &&
-    profile.error.status === 401;
+  const requiresLogin = profile.isError && profile.error instanceof ApiClientError && profile.error.status === 401;
 
   if (profile.isError && !requiresLogin) {
     return (
@@ -143,9 +119,7 @@ export function AccountPage() {
               <KeyRound className="size-7" />
             </span>
             <h1 className="mt-5 text-2xl font-semibold">{t("loginRequired")}</h1>
-            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-              {t("description")}
-            </p>
+            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">{t("description")}</p>
             <Link
               href="/login?redirect=%2Faccount"
               className="mt-6 inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/85"
@@ -158,10 +132,7 @@ export function AccountPage() {
     );
   }
 
-  function updateDraft<K extends keyof ProfileDraft>(
-    key: K,
-    value: ProfileDraft[K],
-  ) {
+  function updateDraft<K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) {
     setProfileDraft((current) => ({
       ...(current ?? profileDefaults),
       [key]: value,
@@ -176,11 +147,7 @@ export function AccountPage() {
           <h1 className="text-4xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="text-muted-foreground">{t("description")}</p>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => void signOut()}
-          disabled={logout.isPending}
-        >
+        <Button variant="outline" onClick={() => void signOut()} disabled={logout.isPending}>
           <LogOut className="size-4" />
           {t("logout")}
         </Button>
@@ -193,13 +160,12 @@ export function AccountPage() {
             <CardDescription>{t("profileDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form
-              className="space-y-6"
-              onSubmit={(event) => void saveProfile(event)}
-            >
+            <form className="space-y-6" onSubmit={(event) => void saveProfile(event)}>
               <AvatarPicker
                 url={draft.avatarUrl}
-                onUploaded={(image) => setProfileDraft((current) => ({ ...(current ?? profileDefaults), avatarFileId: image.id, avatarUrl: image.url }))}
+                onUploaded={(image) =>
+                  setProfileDraft((current) => ({...(current ?? profileDefaults), avatarFileId: image.id, avatarUrl: image.url}))
+                }
               />
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field
@@ -220,12 +186,12 @@ export function AccountPage() {
                   <Label htmlFor="profile-email">{t("email")}</Label>
                   <Input id="profile-email" type="email" value={profile.data?.email ?? ""} readOnly disabled />
                 </div>
-                <Field
-                  id="profile-phone"
-                  label={t("phone")}
-                  value={draft.phone}
-                  onChange={(value) => updateDraft("phone", value)}
-                />
+                <div className="space-y-2">
+                  <Field id="profile-phone" label={t("phone")} value={draft.phone} onChange={(value) => updateDraft("phone", value)} />
+                  {profile.data && !profile.data.phone ? (
+                    <p className="text-xs leading-5 text-muted-foreground">{t("phoneMissingHint")}</p>
+                  ) : null}
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-gender">{t("gender")}</Label>
                   <Select
@@ -247,18 +213,9 @@ export function AccountPage() {
                   onChange={(value) => updateDraft("birthday", value)}
                 />
               </div>
-              {updateProfile.isError ? (
-                <ErrorMessage error={updateProfile.error} />
-              ) : null}
-              {updateProfile.isSuccess ? (
-                <p className="text-sm text-emerald-700">{t("saved")}</p>
-              ) : null}
-              <Button
-                type="submit"
-                disabled={
-                  updateProfile.isPending || !draft.firstName.trim() || !draft.lastName.trim()
-                }
-              >
+              {updateProfile.isError ? <ErrorMessage error={updateProfile.error} /> : null}
+              {updateProfile.isSuccess ? <p className="text-sm text-emerald-700">{t("saved")}</p> : null}
+              <Button type="submit" disabled={updateProfile.isPending || !draft.firstName.trim() || !draft.lastName.trim()}>
                 <Save className="size-4" />
                 {updateProfile.isPending ? common("loading") : t("save")}
               </Button>
@@ -290,7 +247,7 @@ export function AccountPage() {
               })
             }
           />
-          <ChangePasswordCard />
+          <ChangePasswordCard hasPassword={profile.data?.hasPassword ?? true} />
         </div>
       </div>
 
@@ -304,25 +261,17 @@ export function AccountPage() {
           </Link>
         ) : (
           <>
-            <Link
-              href="/orders"
-              className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted"
-            >
+            <Link href="/orders" className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted">
               {t("orders")}
             </Link>
-            <Link
-              href="/cart"
-              className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted"
-            >
+            <Link href="/cart" className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted">
               {t("cart")}
             </Link>
           </>
         )}
       </div>
 
-      {addressDraft ? (
-        <AddressDialog draft={addressDraft} onClose={() => setAddressDraft(null)} />
-      ) : null}
+      {addressDraft ? <AddressDialog draft={addressDraft} onClose={() => setAddressDraft(null)} /> : null}
     </section>
   );
 }
@@ -345,24 +294,12 @@ function Field({
   return (
     <div className="space-y-2">
       <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        required={required}
-      />
+      <Input id={id} type={type} value={value} onChange={(event) => onChange(event.target.value)} required={required} />
     </div>
   );
 }
 
-function AvatarPicker({
-  url,
-  onUploaded,
-}: {
-  url?: string;
-  onUploaded: (image: UploadedImage) => void;
-}) {
+function AvatarPicker({url, onUploaded}: {url?: string; onUploaded: (image: UploadedImage) => void}) {
   const t = useTranslations("account");
   const upload = useUploadAvatar();
   const [error, setError] = useState<unknown>(null);
@@ -495,12 +432,7 @@ function AddressCard({
                     <p className="mt-1 text-sm leading-6">{address.addressLine}</p>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      aria-label={t("editAddress")}
-                      onClick={() => onEdit(address)}
-                    >
+                    <Button size="icon-sm" variant="ghost" aria-label={t("editAddress")} onClick={() => onEdit(address)}>
                       <Pencil className="size-4" />
                     </Button>
                     {address.id ? (
@@ -546,13 +478,7 @@ function AddressCard({
   );
 }
 
-function AddressDialog({
-  draft,
-  onClose,
-}: {
-  draft: AddressDraft;
-  onClose: () => void;
-}) {
+function AddressDialog({draft, onClose}: {draft: AddressDraft; onClose: () => void}) {
   const t = useTranslations("account");
   const create = useCreateAddress();
   const update = useUpdateAddress();
@@ -569,7 +495,7 @@ function AddressDialog({
     };
     try {
       if (editing && form.id) {
-        await update.mutateAsync({ addressId: form.id, request });
+        await update.mutateAsync({addressId: form.id, request});
       } else {
         await create.mutateAsync(request);
       }
@@ -601,13 +527,7 @@ function AddressDialog({
           <h2 id="address-dialog-title" className="text-lg font-semibold">
             {editing ? t("editAddress") : t("addAddress")}
           </h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            disabled={pending}
-            aria-label={t("close")}
-          >
+          <Button variant="ghost" size="icon" onClick={onClose} disabled={pending} aria-label={t("close")}>
             <X className="size-4" />
           </Button>
         </div>
@@ -616,14 +536,14 @@ function AddressDialog({
             id="recipient-name"
             label={t("recipientName")}
             value={form.recipientName}
-            onChange={(value) => setForm((current) => ({ ...current, recipientName: value }))}
+            onChange={(value) => setForm((current) => ({...current, recipientName: value}))}
             required
           />
           <Field
             id="address-phone"
             label={t("phone")}
             value={form.phone}
-            onChange={(value) => setForm((current) => ({ ...current, phone: value }))}
+            onChange={(value) => setForm((current) => ({...current, phone: value}))}
             required
           />
           <div className="space-y-2">
@@ -631,7 +551,7 @@ function AddressDialog({
             <Textarea
               id="address-line"
               value={form.addressLine}
-              onChange={(event) => setForm((current) => ({ ...current, addressLine: event.target.value }))}
+              onChange={(event) => setForm((current) => ({...current, addressLine: event.target.value}))}
               required
             />
           </div>
@@ -639,7 +559,7 @@ function AddressDialog({
             <input
               type="checkbox"
               checked={Boolean(form.default)}
-              onChange={(event) => setForm((current) => ({ ...current, default: event.target.checked }))}
+              onChange={(event) => setForm((current) => ({...current, default: event.target.checked}))}
             />
             {t("makeDefault")}
           </label>
@@ -658,12 +578,12 @@ function AddressDialog({
   );
 }
 
-function ChangePasswordCard() {
+function ChangePasswordCard({hasPassword}: {hasPassword: boolean}) {
   const t = useTranslations("account");
   const common = useTranslations("common");
   const change = useChangePassword();
   const confirm = useVerifyPasswordChange();
-  const [values, setValues] = useState({ currentPassword: "", newPassword: "" });
+  const [values, setValues] = useState({currentPassword: "", newPassword: ""});
   const [otp, setOtp] = useState("");
   const passwordReady = /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(values.newPassword);
   const awaitingOtp = change.isSuccess && !confirm.isSuccess;
@@ -672,17 +592,17 @@ function ChangePasswordCard() {
     event.preventDefault();
     confirm.reset();
     setOtp("");
-    await change.mutateAsync(values).catch(() => undefined);
+    await change.mutateAsync(hasPassword ? values : {newPassword: values.newPassword}).catch(() => undefined);
   }
 
   async function submitOtp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
-      await confirm.mutateAsync({ otp });
+      await confirm.mutateAsync({otp});
     } catch {
       return;
     }
-    setValues({ currentPassword: "", newPassword: "" });
+    setValues({currentPassword: "", newPassword: ""});
     setOtp("");
     change.reset();
   }
@@ -691,11 +611,11 @@ function ChangePasswordCard() {
     <Card>
       <CardHeader>
         <CardTitle>{t("changePassword")}</CardTitle>
-        <CardDescription>{t("changePasswordDescription")}</CardDescription>
+        <CardDescription>{hasPassword ? t("changePasswordDescription") : t("setPasswordDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         {awaitingOtp ? (
-          <form className="space-y-4" onSubmit={(event) => void submitOtp(event)}>
+          <form method="post" className="space-y-4" onSubmit={(event) => void submitOtp(event)}>
             <p className="text-sm text-emerald-700">{t("otpSent")}</p>
             <Field
               id="change-otp"
@@ -715,27 +635,29 @@ function ChangePasswordCard() {
             </div>
           </form>
         ) : (
-          <form className="space-y-4" onSubmit={(event) => void requestOtp(event)}>
-            <Field
-              id="old-password"
-              label={t("oldPassword")}
-              type="password"
-              value={values.currentPassword}
-              onChange={(value) => setValues((current) => ({ ...current, currentPassword: value }))}
-              required
-            />
+          <form method="post" className="space-y-4" onSubmit={(event) => void requestOtp(event)}>
+            {hasPassword ? (
+              <Field
+                id="old-password"
+                label={t("oldPassword")}
+                type="password"
+                value={values.currentPassword}
+                onChange={(value) => setValues((current) => ({...current, currentPassword: value}))}
+                required
+              />
+            ) : null}
             <Field
               id="new-password-account"
               label={t("newPassword")}
               type="password"
               value={values.newPassword}
-              onChange={(value) => setValues((current) => ({ ...current, newPassword: value }))}
+              onChange={(value) => setValues((current) => ({...current, newPassword: value}))}
               required
             />
             <p className="text-xs leading-5 text-muted-foreground">{t("passwordHint")}</p>
             {change.isError ? <ErrorMessage error={change.error} /> : null}
             {confirm.isSuccess ? <p className="text-sm text-emerald-700">{t("passwordChanged")}</p> : null}
-            <Button type="submit" disabled={change.isPending || !values.currentPassword || !passwordReady}>
+            <Button type="submit" disabled={change.isPending || (hasPassword && !values.currentPassword) || !passwordReady}>
               {change.isPending ? common("loading") : t("sendOtp")}
             </Button>
           </form>

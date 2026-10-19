@@ -1,8 +1,6 @@
 import {z} from "zod";
 
-import {
-  CHAT_STREAM_EVENT_VALUES,
-} from "@/lib/domain/assistant-enums";
+import {CHAT_STREAM_EVENT_VALUES} from "@/lib/domain/assistant-enums";
 
 export const productCardStreamSchema = z
   .object({

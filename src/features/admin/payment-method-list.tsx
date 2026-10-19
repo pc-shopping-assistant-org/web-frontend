@@ -41,14 +41,18 @@ export function PaymentMethodListPage() {
               <tr key={method.id ?? index} className="border-t transition hover:bg-muted/20">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><CreditCard className="size-4" /></span>
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <CreditCard className="size-4" />
+                    </span>
                     <span className="font-medium">{method.name ?? method.code ?? "—"}</span>
                   </div>
                 </td>
                 <td className="px-4 py-3">
                   <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">{method.code ?? "—"}</span>
                 </td>
-                <td className="px-4 py-3"><StatusBadge status={method.status} /></td>
+                <td className="px-4 py-3">
+                  <StatusBadge status={method.status} />
+                </td>
               </tr>
             ))}
           </DataTable>

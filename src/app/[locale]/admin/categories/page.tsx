@@ -1,3 +1,5 @@
 import {CategoryManagementRouteClient} from "../admin-route-client";
 
-export default function AdminCategoriesRoute() { return <CategoryManagementRouteClient />; }
+export default function AdminCategoriesRoute() {
+  return <CategoryManagementRouteClient />;
+}

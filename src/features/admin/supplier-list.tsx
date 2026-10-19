@@ -49,12 +49,21 @@ export function SupplierListPage() {
         className="xl:grid-cols-[minmax(0,1fr)_14rem]"
       >
         <FilterField label={t("search")}>
-          <Input aria-label={t("searchSuppliers")} placeholder={t("searchSuppliers")} value={draft.keyword} onChange={(event) => setDraft((current) => ({...current, keyword: event.target.value}))} />
+          <Input
+            aria-label={t("searchSuppliers")}
+            placeholder={t("searchSuppliers")}
+            value={draft.keyword}
+            onChange={(event) => setDraft((current) => ({...current, keyword: event.target.value}))}
+          />
         </FilterField>
         <FilterField label={t("status")}>
           <Select value={draft.status} onChange={(event) => setDraft((current) => ({...current, status: event.target.value}))}>
             <option value="">{t("allStatuses")}</option>
-            {[ResourceStatus.Active, ResourceStatus.Inactive].map((status) => <option key={status} value={status}>{t(`statusValues.${status}`)}</option>)}
+            {[ResourceStatus.Active, ResourceStatus.Inactive].map((status) => (
+              <option key={status} value={status}>
+                {t(`statusValues.${status}`)}
+              </option>
+            ))}
           </Select>
         </FilterField>
       </FilterPanel>
@@ -78,11 +87,19 @@ export function SupplierListPage() {
             {items.map((supplier) => (
               <tr key={supplier.id} className="border-t transition hover:bg-muted/20">
                 <td className="px-4 py-3">
-                  {supplier.id ? <Link href={`/admin/suppliers/${supplier.id}`} className="font-medium hover:text-primary hover:underline">{supplier.name ?? "—"}</Link> : <span className="font-medium">{supplier.name ?? "—"}</span>}
+                  {supplier.id ? (
+                    <Link href={`/admin/suppliers/${supplier.id}`} className="font-medium hover:text-primary hover:underline">
+                      {supplier.name ?? "—"}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{supplier.name ?? "—"}</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-muted-foreground">{supplier.email ?? "—"}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{supplier.phone ?? "—"}</td>
-                <td className="px-4 py-3"><StatusBadge status={supplier.status} /></td>
+                <td className="px-4 py-3">
+                  <StatusBadge status={supplier.status} />
+                </td>
               </tr>
             ))}
           </DataTable>
@@ -90,7 +107,14 @@ export function SupplierListPage() {
         {page && items.length > 0 && (page.hasPrev || page.hasNext) ? (
           <ListFooter
             summary={t("showingItems", {count: items.length})}
-            pager={<AdminPagination hasPrev={Boolean(page.hasPrev)} hasNext={Boolean(page.hasNext)} onPrev={() => setCursor(page.prevCursor)} onNext={() => setCursor(page.nextCursor)} />}
+            pager={
+              <AdminPagination
+                hasPrev={Boolean(page.hasPrev)}
+                hasNext={Boolean(page.hasNext)}
+                onPrev={() => setCursor(page.prevCursor)}
+                onNext={() => setCursor(page.nextCursor)}
+              />
+            }
           />
         ) : null}
       </Card>

@@ -2,7 +2,17 @@
 
 import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
-import {activateEmployee, createEmployee, deactivateEmployee, deleteEmployee, getEmployee, getEmployees, lockEmployee, updateEmployee, type EmployeeFilters} from "./api";
+import {
+  activateEmployee,
+  createEmployee,
+  deactivateEmployee,
+  deleteEmployee,
+  getEmployee,
+  getEmployees,
+  lockEmployee,
+  updateEmployee,
+  type EmployeeFilters,
+} from "./api";
 import type {UpdateEmployeeRequest} from "./contracts/requests";
 
 export const employeeKeys = {

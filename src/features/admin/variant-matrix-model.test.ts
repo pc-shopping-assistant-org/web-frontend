@@ -54,7 +54,10 @@ describe("variant matrix", () => {
     const cell = (sku: string) => ({price: "100", quantity: "1", sku, warranty: "12"});
     expect(validateMatrix(state([group("c", "Màu", "Đỏ")], {c0: cell("  ")}))).toEqual({code: "cells", count: 1});
     expect(validateMatrix(state([group("c", "Màu", "Đỏ", "Vàng")], {c0: cell("a-1"), c1: cell("A-1")}))).toEqual({code: "duplicateSku"});
-    expect(validateMatrix({...emptyMatrix(), single: {price: "5", quantity: "0", sku: "", warranty: "12"}})).toEqual({code: "cells", count: 1});
+    expect(validateMatrix({...emptyMatrix(), single: {price: "5", quantity: "0", sku: "", warranty: "12"}})).toEqual({
+      code: "cells",
+      count: 1,
+    });
   });
 
   it("wants the warranty to be a whole number of months, at least 1", () => {
@@ -66,7 +69,16 @@ describe("variant matrix", () => {
   });
 
   it("sends the model and barcode when typed, leaves them out when empty, and rejects a barcode used twice", () => {
-    const cell = (barcode: string) => ({price: "1", quantity: "1", sku: barcode || "S", warranty: "12", model: " M1 ", barcode, releaseAt: barcode ? "2026-03-01" : "", description: barcode ? " Hàng mới " : ""});
+    const cell = (barcode: string) => ({
+      price: "1",
+      quantity: "1",
+      sku: barcode || "S",
+      warranty: "12",
+      model: " M1 ",
+      barcode,
+      releaseAt: barcode ? "2026-03-01" : "",
+      description: barcode ? " Hàng mới " : "",
+    });
     const two = (a: string, b: string) => state([group("c", "Màu", "Đỏ", "Vàng")], {c0: cell(a), c1: {...cell(b), sku: "S2"}});
     expect(validateMatrix(two("123", "123"))).toEqual({code: "duplicateBarcode"});
     expect(validateMatrix(two("", ""))).toBeNull();
@@ -78,9 +90,17 @@ describe("variant matrix", () => {
   });
 
   it("builds a request per row with the options and the SKU as typed", () => {
-    const built = buildVariantRequests(state([group("c", "Màu", "Đỏ")], {c0: {price: "100", quantity: "3", sku: " AO-DO ", warranty: "24"}}));
+    const built = buildVariantRequests(
+      state([group("c", "Màu", "Đỏ")], {c0: {price: "100", quantity: "3", sku: " AO-DO ", warranty: "24"}}),
+    );
     expect(built).toHaveLength(1);
-    expect(built[0].request).toMatchObject({price: 100, quantity: 3, sku: "AO-DO", warrantyMonths: 24, options: [{name: "Màu", value: "Đỏ"}]});
+    expect(built[0].request).toMatchObject({
+      price: 100,
+      quantity: 3,
+      sku: "AO-DO",
+      warrantyMonths: 24,
+      options: [{name: "Màu", value: "Đỏ"}],
+    });
   });
 
   it("makes one variant without options from the single price, or none when it is empty", () => {

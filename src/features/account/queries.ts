@@ -26,7 +26,11 @@ export function useCreateAddress() {
 
 export function useUpdateAddress() {
   const queryClient = useQueryClient();
-  return useMutation({mutationFn: ({addressId, request}: {addressId: string; request: Parameters<typeof updateAddress>[1]}) => updateAddress(addressId, request), onSuccess: invalidate(queryClient)});
+  return useMutation({
+    mutationFn: ({addressId, request}: {addressId: string; request: Parameters<typeof updateAddress>[1]}) =>
+      updateAddress(addressId, request),
+    onSuccess: invalidate(queryClient),
+  });
 }
 
 export function useSetDefaultAddress() {

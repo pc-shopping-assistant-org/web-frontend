@@ -2,7 +2,20 @@
 
 import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 
-import {createProductReview, getBrands, getCategories, getCategorySpecLabels, getMyProductReviews, getOrderLineProduct, getReviewedOrderItems, getProductBySlug, getProductReviews, listProducts, updateProductReview, type ProductFilters} from "./api";
+import {
+  createProductReview,
+  getBrands,
+  getCategories,
+  getCategorySpecLabels,
+  getMyProductReviews,
+  getOrderLineProduct,
+  getReviewedOrderItems,
+  getProductBySlug,
+  getProductReviews,
+  listProducts,
+  updateProductReview,
+  type ProductFilters,
+} from "./api";
 
 export const catalogKeys = {
   all: ["catalog"] as const,
@@ -14,10 +27,7 @@ export const catalogKeys = {
   myReviews: (productId: string) => ["catalog", "reviews", productId, "mine"] as const,
 };
 
-export function useProducts(
-  filters: ProductFilters = {},
-  options: {enabled?: boolean} = {},
-) {
+export function useProducts(filters: ProductFilters = {}, options: {enabled?: boolean} = {}) {
   return useQuery({
     queryKey: catalogKeys.products(filters),
     queryFn: () => listProducts(filters),
@@ -67,19 +77,25 @@ function useReviewMutation<TVariables extends {productId: string}, TResult>(muta
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
-    onSettled: (_result, _error, variables) => Promise.all([
-      queryClient.invalidateQueries({queryKey: ["catalog", "reviews", variables.productId]}),
-      queryClient.invalidateQueries({queryKey: ["catalog", "reviewed-items"]}),
-    ]),
+    onSettled: (_result, _error, variables) =>
+      Promise.all([
+        queryClient.invalidateQueries({queryKey: ["catalog", "reviews", variables.productId]}),
+        queryClient.invalidateQueries({queryKey: ["catalog", "reviewed-items"]}),
+      ]),
   });
 }
 
 export function useCreateProductReview() {
-  return useReviewMutation(({productId, request}: {productId: string; request: Parameters<typeof createProductReview>[1]}) => createProductReview(productId, request));
+  return useReviewMutation(({productId, request}: {productId: string; request: Parameters<typeof createProductReview>[1]}) =>
+    createProductReview(productId, request),
+  );
 }
 
 export function useUpdateProductReview() {
-  return useReviewMutation(({productId, reviewId, request}: {productId: string; reviewId: string; request: Parameters<typeof updateProductReview>[2]}) => updateProductReview(productId, reviewId, request));
+  return useReviewMutation(
+    ({productId, reviewId, request}: {productId: string; reviewId: string; request: Parameters<typeof updateProductReview>[2]}) =>
+      updateProductReview(productId, reviewId, request),
+  );
 }
 
 /** The lines of a completed order that the customer has reviewed already; pass no ids while the order is not completed. */

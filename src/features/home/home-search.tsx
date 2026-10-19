@@ -23,8 +23,13 @@ export function HomeSearch() {
     <form className="space-y-2" onSubmit={submit}>
       <div className="flex flex-col gap-1.5 rounded-2xl border bg-background p-1.5 shadow-lg shadow-primary/5 sm:flex-row">
         <div className="relative min-w-0 flex-1">
-          <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
-          <label className="sr-only" htmlFor="home-product-search">{t("searchLabel")}</label>
+          <IconSearch
+            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <label className="sr-only" htmlFor="home-product-search">
+            {t("searchLabel")}
+          </label>
           <Input
             id="home-product-search"
             value={term}

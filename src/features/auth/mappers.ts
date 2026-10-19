@@ -20,6 +20,7 @@ export function mapUserProfile(dto: UserSummaryDto): UserProfile {
     gender: dto.gender ?? undefined,
     avatarFileId: dto.avatarFileId ?? undefined,
     avatarUrl: dto.avatarUrl ?? undefined,
+    hasPassword: dto.hasPassword ?? true,
   };
 }
 

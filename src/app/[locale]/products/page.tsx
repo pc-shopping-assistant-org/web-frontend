@@ -6,7 +6,7 @@ export const metadata: Metadata = {title: "Products"};
 
 export default async function ProductsPage({searchParams}: {searchParams: Promise<Record<string, string | string[] | undefined>>}) {
   const params = await searchParams;
-  const value = (key: string) => typeof params[key] === "string" ? params[key] : undefined;
+  const value = (key: string) => (typeof params[key] === "string" ? params[key] : undefined);
   const numberValue = (key: string) => {
     const raw = value(key);
     if (!raw || !/^\d+$/.test(raw)) return undefined;

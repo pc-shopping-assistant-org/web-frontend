@@ -7,22 +7,44 @@ afterEach(() => vi.restoreAllMocks());
 const ID = "00000000-0000-4000-8000-000000000001";
 
 function stubFetch(payload: unknown) {
-  const fetchMock = vi.fn().mockImplementation(async () =>
-    new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {status: 200, headers: {"content-type": "application/json"}}),
-  );
+  const fetchMock = vi
+    .fn()
+    .mockImplementation(
+      async () =>
+        new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {
+          status: 200,
+          headers: {"content-type": "application/json"},
+        }),
+    );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 
 const customer = {
-  accountId: ID, email: "cust1@pcshop.local", phone: "0900000011", status: "ACTIVE", firstName: "An", lastName: "Nguyen",
-  gender: "FEMALE", birthday: null, avatarFileId: null, avatarUrl: null, createdAt: "2026-10-08T00:00:00Z",
+  accountId: ID,
+  email: "cust1@pcshop.local",
+  phone: "0900000011",
+  status: "ACTIVE",
+  firstName: "An",
+  lastName: "Nguyen",
+  gender: "FEMALE",
+  birthday: null,
+  avatarFileId: null,
+  avatarUrl: null,
+  createdAt: "2026-10-08T00:00:00Z",
 };
 
 describe("customer api", () => {
   it("lists customers by page with the filters the employee typed, and drops the empty ones", async () => {
     const fetchMock = stubFetch({content: [customer], page: 1, size: 20, totalElements: 41, totalPages: 3, last: false});
-    const page = await getCustomers({page: 1, size: 20, keyword: "an", status: "LOCKED", createdFrom: "2026-10-01T00:00:00Z", createdTo: "2026-10-09T00:00:00Z"});
+    const page = await getCustomers({
+      page: 1,
+      size: 20,
+      keyword: "an",
+      status: "LOCKED",
+      createdFrom: "2026-10-01T00:00:00Z",
+      createdTo: "2026-10-09T00:00:00Z",
+    });
     expect(fetchMock.mock.calls[0][0]).toBe(
       "/api/backend/identity-service/customers?page=1&size=20&keyword=an&status=LOCKED&createdFrom=2026-10-01T00%3A00%3A00Z&createdTo=2026-10-09T00%3A00%3A00Z",
     );
@@ -34,7 +56,10 @@ describe("customer api", () => {
   });
 
   it("reads one customer with the saved addresses", async () => {
-    const fetchMock = stubFetch({...customer, addresses: [{id: "a1", recipientName: "An", phone: "0900000011", addressLine: "1 Le Loi", isDefault: true}]});
+    const fetchMock = stubFetch({
+      ...customer,
+      addresses: [{id: "a1", recipientName: "An", phone: "0900000011", addressLine: "1 Le Loi", isDefault: true}],
+    });
     expect(await getCustomer(ID)).toMatchObject({accountId: ID, addresses: [{id: "a1", addressLine: "1 Le Loi", isDefault: true}]});
     expect(fetchMock.mock.calls[0][0]).toBe(`/api/backend/identity-service/customers/${ID}`);
   });
@@ -47,6 +72,9 @@ describe("customer api", () => {
   it("locks with a POST", async () => {
     const fetchMock = stubFetch({...customer, status: "LOCKED"});
     expect(await lockCustomer(ID)).toMatchObject({status: "LOCKED"});
-    expect(fetchMock.mock.calls[0]).toEqual([`/api/backend/identity-service/customers/${ID}/lock`, expect.objectContaining({method: "POST"})]);
+    expect(fetchMock.mock.calls[0]).toEqual([
+      `/api/backend/identity-service/customers/${ID}/lock`,
+      expect.objectContaining({method: "POST"}),
+    ]);
   });
 });

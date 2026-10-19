@@ -70,7 +70,4 @@ export enum ApiMessageKey {
   UNKNOWN = "UNKNOWN",
 }
 
-export const API_MESSAGE_KEY_VALUES = Object.values(ApiMessageKey) as [
-  ApiMessageKey,
-  ...ApiMessageKey[],
-];
+export const API_MESSAGE_KEY_VALUES = Object.values(ApiMessageKey) as [ApiMessageKey, ...ApiMessageKey[]];

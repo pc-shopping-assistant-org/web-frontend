@@ -48,19 +48,18 @@ export type OrderFilters = {
 
 export async function createOrder(request: CreateOrderRequest) {
   const payload = parseRequest(createOrderRequestSchema, request);
-  return mapOrderDetail(await backendFetch<OrderDetailDto>(`${ORDER}/orders`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }));
+  return mapOrderDetail(
+    await backendFetch<OrderDetailDto>(`${ORDER}/orders`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  );
 }
 
 export async function getOrders(filters: OrderFilters = {}) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters))
-    if (value !== undefined && value !== "") params.set(key, String(value));
-  return mapOrderSummaryPage(await backendFetch<OrderSummaryPageDto>(
-    `${ORDER}/orders${params.size ? `?${params.toString()}` : ""}`,
-  ));
+  for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value));
+  return mapOrderSummaryPage(await backendFetch<OrderSummaryPageDto>(`${ORDER}/orders${params.size ? `?${params.toString()}` : ""}`));
 }
 
 export async function getOrder(orderId: string) {
@@ -90,11 +89,8 @@ export type AdminOrderFilters = {
 /** Every customer's orders, for the shop. */
 export async function getAdminOrders(filters: AdminOrderFilters = {}) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters))
-    if (value !== undefined && value !== "") params.set(key, String(value));
-  return mapAdminOrderPage(await backendFetch<AdminOrderPageDto>(
-    `${ORDER}/orders/admin${params.size ? `?${params.toString()}` : ""}`,
-  ));
+  for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value));
+  return mapAdminOrderPage(await backendFetch<AdminOrderPageDto>(`${ORDER}/orders/admin${params.size ? `?${params.toString()}` : ""}`));
 }
 
 export type AdminInvoiceFilters = {
@@ -108,11 +104,10 @@ export type AdminInvoiceFilters = {
 /** The invoices of the shop: completed orders, the latest first. */
 export async function getAdminInvoices(filters: AdminInvoiceFilters = {}) {
   const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(filters))
-    if (value !== undefined && value !== "") params.set(key, String(value));
-  return mapAdminInvoicePage(await backendFetch<AdminInvoicePageDto>(
-    `${ORDER}/orders/admin/invoices${params.size ? `?${params.toString()}` : ""}`,
-  ));
+  for (const [key, value] of Object.entries(filters)) if (value !== undefined && value !== "") params.set(key, String(value));
+  return mapAdminInvoicePage(
+    await backendFetch<AdminInvoicePageDto>(`${ORDER}/orders/admin/invoices${params.size ? `?${params.toString()}` : ""}`),
+  );
 }
 
 /** An invoice is the order it belongs to, so it is read by the id of that order. */
@@ -161,14 +156,21 @@ export async function createVnpayUrl(paymentId: string) {
 /** What became of the payment, from the query string VNPAY sent the customer back with (the backend checks its signature). */
 export async function getVnpayResult(query: string): Promise<VnpayResult> {
   const response = await backendFetch<VnpayResultDto>(`${PAYMENT}/payments/vnpay/return?${query}`);
-  return {paymentId: response.paymentId, orderId: response.orderId, result: response.result as VnpayResult["result"], amount: response.amount ?? 0};
+  return {
+    paymentId: response.paymentId,
+    orderId: response.orderId,
+    result: response.result as VnpayResult["result"],
+    amount: response.amount ?? 0,
+  };
 }
 
 /** Prices a cart with the promotion-service, the same call the order makes when it is placed. */
 export async function previewDiscounts(request: DiscountPreviewRequest) {
   const payload = parseRequest(discountPreviewRequestSchema, request);
-  return mapDiscountPreview(await backendFetch<DiscountPreviewDto>(`${PROMOTION}/discounts/apply`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  }));
+  return mapDiscountPreview(
+    await backendFetch<DiscountPreviewDto>(`${PROMOTION}/discounts/apply`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  );
 }

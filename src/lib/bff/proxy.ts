@@ -1,12 +1,7 @@
 import {cookies} from "next/headers";
 import {NextResponse} from "next/server";
 
-import {
-  ACCESS_TOKEN_COOKIE,
-  REFRESH_TOKEN_COOKIE,
-  accessTokenCookieOptions,
-  refreshTokenCookieOptions,
-} from "@/lib/auth/cookies";
+import {ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE, accessTokenCookieOptions, refreshTokenCookieOptions} from "@/lib/auth/cookies";
 import {getServerEnv} from "@/lib/config/env";
 import {envelope, normalizeMessage} from "@/lib/api/envelope";
 import {STATIC_MESSAGE_KEYS, type ApiError, type ApiResponse} from "@/lib/api/contracts/common";
@@ -239,7 +234,13 @@ export async function handleBffRequest(request: Request, service: BffService, pa
 
   let result: UpstreamResult;
   try {
-    result = await requestUpstream(request, service, upstreamPath, requestBody, AUTH_TOKEN_PATHS.has(pathWithoutQuery) ? undefined : accessToken);
+    result = await requestUpstream(
+      request,
+      service,
+      upstreamPath,
+      requestBody,
+      AUTH_TOKEN_PATHS.has(pathWithoutQuery) ? undefined : accessToken,
+    );
   } catch {
     return NextResponse.json(envelope(null, serviceUnavailableKey(service), [{code: "UPSTREAM_UNREACHABLE"}]), {status: 503});
   }

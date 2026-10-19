@@ -85,9 +85,19 @@ export function PaymentListPage() {
         tabs={[{value: "", label: tl("all")}, ...Object.values(PaymentStatus).map((value) => ({value, label: t(`statusValues.${value}`)}))]}
       />
 
-      <FilterPanel onSubmit={search} onReset={reset} error={rangeError ? tl("rangeError") : undefined} className="xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_11rem_11rem]">
+      <FilterPanel
+        onSubmit={search}
+        onReset={reset}
+        error={rangeError ? tl("rangeError") : undefined}
+        className="xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_11rem_11rem]"
+      >
         <FilterField label={tl("transaction")}>
-          <Input aria-label={t("searchPayments")} placeholder={t("searchPayments")} value={draft.transactionCode} onChange={(event) => set("transactionCode", event.target.value)} />
+          <Input
+            aria-label={t("searchPayments")}
+            placeholder={t("searchPayments")}
+            value={draft.transactionCode}
+            onChange={(event) => set("transactionCode", event.target.value)}
+          />
         </FilterField>
         <FilterField label={t("customerName")}>
           <Input value={draft.customerName} onChange={(event) => set("customerName", event.target.value)} />
@@ -101,7 +111,11 @@ export function PaymentListPage() {
       </FilterPanel>
 
       <Card className="p-4 sm:p-5">
-        {actionError ? <div className="mb-4"><ErrorMessage error={actionError} /></div> : null}
+        {actionError ? (
+          <div className="mb-4">
+            <ErrorMessage error={actionError} />
+          </div>
+        ) : null}
         {query.isPending ? (
           <Skeleton className="h-64 rounded-xl" />
         ) : query.isError ? (
@@ -134,8 +148,22 @@ export function PaymentListPage() {
         )}
         {page && items.length > 0 ? (
           <ListFooter
-            summary={<>{t("totalPayments", {count: page.totalElements})}{page.totalPages > 1 ? ` · ${t("pageOf", {page: page.page + 1, total: page.totalPages})}` : ""}</>}
-            pager={page.totalPages > 1 ? <AdminPagination hasPrev={page.page > 0} hasNext={!page.last} onPrev={() => go(pageNumber - 1)} onNext={() => go(pageNumber + 1)} /> : undefined}
+            summary={
+              <>
+                {t("totalPayments", {count: page.totalElements})}
+                {page.totalPages > 1 ? ` · ${t("pageOf", {page: page.page + 1, total: page.totalPages})}` : ""}
+              </>
+            }
+            pager={
+              page.totalPages > 1 ? (
+                <AdminPagination
+                  hasPrev={page.page > 0}
+                  hasNext={!page.last}
+                  onPrev={() => go(pageNumber - 1)}
+                  onNext={() => go(pageNumber + 1)}
+                />
+              ) : undefined
+            }
           />
         ) : null}
       </Card>
@@ -147,7 +175,17 @@ export function PaymentListPage() {
  * The two changes the shop can make: cash collected on delivery, and a paid payment given back.
  * A refused change refreshes the row, which then loses its button and its dialog, so the refusal goes to the page.
  */
-function PaymentRow({payment, locale, method, onError}: {payment: AdminPayment; locale: string; method?: AdminPaymentMethod; onError: (error: unknown) => void}) {
+function PaymentRow({
+  payment,
+  locale,
+  method,
+  onError,
+}: {
+  payment: AdminPayment;
+  locale: string;
+  method?: AdminPaymentMethod;
+  onError: (error: unknown) => void;
+}) {
   const t = useTranslations("admin");
   const mutation = useUpdateAdminPaymentStatus();
   const change = (status: PaymentStatus) => {
@@ -157,7 +195,8 @@ function PaymentRow({payment, locale, method, onError}: {payment: AdminPayment; 
       throw error;
     });
   };
-  const dateTime = (value: string) => new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-US", {dateStyle: "short", timeStyle: "short"}).format(new Date(value));
+  const dateTime = (value: string) =>
+    new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : "en-US", {dateStyle: "short", timeStyle: "short"}).format(new Date(value));
   const canCollect = payment.status === PaymentStatus.Pending && method?.code === PaymentMethodCode.Cod;
   const canRefund = payment.status === PaymentStatus.Paid;
   const when = payment.paidAt ?? payment.createdAt;
@@ -169,7 +208,9 @@ function PaymentRow({payment, locale, method, onError}: {payment: AdminPayment; 
         {payment.customerId ? <p className="mt-0.5 text-xs text-muted-foreground">{shortId(payment.customerId)}</p> : null}
       </td>
       <td className="whitespace-nowrap px-4 py-3">
-        <Link href={`/admin/orders/${payment.orderId}`} className="font-medium hover:text-primary hover:underline">{shortId(payment.orderId)}</Link>
+        <Link href={`/admin/orders/${payment.orderId}`} className="font-medium hover:text-primary hover:underline">
+          {shortId(payment.orderId)}
+        </Link>
       </td>
       <td className="px-4 py-3 text-muted-foreground">{method?.name ?? "—"}</td>
       <td className="whitespace-nowrap px-4 py-3 text-right font-medium">{formatMoney(payment.amount, locale)}</td>
@@ -178,7 +219,9 @@ function PaymentRow({payment, locale, method, onError}: {payment: AdminPayment; 
         {payment.paidAt ? <p className="mt-0.5 text-xs">{t("paidAt")}</p> : null}
         {payment.updatedBy ? <p className="mt-0.5 text-xs">{t("changedByStaff")}</p> : null}
       </td>
-      <td className="px-4 py-3"><StatusBadge status={payment.status} /></td>
+      <td className="px-4 py-3">
+        <StatusBadge status={payment.status} />
+      </td>
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           {canCollect ? (

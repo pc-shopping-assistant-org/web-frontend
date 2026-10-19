@@ -83,7 +83,9 @@ export function HomeStorefront() {
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="max-w-2xl space-y-1.5">
               <p className="eyebrow">{t("featuredEyebrow")}</p>
-              <h2 id="featured-products-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("catalogTitle")}</h2>
+              <h2 id="featured-products-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                {t("catalogTitle")}
+              </h2>
               <p className="text-sm leading-6 text-muted-foreground">{t("featuredDescription")}</p>
             </div>
             <Link href="/products" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline">
@@ -91,11 +93,7 @@ export function HomeStorefront() {
               <IconArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </div>
-          <FeaturedProducts
-            products={featuredProducts}
-            pending={products.isPending}
-            unavailable={products.isError}
-          />
+          <FeaturedProducts products={featuredProducts} pending={products.isPending} unavailable={products.isError} />
         </section>
 
         <ShopByGoal />
@@ -120,15 +118,17 @@ function HeroCategoryChips({categories, counts, pending}: {categories: HomeCateg
       {pending
         ? Array.from({length: 5}, (_, index) => <Skeleton key={index} className="h-8 w-28 rounded-full" />)
         : categories.map((category) => (
-          <Link
-            key={category.id}
-            href={`/products?categoryId=${encodeURIComponent(category.id)}`}
-            className="inline-flex max-w-48 items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
-          >
-            <span className="truncate" title={category.name}>{category.name}</span>
-            <span className="tabular-nums text-muted-foreground">{counts.get(category.id) ?? 0}</span>
-          </Link>
-        ))}
+            <Link
+              key={category.id}
+              href={`/products?categoryId=${encodeURIComponent(category.id)}`}
+              className="inline-flex max-w-48 items-center gap-1.5 rounded-full border border-border/70 bg-background px-3 py-1.5 text-xs font-medium transition hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+            >
+              <span className="truncate" title={category.name}>
+                {category.name}
+              </span>
+              <span className="tabular-nums text-muted-foreground">{counts.get(category.id) ?? 0}</span>
+            </Link>
+          ))}
     </div>
   );
 }
@@ -136,7 +136,12 @@ function HeroCategoryChips({categories, counts, pending}: {categories: HomeCateg
 function ShopByGoal() {
   const t = useTranslations("home");
   const goals = [
-    {key: "gaming", href: "/products?keyword=gaming", icon: IconDeviceGamepad2, tone: "from-violet-500/15 to-fuchsia-500/5 text-violet-700"},
+    {
+      key: "gaming",
+      href: "/products?keyword=gaming",
+      icon: IconDeviceGamepad2,
+      tone: "from-violet-500/15 to-fuchsia-500/5 text-violet-700",
+    },
     {key: "work", href: "/products?keyword=laptop", icon: IconDeviceLaptop, tone: "from-sky-500/15 to-cyan-500/5 text-sky-700"},
     {key: "creator", href: "/products?keyword=creator", icon: IconDesk, tone: "from-amber-500/15 to-orange-500/5 text-amber-700"},
     {key: "build", href: "/assistant", icon: IconCpu, tone: "from-emerald-500/15 to-teal-500/5 text-emerald-700"},
@@ -147,7 +152,9 @@ function ShopByGoal() {
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="eyebrow">{t("goalEyebrow")}</p>
-          <h2 id="shop-by-goal-title" className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">{t("goalTitle")}</h2>
+          <h2 id="shop-by-goal-title" className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">
+            {t("goalTitle")}
+          </h2>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">{t("goalDescription")}</p>
         </div>
         <Link href="/assistant" className="inline-flex shrink-0 items-center gap-1 text-sm font-semibold text-primary hover:underline">
@@ -158,7 +165,12 @@ function ShopByGoal() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {goals.map(({key, href, icon: Icon, tone}) => (
           <Link key={key} href={href} className="group">
-            <Card className={cn("h-full overflow-hidden border-border/70 bg-gradient-to-br transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md", tone)}>
+            <Card
+              className={cn(
+                "h-full overflow-hidden border-border/70 bg-gradient-to-br transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md",
+                tone,
+              )}
+            >
               <CardContent className="flex min-h-32 items-center gap-4 p-5">
                 <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-background/80 shadow-sm transition group-hover:scale-105">
                   <Icon className="size-6" strokeWidth={1.7} aria-hidden="true" />
@@ -166,7 +178,10 @@ function ShopByGoal() {
                 <span className="min-w-0">
                   <span className="block text-base font-semibold text-foreground">{t(`goal.${key}.title`)}</span>
                   <span className="mt-1 block text-sm leading-5 text-muted-foreground">{t(`goal.${key}.description`)}</span>
-                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">{t("exploreCategory")}<IconArrowUpRight className="size-3.5 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></span>
+                  <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                    {t("exploreCategory")}
+                    <IconArrowUpRight className="size-3.5 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </span>
                 </span>
               </CardContent>
             </Card>
@@ -177,14 +192,25 @@ function ShopByGoal() {
   );
 }
 
-function CategoryMenu({categories, counts, pending, error}: {categories: HomeCategoryNode[]; counts: Map<string, number>; pending: boolean; error: boolean}) {
+function CategoryMenu({
+  categories,
+  counts,
+  pending,
+  error,
+}: {
+  categories: HomeCategoryNode[];
+  counts: Map<string, number>;
+  pending: boolean;
+  error: boolean;
+}) {
   const t = useTranslations("home");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const toggle = (id: string) => setExpanded((current) => {
-    const next = new Set(current);
-    if (!next.delete(id)) next.add(id);
-    return next;
-  });
+  const toggle = (id: string) =>
+    setExpanded((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
 
   return (
     <Card className="h-full rounded-2xl border-border/70 shadow-sm">
@@ -196,13 +222,20 @@ function CategoryMenu({categories, counts, pending, error}: {categories: HomeCat
             </span>
             <h2 className="whitespace-nowrap text-sm font-semibold">{t("categoryMenuTitle")}</h2>
           </div>
-          <Link href="/products" className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10" aria-label={t("browseAllProducts")} title={t("browseAllProducts")}>
+          <Link
+            href="/products"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-primary transition hover:bg-primary/10"
+            aria-label={t("browseAllProducts")}
+            title={t("browseAllProducts")}
+          >
             <IconArrowUpRight className="size-4" aria-hidden="true" />
           </Link>
         </div>
         {pending ? (
           <div className="space-y-2 p-2">
-            {Array.from({length: 5}, (_, index) => <Skeleton key={index} className="h-8" />)}
+            {Array.from({length: 5}, (_, index) => (
+              <Skeleton key={index} className="h-8" />
+            ))}
           </div>
         ) : categories.length > 0 ? (
           <ul className="max-h-[22rem] space-y-0.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
@@ -216,7 +249,9 @@ function CategoryMenu({categories, counts, pending, error}: {categories: HomeCat
                       href={`/products?categoryId=${encodeURIComponent(category.id)}`}
                       className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition group-hover:text-primary"
                     >
-                      <span className="min-w-0 flex-1 truncate font-medium" title={category.name}>{category.name}</span>
+                      <span className="min-w-0 flex-1 truncate font-medium" title={category.name}>
+                        {category.name}
+                      </span>
                       <span className="shrink-0 text-[0.7rem] tabular-nums text-muted-foreground/70">{counts.get(category.id) ?? 0}</span>
                     </Link>
                     {hasChildren ? (
@@ -229,7 +264,9 @@ function CategoryMenu({categories, counts, pending, error}: {categories: HomeCat
                       >
                         <IconChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} aria-hidden="true" />
                       </button>
-                    ) : <span className="mr-1 size-7 shrink-0" aria-hidden="true" />}
+                    ) : (
+                      <span className="mr-1 size-7 shrink-0" aria-hidden="true" />
+                    )}
                   </div>
                   {hasChildren && open ? <CategoryBranch nodes={category.children} counts={counts} /> : null}
                 </li>
@@ -240,7 +277,10 @@ function CategoryMenu({categories, counts, pending, error}: {categories: HomeCat
           <p className="p-2 text-xs leading-5 text-muted-foreground">{error ? t("catalogUnavailable") : t("noCategories")}</p>
         )}
         <div className="mt-2 border-t pt-2">
-          <Link href="/assistant" className="group flex items-center gap-2.5 rounded-xl px-2 py-2 text-sm transition hover:bg-primary/5 hover:text-primary">
+          <Link
+            href="/assistant"
+            className="group flex items-center gap-2.5 rounded-xl px-2 py-2 text-sm transition hover:bg-primary/5 hover:text-primary"
+          >
             <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <IconRobot className="size-4" aria-hidden="true" />
             </span>
@@ -263,7 +303,9 @@ function CategoryBranch({nodes, counts}: {nodes: HomeCategoryNode[]; counts: Map
             href={`/products?categoryId=${encodeURIComponent(node.id)}`}
             className="group flex items-center gap-2 rounded-lg px-2 py-1.5 text-[0.82rem] text-muted-foreground transition hover:bg-primary/5 hover:text-primary"
           >
-            <span className="min-w-0 flex-1 truncate" title={node.name}>{node.name}</span>
+            <span className="min-w-0 flex-1 truncate" title={node.name}>
+              {node.name}
+            </span>
             <span className="shrink-0 text-[0.7rem] tabular-nums text-muted-foreground/70">{counts.get(node.id) ?? 0}</span>
           </Link>
           {node.children.length > 0 ? <CategoryBranch nodes={node.children} counts={counts} /> : null}
@@ -281,9 +323,7 @@ function FeaturedSpotlight({product, pending, unavailable}: {product?: ProductSu
   if (!product) return <CatalogFallback unavailable={unavailable} />;
 
   const name = product.name ?? t("productUnavailable");
-  const slug = product.seoName
-    ? encodeURIComponent(product.seoName)
-    : undefined;
+  const slug = product.seoName ? encodeURIComponent(product.seoName) : undefined;
   const price = product.minPrice ?? product.maxPrice;
   const category = product.categoryName ?? t("catalogTitle");
 
@@ -294,7 +334,9 @@ function FeaturedSpotlight({product, pending, unavailable}: {product?: ProductSu
         <div className="flex min-h-full flex-col justify-between gap-8 py-1">
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="border-white/20 bg-white/10 text-white">{t("featuredBadge")}</Badge>
-            {product.status === ResourceStatus.Active ? <Badge className="border-emerald-300/40 bg-emerald-300/15 text-emerald-100">{t("activeCatalog")}</Badge> : null}
+            {product.status === ResourceStatus.Active ? (
+              <Badge className="border-emerald-300/40 bg-emerald-300/15 text-emerald-100">{t("activeCatalog")}</Badge>
+            ) : null}
           </div>
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/60">{product.brandName ?? category}</p>
@@ -305,9 +347,23 @@ function FeaturedSpotlight({product, pending, unavailable}: {product?: ProductSu
             <div>
               <p className="text-xs text-white/60">{t("from")}</p>
               <p className="text-xl font-semibold tracking-tight sm:text-2xl">{formatMoney(price, locale)}</p>
-              <p className="mt-1 text-xs text-white/60">★ {formatRating(product.ratingAverage)} · {product.reviewCount ?? 0} {t("reviews")}</p>
+              <p className="mt-1 text-xs text-white/60">
+                ★ {formatRating(product.ratingAverage)} · {product.reviewCount ?? 0} {t("reviews")}
+              </p>
             </div>
-            {slug ? <Link href={`/products/${slug}`} prefetch={false} className="inline-flex items-center gap-1 text-sm font-medium text-white underline-offset-4 hover:underline">{t("viewProduct")}<IconArrowUpRight className="size-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" /></Link> : null}
+            {slug ? (
+              <Link
+                href={`/products/${slug}`}
+                prefetch={false}
+                className="inline-flex items-center gap-1 text-sm font-medium text-white underline-offset-4 hover:underline"
+              >
+                {t("viewProduct")}
+                <IconArrowUpRight
+                  className="size-4 transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                  aria-hidden="true"
+                />
+              </Link>
+            ) : null}
           </div>
         </div>
         <div className="relative flex h-full min-h-48 items-center justify-center">
@@ -327,7 +383,12 @@ function CatalogFallback({unavailable = true}: {unavailable?: boolean}) {
     <Card className="flex min-h-44 items-center justify-center rounded-2xl border-dashed shadow-none">
       <CardContent className="space-y-3 p-5 text-center">
         <p className="text-sm text-muted-foreground">{unavailable ? t("catalogUnavailable") : t("noProducts")}</p>
-        <Link href="/products" className="inline-flex h-8 items-center rounded-lg border px-2.5 text-sm font-medium transition hover:bg-muted">{t("browseAllProducts")}</Link>
+        <Link
+          href="/products"
+          className="inline-flex h-8 items-center rounded-lg border px-2.5 text-sm font-medium transition hover:bg-muted"
+        >
+          {t("browseAllProducts")}
+        </Link>
       </CardContent>
     </Card>
   );
@@ -345,7 +406,15 @@ function ProductArtwork({product, large = false}: {product: ProductSummary; larg
   return (
     <div className={`relative flex items-center justify-center ${large ? "size-32 sm:size-40 xl:size-48 2xl:size-52" : "size-14"}`}>
       {product.imageUrl ? (
-        <Image src={product.imageUrl} alt={product.name ?? ""} fill sizes={large ? "240px" : "64px"} priority={large} unoptimized className="object-contain p-1" />
+        <Image
+          src={product.imageUrl}
+          alt={product.name ?? ""}
+          fill
+          sizes={large ? "240px" : "64px"}
+          priority={large}
+          unoptimized
+          className="object-contain p-1"
+        />
       ) : large ? (
         <div className="relative flex size-full items-center justify-center" aria-hidden="true">
           <span className="absolute inset-3 rounded-full bg-cyan-300/20 blur-3xl" />
@@ -397,10 +466,19 @@ function ProductArtwork({product, large = false}: {product: ProductSummary; larg
           </span>
         </div>
       ) : (
-        <div className={`relative flex flex-col items-center justify-center overflow-hidden rounded-3xl border ${large ? "border-white/15 bg-white/10 text-white/75" : "border-primary/10 bg-background/60 text-primary/55"}`} aria-hidden="true">
-          <span className={`pointer-events-none absolute -right-5 -top-6 rounded-full blur-2xl ${large ? "size-24 bg-cyan-300/20" : "size-16 bg-primary/10"}`} />
+        <div
+          className={`relative flex flex-col items-center justify-center overflow-hidden rounded-3xl border ${large ? "border-white/15 bg-white/10 text-white/75" : "border-primary/10 bg-background/60 text-primary/55"}`}
+          aria-hidden="true"
+        >
+          <span
+            className={`pointer-events-none absolute -right-5 -top-6 rounded-full blur-2xl ${large ? "size-24 bg-cyan-300/20" : "size-16 bg-primary/10"}`}
+          />
           <CatalogCategoryIcon categoryName={product.categoryName ?? product.name} className={`relative ${iconClass}`} strokeWidth={1.5} />
-          {large ? <span className="relative mt-2 max-w-32 truncate text-[0.55rem] font-semibold uppercase tracking-[0.16em] text-white/55">{product.categoryName ?? "gearPC"}</span> : null}
+          {large ? (
+            <span className="relative mt-2 max-w-32 truncate text-[0.55rem] font-semibold uppercase tracking-[0.16em] text-white/55">
+              {product.categoryName ?? "gearPC"}
+            </span>
+          ) : null}
         </div>
       )}
     </div>
