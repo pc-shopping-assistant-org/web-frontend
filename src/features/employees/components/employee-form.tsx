@@ -60,6 +60,7 @@ export function EmployeeForm({
   const flag = (name: string) => refused.has(name) ? {"aria-invalid": true, className: "border-destructive"} : {};
 
   return <form
+    method="post"
     className="grid gap-4 sm:grid-cols-2"
     onSubmit={(event) => {
       event.preventDefault();

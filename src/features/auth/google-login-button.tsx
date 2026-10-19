@@ -8,6 +8,7 @@ import {useQuery, useQueryClient} from "@tanstack/react-query";
 
 import {ErrorMessage} from "@/components/ui/error-message";
 import {ApiMessageKey} from "@/lib/domain/message-keys";
+import {cn} from "@/lib/utils";
 import {apiFetch} from "@/lib/api/client";
 import {PUBLIC_CONFIG_PATH, publicConfigKeys, publicConfigSchema} from "@/lib/config/public-config";
 
@@ -46,6 +47,10 @@ declare global {
 }
 
 const GOOGLE_SCRIPT = "https://accounts.google.com/gsi/client";
+// Google draws the button at a fixed pixel width within these limits, so it is sized to the space it is given;
+// the login form is held to the same maximum so the button spans it exactly
+const GOOGLE_BUTTON_MIN_WIDTH = 200;
+const GOOGLE_BUTTON_MAX_WIDTH = 400;
 
 export function GoogleLoginButton({redirectTo, onSuccess}: {redirectTo?: string; onSuccess?: () => void} = {}) {
   const t = useTranslations("auth");
@@ -100,7 +105,7 @@ export function GoogleLoginButton({redirectTo, onSuccess}: {redirectTo?: string;
       type: "standard",
       theme: "outline",
       size: "large",
-      width: 384,
+      width: Math.min(GOOGLE_BUTTON_MAX_WIDTH, Math.max(GOOGLE_BUTTON_MIN_WIDTH, Math.floor(containerRef.current.clientWidth))),
       text: "signin_with",
       shape: "rectangular",
     });
@@ -116,7 +121,7 @@ export function GoogleLoginButton({redirectTo, onSuccess}: {redirectTo?: string;
   return <div className="space-y-4">
     <Script src={GOOGLE_SCRIPT} strategy="afterInteractive" onLoad={() => setScriptReady(true)} onReady={() => setScriptReady(true)} onError={() => setError(new Error(ApiMessageKey.SERVICE_UNAVAILABLE))} />
     <div className="flex items-center gap-3 text-xs uppercase tracking-[0.18em] text-muted-foreground"><span className="h-px flex-1 bg-border" /><span>{t("orContinueWith")}</span><span className="h-px flex-1 bg-border" /></div>
-    <div ref={containerRef} className={pending ? "pointer-events-none opacity-60" : undefined} aria-busy={pending} />
+    <div ref={containerRef} className={cn("flex justify-center", pending && "pointer-events-none opacity-60")} aria-busy={pending} />
     {error ? <ErrorMessage error={error} fallback={ApiMessageKey.SERVICE_UNAVAILABLE} /> : null}
   </div>;
 }

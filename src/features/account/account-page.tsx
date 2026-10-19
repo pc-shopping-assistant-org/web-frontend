@@ -220,12 +220,17 @@ export function AccountPage() {
                   <Label htmlFor="profile-email">{t("email")}</Label>
                   <Input id="profile-email" type="email" value={profile.data?.email ?? ""} readOnly disabled />
                 </div>
-                <Field
-                  id="profile-phone"
-                  label={t("phone")}
-                  value={draft.phone}
-                  onChange={(value) => updateDraft("phone", value)}
-                />
+                <div className="space-y-2">
+                  <Field
+                    id="profile-phone"
+                    label={t("phone")}
+                    value={draft.phone}
+                    onChange={(value) => updateDraft("phone", value)}
+                  />
+                  {profile.data && !profile.data.phone ? (
+                    <p className="text-xs leading-5 text-muted-foreground">{t("phoneMissingHint")}</p>
+                  ) : null}
+                </div>
                 <div className="space-y-2">
                   <Label htmlFor="profile-gender">{t("gender")}</Label>
                   <Select
@@ -290,7 +295,7 @@ export function AccountPage() {
               })
             }
           />
-          <ChangePasswordCard />
+          <ChangePasswordCard hasPassword={profile.data?.hasPassword ?? true} />
         </div>
       </div>
 
@@ -658,7 +663,7 @@ function AddressDialog({
   );
 }
 
-function ChangePasswordCard() {
+function ChangePasswordCard({ hasPassword }: { hasPassword: boolean }) {
   const t = useTranslations("account");
   const common = useTranslations("common");
   const change = useChangePassword();
@@ -672,7 +677,7 @@ function ChangePasswordCard() {
     event.preventDefault();
     confirm.reset();
     setOtp("");
-    await change.mutateAsync(values).catch(() => undefined);
+    await change.mutateAsync(hasPassword ? values : { newPassword: values.newPassword }).catch(() => undefined);
   }
 
   async function submitOtp(event: FormEvent<HTMLFormElement>) {
@@ -691,11 +696,11 @@ function ChangePasswordCard() {
     <Card>
       <CardHeader>
         <CardTitle>{t("changePassword")}</CardTitle>
-        <CardDescription>{t("changePasswordDescription")}</CardDescription>
+        <CardDescription>{hasPassword ? t("changePasswordDescription") : t("setPasswordDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         {awaitingOtp ? (
-          <form className="space-y-4" onSubmit={(event) => void submitOtp(event)}>
+          <form method="post" className="space-y-4" onSubmit={(event) => void submitOtp(event)}>
             <p className="text-sm text-emerald-700">{t("otpSent")}</p>
             <Field
               id="change-otp"
@@ -715,15 +720,17 @@ function ChangePasswordCard() {
             </div>
           </form>
         ) : (
-          <form className="space-y-4" onSubmit={(event) => void requestOtp(event)}>
-            <Field
-              id="old-password"
-              label={t("oldPassword")}
-              type="password"
-              value={values.currentPassword}
-              onChange={(value) => setValues((current) => ({ ...current, currentPassword: value }))}
-              required
-            />
+          <form method="post" className="space-y-4" onSubmit={(event) => void requestOtp(event)}>
+            {hasPassword ? (
+              <Field
+                id="old-password"
+                label={t("oldPassword")}
+                type="password"
+                value={values.currentPassword}
+                onChange={(value) => setValues((current) => ({ ...current, currentPassword: value }))}
+                required
+              />
+            ) : null}
             <Field
               id="new-password-account"
               label={t("newPassword")}
@@ -735,7 +742,7 @@ function ChangePasswordCard() {
             <p className="text-xs leading-5 text-muted-foreground">{t("passwordHint")}</p>
             {change.isError ? <ErrorMessage error={change.error} /> : null}
             {confirm.isSuccess ? <p className="text-sm text-emerald-700">{t("passwordChanged")}</p> : null}
-            <Button type="submit" disabled={change.isPending || !values.currentPassword || !passwordReady}>
+            <Button type="submit" disabled={change.isPending || (hasPassword && !values.currentPassword) || !passwordReady}>
               {change.isPending ? common("loading") : t("sendOtp")}
             </Button>
           </form>

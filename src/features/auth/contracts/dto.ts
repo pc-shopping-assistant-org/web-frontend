@@ -10,6 +10,8 @@ export type UserSummaryDto = {
   birthday?: string | null;
   avatarFileId?: string | null;
   avatarUrl?: string | null;
+  /** False for an account that signed up with Google and has not set a password yet. */
+  hasPassword?: boolean;
 };
 
 export type AuthResponseDto = {

@@ -54,7 +54,7 @@ export const resetPasswordRequestSchema = z.object({
 }).strict();
 
 export const changePasswordRequestSchema = z.object({
-  currentPassword: z.string().min(1),
+  currentPassword: z.string().min(1).optional(),
   newPassword: password,
 }).strict();
 

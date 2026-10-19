@@ -14,6 +14,7 @@ export type UserProfile = UserSummary & {
   gender?: string;
   avatarFileId?: string;
   avatarUrl?: string;
+  hasPassword: boolean;
 };
 
 export type UploadedImage = {

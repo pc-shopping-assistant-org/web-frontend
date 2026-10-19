@@ -63,9 +63,9 @@ export function PasswordRecoveryForm() {
         setError(cause);
       }
     };
-    return <form className="space-y-5" onSubmit={(event: FormEvent) => void submitReset(event)} noValidate>
+    return <form method="post" className="space-y-5" onSubmit={(event: FormEvent) => void submitReset(event)} noValidate>
       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{t("resetOtpSent", {identifier})}</div>
-      <div className="space-y-2"><Label htmlFor="otp">{t("otp")}</Label><Input id="otp" inputMode="numeric" maxLength={6} {...resetForm.register("otp")} aria-invalid={Boolean(resetForm.formState.errors.otp)} />{resetForm.formState.errors.otp ? <p className="text-xs text-destructive">{common("validation")}</p> : null}</div>
+      <div className="space-y-2"><Label htmlFor="otp">{t("otp")}</Label><Input id="otp" inputMode="numeric" maxLength={6} {...resetForm.register("otp")} aria-invalid={Boolean(resetForm.formState.errors.otp)} />{resetForm.formState.errors.otp ? <p className="text-xs text-destructive">{t("otpInvalid")}</p> : null}</div>
       <div className="space-y-2"><Label htmlFor="new-password">{t("newPassword")}</Label><Input id="new-password" type="password" autoComplete="new-password" {...resetForm.register("newPassword")} aria-invalid={Boolean(resetForm.formState.errors.newPassword)} /><p className={`text-xs ${resetForm.formState.errors.newPassword ? "text-destructive" : "text-muted-foreground"}`}>{t("passwordHint")}</p></div>
       <div className="space-y-2"><Label htmlFor="confirm-password">{t("confirmPassword")}</Label><Input id="confirm-password" type="password" autoComplete="new-password" {...resetForm.register("confirmPassword")} aria-invalid={Boolean(resetForm.formState.errors.confirmPassword)} />{resetForm.formState.errors.confirmPassword ? <p className="text-xs text-destructive">{t("passwordMismatch")}</p> : null}</div>
       {error ? <ErrorMessage error={error} /> : null}
@@ -75,8 +75,8 @@ export function PasswordRecoveryForm() {
     </form>;
   }
 
-  return <form className="space-y-5" onSubmit={(event: FormEvent) => void submitRequest(event)} noValidate>
-    <div className="space-y-2"><Label htmlFor="identifier">{t("email")}</Label><Input id="identifier" type="email" autoComplete="email" placeholder={t("identifierPlaceholder")} {...requestForm.register("identifier")} aria-invalid={Boolean(requestForm.formState.errors.identifier)} />{requestForm.formState.errors.identifier ? <p className="text-xs text-destructive">{common("validation")}</p> : null}</div>
+  return <form method="post" className="space-y-5" onSubmit={(event: FormEvent) => void submitRequest(event)} noValidate>
+    <div className="space-y-2"><Label htmlFor="identifier">{t("email")}</Label><Input id="identifier" type="email" autoComplete="email" placeholder={t("identifierPlaceholder")} {...requestForm.register("identifier")} aria-invalid={Boolean(requestForm.formState.errors.identifier)} />{requestForm.formState.errors.identifier ? <p className="text-xs text-destructive">{requestForm.getValues("identifier").trim() ? t("emailInvalid") : t("emailRequired")}</p> : null}</div>
     {error ? <ErrorMessage error={error} /> : null}
     <Button type="submit" className="w-full" disabled={requestForm.formState.isSubmitting}>{requestForm.formState.isSubmitting ? common("loading") : t("sendResetOtp")}</Button>
   </form>;
