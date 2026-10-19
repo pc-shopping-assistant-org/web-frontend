@@ -52,6 +52,14 @@ describe("auth API", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({firstName: "An", lastName: "Nguyễn"});
   });
 
+  it("lets an account that signed up with Google set its first password without a current one", async () => {
+    const fetchMock = stubFetch(null);
+
+    await changePassword({newPassword: "NewPassw0rd"});
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({newPassword: "NewPassw0rd"});
+  });
+
   it("changes a password in two steps", async () => {
     const fetchMock = stubFetch(null);
 

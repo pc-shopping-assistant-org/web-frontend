@@ -333,6 +333,8 @@
     "close": "Đóng",
     "changePassword": "Đổi mật khẩu",
     "changePasswordDescription": "Nhập mật khẩu hiện tại và mật khẩu mới, hệ thống gửi mã OTP về email đăng ký để xác nhận.",
+    "setPasswordDescription": "Tài khoản của bạn đăng ký bằng Google nên chưa có mật khẩu. Nhập mật khẩu mới, hệ thống gửi mã OTP về email để xác nhận.",
+    "phoneMissingHint": "Bạn chưa có số điện thoại. Hãy thêm để đơn hàng được liên lạc và để đăng nhập bằng số điện thoại.",
     "oldPassword": "Mật khẩu hiện tại",
     "newPassword": "Mật khẩu mới",
     "otp": "Mã OTP",

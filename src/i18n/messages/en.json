@@ -333,6 +333,8 @@
     "close": "Close",
     "changePassword": "Change password",
     "changePasswordDescription": "Enter your current and new password; a confirmation OTP is emailed to you.",
+    "setPasswordDescription": "Your account was created with Google, so it has no password yet. Enter a new password and we email an OTP to confirm.",
+    "phoneMissingHint": "You have no phone number yet. Add one so orders can reach you and so you can sign in with it.",
     "oldPassword": "Current password",
     "newPassword": "New password",
     "otp": "One-time code",
