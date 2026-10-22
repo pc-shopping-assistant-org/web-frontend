@@ -4,6 +4,7 @@ import {
   IconChevronDown,
   IconChevronRight,
   IconDeviceDesktop,
+  IconHome,
   IconLayoutGrid,
   IconLayoutDashboard,
   IconClipboardList,
@@ -43,7 +44,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const links = [
-    {href: "/" as const, label: t("home")},
+    {href: "/" as const, label: t("home"), icon: IconHome},
     {href: "/products" as const, label: t("products"), icon: IconLayoutGrid},
     {href: "/build-pc" as const, label: "Build PC", icon: IconDeviceDesktop},
     {href: "/assistant" as const, label: t("assistant"), icon: IconRobot},
@@ -92,7 +93,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
         <CatalogMenu categories={categories.data ?? []} />
 
         <form
-          className="relative mx-4 hidden min-w-[12rem] basis-[14rem] flex-1 md:block lg:basis-[16rem] xl:basis-[18rem] 2xl:max-w-2xl"
+          className="relative mx-4 hidden min-w-[12rem] basis-[14rem] flex-1 lg:block lg:basis-[16rem] xl:basis-[18rem] 2xl:max-w-2xl"
           onSubmit={submitSearch}
         >
           <label className="sr-only" htmlFor="site-product-search">
@@ -113,7 +114,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
 
         <button
           type="button"
-          className="rounded-lg p-2 md:hidden"
+          className="rounded-lg p-2 lg:hidden"
           aria-label={t("openMenu")}
           aria-expanded={open}
           onClick={() => setOpen((value) => !value)}
@@ -121,18 +122,20 @@ export function SiteHeader({locale}: {locale: Locale}) {
           {open ? <IconX className="size-5" /> : <IconMenu2 className="size-5" />}
         </button>
 
-        <nav className="hidden items-center gap-0 md:flex" aria-label="Primary navigation">
+        <nav className="hidden items-center gap-0 lg:flex" aria-label="Primary navigation">
           {visibleLinks.map(({href, label, icon: Icon}) => (
             <Link
               key={href}
               href={href}
+              aria-label={label}
+              title={label}
               className={cn(
                 "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground",
                 isActive(href) && "bg-muted text-foreground",
               )}
             >
               {Icon ? <Icon className="size-4" /> : null}
-              {label}
+              <span className="hidden xl:inline">{label}</span>
               {href === "/cart" && cart.data?.totalItems ? (
                 <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
                   {cart.data.totalItems > 99 ? "99+" : cart.data.totalItems}
@@ -193,7 +196,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
       </div>
 
       {open ? (
-        <nav className="border-t px-4 py-3 md:hidden" aria-label="Mobile navigation">
+        <nav className="border-t px-4 py-3 lg:hidden" aria-label="Mobile navigation">
           <form
             className="relative mb-3"
             onSubmit={(event) => {
@@ -310,7 +313,7 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
     });
 
   return (
-    <details className="group relative hidden shrink-0 md:block">
+    <details className="group relative hidden shrink-0 lg:block">
       <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl border border-border/70 bg-background px-3 text-sm font-semibold transition hover:border-primary/30 hover:bg-primary/5 [&::-webkit-details-marker]:hidden">
         <IconLayoutGrid className="size-4 text-primary" aria-hidden="true" />
         {t("catalogMenu")}
