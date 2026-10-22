@@ -10,8 +10,11 @@ import {FeaturedProductsSkeleton} from "@/components/ui/loading-skeletons";
 import type {ProductSummary} from "@/features/catalog/contracts/responses";
 import {ProductCard} from "./product-card";
 
-/** Most products shown at once: two rows of four on a wide screen. The rest is one tap away in the category. */
-const VISIBLE_PRODUCTS = 8;
+/**
+ * Most products shown at once: two rows of six on a wide screen. A multiple of 2, 3, 4 and 6, the column counts of the
+ * grid, so the last row is never short. The rest is one tap away in the category.
+ */
+const VISIBLE_PRODUCTS = 12;
 /** Most category chips; the categories with the most products come first. */
 const VISIBLE_CHIPS = 8;
 const ALL = "all";
@@ -49,7 +52,7 @@ export function FeaturedProducts({
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {shown.slice(0, VISIBLE_PRODUCTS).map((product, index) => (
           <ProductCard key={product.id ?? product.seoName ?? index} product={product} compact />
         ))}
