@@ -43,15 +43,9 @@ export function FeaturedProducts({
   return (
     <div className="space-y-5 [content-visibility:auto] [contain-intrinsic-size:1200px]">
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]" role="group" aria-label={t("categoryTitle")}>
-        <FilterChip active={!group} onClick={() => setSelected(ALL)} label={t("filterAll")} count={products.length} />
+        <FilterChip active={!group} onClick={() => setSelected(ALL)} label={t("filterAll")} />
         {chips.map((chip) => (
-          <FilterChip
-            key={chip.id}
-            active={chip.id === group?.id}
-            onClick={() => setSelected(chip.id)}
-            label={chip.name}
-            count={chip.products.length}
-          />
+          <FilterChip key={chip.id} active={chip.id === group?.id} onClick={() => setSelected(chip.id)} label={chip.name} />
         ))}
       </div>
 
@@ -77,7 +71,7 @@ export function FeaturedProducts({
 }
 
 /** A filter, not a link: it narrows the grid below in place, so choosing a category costs no page load. */
-function FilterChip({active, onClick, label, count}: {active: boolean; onClick: () => void; label: string; count: number}) {
+function FilterChip({active, onClick, label}: {active: boolean; onClick: () => void; label: string}) {
   return (
     <button
       type="button"
@@ -93,7 +87,6 @@ function FilterChip({active, onClick, label, count}: {active: boolean; onClick: 
       <span className="max-w-40 truncate" title={label}>
         {label}
       </span>
-      <span className={cn("text-xs tabular-nums", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{count}</span>
     </button>
   );
 }
