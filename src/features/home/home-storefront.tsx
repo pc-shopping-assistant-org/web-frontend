@@ -49,7 +49,7 @@ export function HomeStorefront() {
   const products = useProducts({limit: 100});
   const categoryTree = getActiveCategoryTree(categories.data ?? []);
   const featuredProducts = products.data?.items ?? [];
-  const categoryCounts = getCategoryCounts(featuredProducts, categories.data ?? []);
+  const categoryCounts = getCategoryCounts(categories.data ?? []);
   // Only the top-level categories that have products, the fullest first: every category as a chip is a wall of tags
   const topCategories = categoryTree
     .filter((category) => (categoryCounts.get(category.id) ?? 0) > 0)
@@ -511,24 +511,15 @@ function getActiveCategoryTree(categories: CategoryTree[]): HomeCategoryNode[] {
   });
 }
 
-function getCategoryCounts(products: ProductSummary[], categories: CategoryTree[]): Map<string, number> {
+/** The products the shop lists in each category, its sub-categories included, as the catalog counted them. */
+function getCategoryCounts(categories: CategoryTree[]): Map<string, number> {
   const counts = new Map<string, number>();
-  const parentById = new Map<string, string | undefined>();
-  function index(nodes: CategoryTree[], inheritedParentId?: string) {
+  function collect(nodes: CategoryTree[]) {
     for (const category of nodes) {
-      if (category.id) parentById.set(category.id, category.parentId ?? inheritedParentId);
-      index(category.children ?? [], category.id);
+      if (category.id) counts.set(category.id, category.productCount ?? 0);
+      collect(category.children ?? []);
     }
   }
-  index(categories);
-  for (const product of products) {
-    let categoryId = product.categoryId;
-    const visited = new Set<string>();
-    while (categoryId && !visited.has(categoryId)) {
-      visited.add(categoryId);
-      counts.set(categoryId, (counts.get(categoryId) ?? 0) + 1);
-      categoryId = parentById.get(categoryId);
-    }
-  }
+  collect(categories);
   return counts;
 }

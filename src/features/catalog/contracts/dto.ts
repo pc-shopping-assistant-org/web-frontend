@@ -80,6 +80,7 @@ export type CategoryDto = {
   status: string;
   createdAt?: string;
   children?: CategoryDto[];
+  productCount?: number;
 };
 export type CategoryTreeDto = CategoryDto;
 

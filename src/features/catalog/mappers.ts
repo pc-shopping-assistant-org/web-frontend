@@ -93,6 +93,7 @@ export function mapCategoryResponse(dto: CategoryDto): Category {
     description: dto.description ?? undefined,
     status: dto.status,
     createdAt: dto.createdAt,
+    productCount: dto.productCount,
   };
 }
 
