@@ -335,6 +335,10 @@ export function ProductDetailPage({slug}: {slug: string}) {
       </div>
 
       <div ref={belowFoldRef} className="[content-visibility:auto] [contain-intrinsic-size:1400px]">
+        <Panel title={t("descriptionTitle")}>
+          <p className="whitespace-pre-line text-sm leading-7">{product.description ?? t("noDescription")}</p>
+        </Panel>
+
         <Panel title={t("technicalDetails")}>
           {specifications.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("specificationsEmpty")}</p>
@@ -354,10 +358,6 @@ export function ProductDetailPage({slug}: {slug: string}) {
               ))}
             </dl>
           )}
-        </Panel>
-
-        <Panel title={t("descriptionTitle")}>
-          <p className="whitespace-pre-line text-sm leading-7">{product.description ?? t("noDescription")}</p>
         </Panel>
 
         <ProductReviews productId={product.id} enabled={belowFoldReady} />
