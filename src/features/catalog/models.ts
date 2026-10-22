@@ -28,6 +28,8 @@ export type Category = {
   description?: string;
   status?: string;
   createdAt?: string;
+  /** Products the shop lists in this category and everything under it; only the storefront lists carry it. */
+  productCount?: number;
 };
 
 export type CategoryTree = Category & {

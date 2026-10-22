@@ -21,7 +21,7 @@ import {ProductGrid} from "./product-grid";
 // Never changes after mount, so the store never needs to notify.
 const subscribeNoop = () => () => {};
 
-const PAGE_SIZE = 12;
+const PAGE_SIZE = 15;
 
 type CatalogPageProps = {
   initialKeyword?: string;
