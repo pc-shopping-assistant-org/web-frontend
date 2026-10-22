@@ -228,7 +228,7 @@ export function deleteAttribute(id: string) {
   });
 }
 
-/** The whole specification form of a category is replaced in one call: groups, their attributes and the order. */
+/** The whole specification form of a category is replaced in one call: its attributes and their order. */
 export function replaceCategorySpecs(categoryId: string, request: ReplaceCategorySpecsRequest) {
   const payload = parseRequest(replaceCategorySpecsRequestSchema, request);
   return backendFetch<CategorySpecsDto>(`${CATALOG}/categories/${encodeURIComponent(categoryId)}/attributes`, {

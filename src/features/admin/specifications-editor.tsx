@@ -42,27 +42,19 @@ export function SpecificationsEditor({
   const parsed = useMemo(() => parseSpecs(value), [value]);
   const attributes = useMemo(
     () =>
-      (schema.data?.groups ?? [])
+      (schema.data?.attributes ?? [])
         .slice()
         .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
-        .flatMap((group) =>
-          (group.attributes ?? [])
-            .slice()
-            .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
-            .map((attribute) => ({
-              groupName: group.groupName ?? t("specifications"),
-              attribute: attribute as SchemaAttribute,
-            })),
-        )
-        .filter(({attribute}) => Boolean(attribute.key)),
-    [schema.data?.groups, t],
+        .map((attribute) => attribute as SchemaAttribute)
+        .filter((attribute) => Boolean(attribute.key)),
+    [schema.data?.attributes],
   );
 
   /** Values of another category (or of an attribute since removed) are not on screen, so they must not be sent. */
   const settled = Boolean(categoryId) && !schema.isPending && !schema.isError;
   useEffect(() => {
     if (!settled) return;
-    const allowed = new Set(attributes.map(({attribute}) => attribute.key));
+    const allowed = new Set(attributes.map((attribute) => attribute.key));
     const entries = Object.entries(parsed);
     const kept = entries.filter(([key]) => allowed.has(key));
     if (kept.length !== entries.length) onChange(JSON.stringify(Object.fromEntries(kept), null, 2));
@@ -86,27 +78,22 @@ export function SpecificationsEditor({
   if (attributes.length === 0) return null;
 
   return (
-    <section className="space-y-5 sm:col-span-2" aria-label={t("specifications")}>
+    <section className="space-y-4 sm:col-span-2" aria-label={t("specifications")}>
       <div>
         <h3 className="text-base font-semibold">{t("specifications")}</h3>
         <p className="mt-1 text-sm text-muted-foreground">{t("specificationsSchemaHint")}</p>
       </div>
-      {groupAttributes(attributes).map(([groupName, groupItems]) => (
-        <div key={groupName} className="space-y-3">
-          <h4 className="border-b pb-2 text-sm font-medium text-muted-foreground">{groupName}</h4>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {groupItems.map(({attribute}) => (
-              <SpecificationField
-                key={attribute.key}
-                attribute={attribute}
-                value={parsed[attribute.key!]}
-                id={`${idPrefix}-${attribute.key}`}
-                onChange={(next) => setSpec(attribute.key!, next)}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {attributes.map((attribute) => (
+          <SpecificationField
+            key={attribute.key}
+            attribute={attribute}
+            value={parsed[attribute.key!]}
+            id={`${idPrefix}-${attribute.key}`}
+            onChange={(next) => setSpec(attribute.key!, next)}
+          />
+        ))}
+      </div>
     </section>
   );
 }
@@ -167,16 +154,6 @@ function SpecificationField({
       )}
     </div>
   );
-}
-
-function groupAttributes(attributes: {groupName: string; attribute: SchemaAttribute}[]) {
-  const groups = new Map<string, {groupName: string; attribute: SchemaAttribute}[]>();
-  for (const item of attributes) {
-    const entries = groups.get(item.groupName) ?? [];
-    entries.push(item);
-    groups.set(item.groupName, entries);
-  }
-  return Array.from(groups.entries());
 }
 
 function parseSpecs(value: string): Specs {

@@ -1084,12 +1084,8 @@
       "searchCategory": "Tìm danh mục",
       "noCategory": "Chọn một danh mục để cấu hình form thông số.",
       "editorTitle": "Form thông số: {name}",
-      "summary": "{groups} nhóm · {items} thuộc tính",
-      "addGroup": "Thêm nhóm",
+      "summary": "{items} thuộc tính",
       "addAttribute": "Thêm thuộc tính",
-      "groupName": "Tên nhóm",
-      "groupNamePlaceholder": "Ví dụ: Thông số chung",
-      "removeGroup": "Xóa nhóm",
       "removeItem": "Gỡ thuộc tính",
       "moveUp": "Chuyển lên",
       "moveDown": "Chuyển xuống",
@@ -1100,12 +1096,10 @@
       "saved": "Đã lưu",
       "unsaved": "Có thay đổi chưa lưu",
       "emptyTemplate": "Danh mục này chưa có form thông số.",
-      "emptyTemplateHint": "Thêm nhóm, rồi chọn các thuộc tính mà sản phẩm của danh mục cần khai báo.",
+      "emptyTemplateHint": "Thêm thuộc tính mà sản phẩm của danh mục cần khai báo.",
       "noDefinitions": "Chưa có thuộc tính nào. Hãy tạo thuộc tính trước khi dựng form.",
       "goAttributes": "Tạo thuộc tính",
       "problem": {
-        "groupName": "Mỗi nhóm cần có tên.",
-        "groupDuplicate": "Tên nhóm không được trùng nhau.",
         "attributeMissing": "Hãy chọn thuộc tính cho mọi dòng.",
         "attributeDuplicate": "Một thuộc tính chỉ dùng được một lần trong form."
       }

@@ -1,6 +1,6 @@
 "use client";
 
-import {ChevronDown, ChevronUp, Plus, Search, Trash2, X} from "lucide-react";
+import {ChevronDown, ChevronUp, Plus, Search, X} from "lucide-react";
 import {useTranslations} from "next-intl";
 import {useId, useMemo, useState, type FormEvent} from "react";
 
@@ -502,7 +502,6 @@ function SpecsPanel({onGoAttributes}: {onGoAttributes: () => void}) {
 }
 
 type DraftItem = {uid: string; attributeId: string; required: boolean};
-type DraftGroup = {uid: string; name: string; items: DraftItem[]};
 
 let draftSeq = 0;
 const uid = () => `d${++draftSeq}`;
@@ -516,8 +515,8 @@ function move<T>(list: T[], index: number, delta: number): T[] {
 }
 
 /** The part of a draft that is sent: what "has anything changed" compares. */
-function plain(groups: DraftGroup[]) {
-  return JSON.stringify(groups.map((group) => ({n: group.name.trim(), i: group.items.map((item) => [item.attributeId, item.required])})));
+function plain(items: DraftItem[]) {
+  return JSON.stringify(items.map((item) => [item.attributeId, item.required]));
 }
 
 function TemplateEditor({
@@ -534,10 +533,10 @@ function TemplateEditor({
   const save = useReplaceAdminCategorySpecs();
   if (specs.isPending) return <Skeleton className="h-72 rounded-2xl" />;
   if (specs.isError) return <ErrorMessage error={specs.error} />;
-  const initial: DraftGroup[] = specs.data.groups.map((group) => ({
+  const initial: DraftItem[] = specs.data.attributes.map((attribute) => ({
     uid: uid(),
-    name: group.groupName,
-    items: group.attributes.map((attribute) => ({uid: uid(), attributeId: attribute.attributeId, required: attribute.required})),
+    attributeId: attribute.attributeId,
+    required: attribute.required,
   }));
   return (
     <TemplateForm
@@ -560,29 +559,25 @@ function TemplateForm({
 }: {
   categoryId: string;
   categoryName: string;
-  initial: DraftGroup[];
+  initial: DraftItem[];
   save: ReturnType<typeof useReplaceAdminCategorySpecs>;
   onGoAttributes: () => void;
 }) {
   const tc = useTranslations("admin.catalogConfig");
   const definitions = useAttributes();
-  const [groups, setGroups] = useState(initial);
+  const [items, setItems] = useState(initial);
   const [problem, setProblem] = useState<string | null>(null);
   const baseline = useMemo(() => plain(initial), [initial]);
-  const dirty = plain(groups) !== baseline;
+  const dirty = plain(items) !== baseline;
   const defs = definitions.data ?? [];
   const byId = new Map(defs.map((definition) => [definition.id, definition]));
-  const used = new Set(groups.flatMap((group) => group.items.map((item) => item.attributeId)).filter(Boolean));
-  const itemCount = groups.reduce((sum, group) => sum + group.items.length, 0);
+  const used = new Set(items.map((item) => item.attributeId).filter(Boolean));
 
-  const patchGroup = (index: number, patch: Partial<DraftGroup>) =>
-    setGroups((current) => current.map((group, at) => (at === index ? {...group, ...patch} : group)));
+  const patchItem = (index: number, patch: Partial<DraftItem>) =>
+    setItems((current) => current.map((item, at) => (at === index ? {...item, ...patch} : item)));
 
   function validate(): string | null {
-    const names = groups.map((group) => group.name.trim().toLowerCase());
-    if (names.some((name) => !name)) return tc("problem.groupName");
-    if (new Set(names).size !== names.length) return tc("problem.groupDuplicate");
-    const chosen = groups.flatMap((group) => group.items.map((item) => item.attributeId));
+    const chosen = items.map((item) => item.attributeId);
     if (chosen.some((id) => !id)) return tc("problem.attributeMissing");
     if (new Set(chosen).size !== chosen.length) return tc("problem.attributeDuplicate");
     return null;
@@ -596,15 +591,7 @@ function TemplateForm({
       await save.mutateAsync({
         categoryId,
         request: {
-          groups: groups.map((group, groupIndex) => ({
-            name: group.name.trim(),
-            displayOrder: groupIndex,
-            attributes: group.items.map((item, itemIndex) => ({
-              attributeId: item.attributeId,
-              required: item.required,
-              displayOrder: itemIndex,
-            })),
-          })),
+          attributes: items.map((item, index) => ({attributeId: item.attributeId, required: item.required, displayOrder: index})),
         },
       });
     } catch {
@@ -617,7 +604,7 @@ function TemplateForm({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold">{tc("editorTitle", {name: categoryName})}</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{tc("summary", {groups: groups.length, items: itemCount})}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{tc("summary", {items: items.length})}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {dirty ? (
@@ -631,7 +618,7 @@ function TemplateForm({
               variant="outline"
               disabled={save.isPending}
               onClick={() => {
-                setGroups(initial);
+                setItems(initial);
                 setProblem(null);
               }}
             >
@@ -653,150 +640,92 @@ function TemplateForm({
         </div>
       ) : null}
 
-      <div className="mt-5 space-y-4">
-        {groups.length === 0 ? (
+      <div className="mt-5 space-y-3">
+        {items.length === 0 ? (
           <div className="rounded-xl border border-dashed p-10 text-center">
             <p className="font-medium">{tc("emptyTemplate")}</p>
             <p className="mt-1 text-sm text-muted-foreground">{tc("emptyTemplateHint")}</p>
           </div>
-        ) : null}
-
-        {groups.map((group, groupIndex) => (
-          <div key={group.uid} className="rounded-xl border">
-            <div className="flex flex-wrap items-center gap-2 border-b bg-muted/40 px-3 py-2.5">
-              <div className="flex">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={tc("moveUp")}
-                  disabled={groupIndex === 0}
-                  onClick={() => setGroups((current) => move(current, groupIndex, -1))}
-                >
-                  <ChevronUp className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={tc("moveDown")}
-                  disabled={groupIndex === groups.length - 1}
-                  onClick={() => setGroups((current) => move(current, groupIndex, 1))}
-                >
-                  <ChevronDown className="size-4" />
-                </Button>
-              </div>
-              <Input
-                className="h-9 min-w-40 flex-1 bg-background font-medium"
-                value={group.name}
-                maxLength={100}
-                placeholder={tc("groupNamePlaceholder")}
-                aria-label={tc("groupName")}
-                onChange={(event) => patchGroup(groupIndex, {name: event.target.value})}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={() => setGroups((current) => current.filter((_, at) => at !== groupIndex))}
-              >
-                <Trash2 className="size-4" />
-                {tc("removeGroup")}
-              </Button>
-            </div>
-
-            <ul className="divide-y">
-              {group.items.map((item, itemIndex) => {
-                const definition = byId.get(item.attributeId);
-                const setItem = (patch: Partial<DraftItem>) =>
-                  patchGroup(groupIndex, {items: group.items.map((current, at) => (at === itemIndex ? {...current, ...patch} : current))});
-                return (
-                  <li key={item.uid} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
-                    <div className="flex">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={tc("moveUp")}
-                        disabled={itemIndex === 0}
-                        onClick={() => patchGroup(groupIndex, {items: move(group.items, itemIndex, -1)})}
-                      >
-                        <ChevronUp className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={tc("moveDown")}
-                        disabled={itemIndex === group.items.length - 1}
-                        onClick={() => patchGroup(groupIndex, {items: move(group.items, itemIndex, 1)})}
-                      >
-                        <ChevronDown className="size-4" />
-                      </Button>
-                    </div>
-                    <Select
-                      className="h-9 min-w-52 flex-1"
-                      aria-label={tc("pickAttribute")}
-                      value={item.attributeId}
-                      onChange={(event) => setItem({attributeId: event.target.value})}
-                    >
-                      <option value="">{tc("pickAttribute")}</option>
-                      {defs
-                        .filter((definition) => definition.id === item.attributeId || !used.has(definition.id))
-                        .map((definition) => (
-                          <option key={definition.id} value={definition.id}>
-                            {definition.displayName} ({definition.key})
-                          </option>
-                        ))}
-                    </Select>
-                    <span className="flex w-28 items-center gap-1.5 text-xs text-muted-foreground">
-                      {definition?.dataType ? (
-                        <Badge className={cn("px-2 py-0", TYPE_TONE[definition.dataType])}>{tc(`dataTypes.${definition.dataType}`)}</Badge>
-                      ) : null}
-                      {definition?.unit}
-                    </span>
-                    <label className="flex cursor-pointer items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        className="size-4 accent-primary"
-                        checked={item.required}
-                        onChange={(event) => setItem({required: event.target.checked})}
-                      />
-                      {tc("required")}
-                    </label>
+        ) : (
+          <ul className="divide-y rounded-xl border">
+            {items.map((item, index) => {
+              const definition = byId.get(item.attributeId);
+              return (
+                <li key={item.uid} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
+                  <div className="flex">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      aria-label={tc("removeItem")}
-                      onClick={() => patchGroup(groupIndex, {items: group.items.filter((_, at) => at !== itemIndex)})}
+                      aria-label={tc("moveUp")}
+                      disabled={index === 0}
+                      onClick={() => setItems((current) => move(current, index, -1))}
                     >
-                      <X className="size-4" />
+                      <ChevronUp className="size-4" />
                     </Button>
-                  </li>
-                );
-              })}
-            </ul>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={tc("moveDown")}
+                      disabled={index === items.length - 1}
+                      onClick={() => setItems((current) => move(current, index, 1))}
+                    >
+                      <ChevronDown className="size-4" />
+                    </Button>
+                  </div>
+                  <Select
+                    className="h-9 min-w-52 flex-1"
+                    aria-label={tc("pickAttribute")}
+                    value={item.attributeId}
+                    onChange={(event) => patchItem(index, {attributeId: event.target.value})}
+                  >
+                    <option value="">{tc("pickAttribute")}</option>
+                    {defs
+                      .filter((candidate) => candidate.id === item.attributeId || !used.has(candidate.id))
+                      .map((candidate) => (
+                        <option key={candidate.id} value={candidate.id}>
+                          {candidate.displayName} ({candidate.key})
+                        </option>
+                      ))}
+                  </Select>
+                  <span className="flex w-28 items-center gap-1.5 text-xs text-muted-foreground">
+                    {definition?.dataType ? (
+                      <Badge className={cn("px-2 py-0", TYPE_TONE[definition.dataType])}>{tc(`dataTypes.${definition.dataType}`)}</Badge>
+                    ) : null}
+                    {definition?.unit}
+                  </span>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="size-4 accent-primary"
+                      checked={item.required}
+                      onChange={(event) => patchItem(index, {required: event.target.checked})}
+                    />
+                    {tc("required")}
+                  </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={tc("removeItem")}
+                    onClick={() => setItems((current) => current.filter((_, at) => at !== index))}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
-            <div className="border-t px-3 py-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="text-primary hover:text-primary"
-                onClick={() => patchGroup(groupIndex, {items: [...group.items, {uid: uid(), attributeId: "", required: false}]})}
-              >
-                <Plus className="size-4" />
-                {tc("addAttribute")}
-              </Button>
-            </div>
-          </div>
-        ))}
-
-        <Button type="button" variant="outline" onClick={() => setGroups((current) => [...current, {uid: uid(), name: "", items: []}])}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setItems((current) => [...current, {uid: uid(), attributeId: "", required: false}])}
+        >
           <Plus className="size-4" />
-          {tc("addGroup")}
+          {tc("addAttribute")}
         </Button>
       </div>
 

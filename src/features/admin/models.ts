@@ -29,17 +29,10 @@ export type AttributeSchemaItem = {
   unit?: string;
 };
 
-export type GroupSchemaItem = {
-  groupId: string;
-  groupName: string;
-  displayOrder: number;
-  attributes: AttributeSchemaItem[];
-};
-
 export type CategorySpecs = {
   categoryId: string;
   categoryName: string;
-  groups: GroupSchemaItem[];
+  attributes: AttributeSchemaItem[];
 };
 
 export type DiscountSummary = {

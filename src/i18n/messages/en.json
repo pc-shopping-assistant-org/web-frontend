@@ -1084,12 +1084,8 @@
       "searchCategory": "Search categories",
       "noCategory": "Pick a category to set up its specification form.",
       "editorTitle": "Specification form: {name}",
-      "summary": "{groups} groups · {items} attributes",
-      "addGroup": "Add group",
+      "summary": "{items} attributes",
       "addAttribute": "Add attribute",
-      "groupName": "Group name",
-      "groupNamePlaceholder": "e.g. General",
-      "removeGroup": "Delete group",
       "removeItem": "Remove attribute",
       "moveUp": "Move up",
       "moveDown": "Move down",
@@ -1100,12 +1096,10 @@
       "saved": "Saved",
       "unsaved": "Unsaved changes",
       "emptyTemplate": "This category has no specification form yet.",
-      "emptyTemplateHint": "Add a group, then pick the attributes a product in this category has to declare.",
+      "emptyTemplateHint": "Add the attributes a product of this category must describe.",
       "noDefinitions": "There are no attributes yet. Create attributes before building the form.",
       "goAttributes": "Create attributes",
       "problem": {
-        "groupName": "Every group needs a name.",
-        "groupDuplicate": "Group names must be different.",
         "attributeMissing": "Pick an attribute for every row.",
         "attributeDuplicate": "An attribute can be used only once in the form."
       }

@@ -130,20 +130,12 @@ export const updateAttributeDefinitionRequestSchema = createAttributeDefinitionR
 
 export const replaceCategorySpecsRequestSchema = z
   .object({
-    groups: z.array(
+    attributes: z.array(
       z
         .object({
-          name: nonEmptyText.max(100),
+          attributeId: uuid,
+          required: z.boolean().optional(),
           displayOrder: z.number().int().nonnegative().optional(),
-          attributes: z.array(
-            z
-              .object({
-                attributeId: uuid,
-                required: z.boolean().optional(),
-                displayOrder: z.number().int().nonnegative().optional(),
-              })
-              .strict(),
-          ),
         })
         .strict(),
     ),

@@ -5,12 +5,6 @@ export type AttributeDefinitionDto = BackendSchema["AttributeDefinitionResponse"
 /** The specification form of a category as catalog-service serves it. */
 export type CategorySpecsDto = {
   categoryId: string;
-  groups: GroupSchemaItemDto[];
-};
-export type GroupSchemaItemDto = {
-  id: string;
-  name: string;
-  displayOrder: number;
   attributes: SpecAttributeDto[];
 };
 export type SpecAttributeDto = {

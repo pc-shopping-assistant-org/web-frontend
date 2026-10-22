@@ -4,7 +4,7 @@ import type {
   DiscountDto,
   DiscountsPageDto,
   FileResponseDto,
-  GroupSchemaItemDto,
+  SpecAttributeDto,
   PaymentDetailDto,
   PaymentsPageDto,
   SupplierDto,
@@ -43,23 +43,18 @@ export function mapAttributeDefinition(dto: AttributeDefinitionDto): AttributeDe
   };
 }
 
-export function mapGroupSchemaItem(dto: GroupSchemaItemDto): CategorySpecs["groups"][number] {
+export function mapSpecAttribute(attribute: SpecAttributeDto): AttributeSchemaItem {
   return {
-    groupId: dto.id,
-    groupName: dto.name,
-    displayOrder: number(dto.displayOrder),
-    attributes: (dto.attributes ?? []).map((attribute) => ({
-      attributeId: attribute.attributeId,
-      key: attribute.key,
-      displayName: attribute.displayName,
-      dataType: attribute.dataType as AttributeSchemaItem["dataType"],
-      unit: attribute.unit ?? undefined,
-      allowedValues: attribute.allowedValues ?? [],
-      required: attribute.required,
-      displayOrder: number(attribute.displayOrder),
-      filterable: false,
-      comparable: false,
-    })),
+    attributeId: attribute.attributeId,
+    key: attribute.key,
+    displayName: attribute.displayName,
+    dataType: attribute.dataType as AttributeSchemaItem["dataType"],
+    unit: attribute.unit ?? undefined,
+    allowedValues: attribute.allowedValues ?? [],
+    required: attribute.required,
+    displayOrder: number(attribute.displayOrder),
+    filterable: false,
+    comparable: false,
   };
 }
 
@@ -67,7 +62,7 @@ export function mapCategorySpecs(dto: CategorySpecsDto): CategorySpecs {
   return {
     categoryId: dto.categoryId,
     categoryName: "",
-    groups: (dto.groups ?? []).map(mapGroupSchemaItem),
+    attributes: (dto.attributes ?? []).map(mapSpecAttribute),
   };
 }
 
