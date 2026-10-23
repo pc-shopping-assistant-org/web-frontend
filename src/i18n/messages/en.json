@@ -1180,6 +1180,8 @@
     "INVALID_ATTRIBUTE_DEFINITION": "Attribute definition is invalid.",
     "ATTRIBUTE_IN_USE": "Attribute is used by a category template and cannot be deleted.",
     "INVALID_CATEGORY_ATTRIBUTES": "Category attribute template is invalid.",
+    "ATTRIBUTE_ALREADY_INHERITED": "A parent category already provides this attribute, so it does not need adding again. Reload the page to see the latest data.",
+    "ATTRIBUTE_USED_BY_SUBCATEGORY": "A sub-category already uses this attribute. Remove it there before adding it to the parent category.",
     "INVALID_MEDIA_FILE": "Image file does not exist.",
     "INVALID_GALLERY": "Product gallery is invalid.",
     "INVALID_VARIANT_OPTIONS": "Variant options are invalid.",

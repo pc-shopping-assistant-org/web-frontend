@@ -1180,6 +1180,8 @@
     "INVALID_ATTRIBUTE_DEFINITION": "Định nghĩa thuộc tính không hợp lệ.",
     "ATTRIBUTE_IN_USE": "Thuộc tính đang được danh mục sử dụng nên không thể xóa.",
     "INVALID_CATEGORY_ATTRIBUTES": "Mẫu thuộc tính của danh mục không hợp lệ.",
+    "ATTRIBUTE_ALREADY_INHERITED": "Thuộc tính này đã được danh mục cha cung cấp, không cần thêm lại. Hãy tải lại trang để xem dữ liệu mới nhất.",
+    "ATTRIBUTE_USED_BY_SUBCATEGORY": "Có danh mục con đang dùng thuộc tính này. Hãy gỡ nó ở danh mục con trước khi thêm vào danh mục cha.",
     "INVALID_MEDIA_FILE": "Tệp ảnh không tồn tại.",
     "INVALID_GALLERY": "Bộ ảnh sản phẩm không hợp lệ.",
     "INVALID_VARIANT_OPTIONS": "Tùy chọn của biến thể không hợp lệ.",
