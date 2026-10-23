@@ -8,7 +8,6 @@ export type {
   DiscountSummary,
   DiscountsPage,
   FileResponse,
-  GroupSchemaItem,
   PaymentDetail,
   PaymentsPage,
   Supplier,

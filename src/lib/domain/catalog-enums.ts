@@ -17,6 +17,7 @@ export enum AttributeDataType {
   String = "STRING",
   Enum = "ENUM",
   Boolean = "BOOLEAN",
+  List = "LIST",
 }
 
 export enum SortDirection {

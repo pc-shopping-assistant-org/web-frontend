@@ -104,13 +104,11 @@ export type SpecLabels = Record<string, {label: string; unit?: string; order: nu
 
 export async function getCategorySpecLabels(categoryId: string): Promise<SpecLabels> {
   const template = await backendFetch<{
-    groups: {displayOrder: number; attributes: {key: string; displayName: string; unit?: string | null; displayOrder: number}[]}[];
+    attributes: {key: string; displayName: string; unit?: string | null; displayOrder: number}[];
   }>(`/catalog-service/categories/${encodeURIComponent(categoryId)}/attributes`);
   const labels: SpecLabels = {};
-  for (const group of [...template.groups].sort((a, b) => a.displayOrder - b.displayOrder)) {
-    for (const attribute of [...group.attributes].sort((a, b) => a.displayOrder - b.displayOrder)) {
-      labels[attribute.key] = {label: attribute.displayName, unit: attribute.unit ?? undefined, order: Object.keys(labels).length};
-    }
+  for (const attribute of [...template.attributes].sort((a, b) => a.displayOrder - b.displayOrder)) {
+    labels[attribute.key] = {label: attribute.displayName, unit: attribute.unit ?? undefined, order: Object.keys(labels).length};
   }
   return labels;
 }
