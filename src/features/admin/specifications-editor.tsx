@@ -1,7 +1,7 @@
 "use client";
 
 import {useTranslations} from "next-intl";
-import {useEffect, useMemo} from "react";
+import {useEffect, useMemo, useState} from "react";
 
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Input} from "@/components/ui/input";
@@ -62,7 +62,7 @@ export function SpecificationsEditor({
 
   function setSpec(key: string, next: unknown) {
     const nextSpecs = {...parsed};
-    if (next === "" || next === undefined || next === null) delete nextSpecs[key];
+    if (next === "" || next === undefined || next === null || (Array.isArray(next) && next.length === 0)) delete nextSpecs[key];
     else nextSpecs[key] = next;
     onChange(JSON.stringify(nextSpecs, null, 2));
   }
@@ -130,6 +130,8 @@ function SpecificationField({
             </option>
           ))}
         </Select>
+      ) : dataType === "LIST" ? (
+        <ListField id={id} items={toItems(value)} allowedValues={attribute.allowedValues ?? []} onChange={onChange} />
       ) : dataType === "BOOLEAN" ? (
         <Select
           id={id}
@@ -154,6 +156,54 @@ function SpecificationField({
       )}
     </div>
   );
+}
+
+/** Several values of one attribute: a tick box per allowed value, or comma separated text when any value is accepted. */
+function ListField({
+  id,
+  items,
+  allowedValues,
+  onChange,
+}: {
+  id: string;
+  items: string[];
+  allowedValues: string[];
+  onChange: (value: string[]) => void;
+}) {
+  const [draft, setDraft] = useState(items.join(", "));
+
+  if (allowedValues.length > 0) {
+    return (
+      <div id={id} className="flex flex-wrap gap-x-4 gap-y-2 rounded-md border border-input p-2.5">
+        {allowedValues.map((option) => (
+          <label key={option} className="flex items-center gap-1.5 text-sm">
+            <input
+              type="checkbox"
+              checked={items.includes(option)}
+              onChange={(event) =>
+                onChange(event.target.checked ? [...items, option] : items.filter((item) => item !== option))
+              }
+            />
+            {option}
+          </label>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <Input
+      id={id}
+      value={draft}
+      onChange={(event) => {
+        setDraft(event.target.value);
+        onChange(event.target.value.split(",").map((item) => item.trim()).filter(Boolean));
+      }}
+    />
+  );
+}
+
+function toItems(value: unknown): string[] {
+  return Array.isArray(value) ? value.map(String) : [];
 }
 
 function parseSpecs(value: string): Specs {

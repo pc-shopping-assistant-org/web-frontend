@@ -15,7 +15,7 @@ import {Label} from "@/components/ui/label";
 import {Select} from "@/components/ui/select";
 import {Skeleton} from "@/components/ui/skeleton";
 import {Textarea} from "@/components/ui/textarea";
-import type {AttributeDefinition} from "@/features/admin/contracts/responses";
+import type {AttributeDefinition, AttributeSchemaItem} from "@/features/admin/contracts/responses";
 import {useCategories} from "@/features/catalog/queries";
 import type {CategoryTree} from "@/features/catalog/contracts/responses";
 import {ATTRIBUTE_DATA_TYPE_VALUES, AttributeDataType} from "@/lib/domain/catalog-enums";
@@ -41,6 +41,7 @@ const TYPE_TONE: Record<string, string> = {
   [AttributeDataType.String]: "border-slate-200 bg-slate-50 text-slate-700",
   [AttributeDataType.Enum]: "border-violet-200 bg-violet-50 text-violet-700",
   [AttributeDataType.Boolean]: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  [AttributeDataType.List]: "border-amber-200 bg-amber-50 text-amber-700",
 };
 
 /**
@@ -285,10 +286,11 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
   const [problem, setProblem] = useState<string | null>(null);
   const set = (patch: Partial<typeof form>) => setForm((current) => ({...current, ...patch}));
   const isEnum = form.dataType === AttributeDataType.Enum;
+  const hasAllowedValues = isEnum || form.dataType === AttributeDataType.List;
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    const allowedValues = isEnum ? lines(form.allowedValues) : [];
+    const allowedValues = hasAllowedValues ? lines(form.allowedValues) : [];
     if (!editing && !KEY_PATTERN.test(form.key.trim())) return setProblem(tc("keyInvalid"));
     if (isEnum && allowedValues.length === 0) return setProblem(tc("allowedRequired"));
     setProblem(null);
@@ -382,10 +384,10 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
           <Input id={`${formId}-unit`} value={form.unit} maxLength={50} onChange={(event) => set({unit: event.target.value})} />
           <p className="text-xs text-muted-foreground">{tc("unitHint")}</p>
         </div>
-        {isEnum ? (
+        {hasAllowedValues ? (
           <div className="space-y-2">
             <Label htmlFor={`${formId}-values`}>
-              {tc("allowedValues")} <span className="text-destructive">*</span>
+              {tc("allowedValues")} {isEnum ? <span className="text-destructive">*</span> : null}
             </Label>
             <Textarea
               id={`${formId}-values`}
@@ -393,7 +395,7 @@ function AttributeDialog({state, onClose}: {state: AttributeDialogState; onClose
               value={form.allowedValues}
               onChange={(event) => set({allowedValues: event.target.value})}
             />
-            <p className="text-xs text-muted-foreground">{tc("allowedValuesHint")}</p>
+            <p className="text-xs text-muted-foreground">{tc(isEnum ? "allowedValuesHint" : "allowedValuesListHint")}</p>
           </div>
         ) : null}
         <div className="space-y-2">
@@ -533,17 +535,21 @@ function TemplateEditor({
   const save = useReplaceAdminCategorySpecs();
   if (specs.isPending) return <Skeleton className="h-72 rounded-2xl" />;
   if (specs.isError) return <ErrorMessage error={specs.error} />;
-  const initial: DraftItem[] = specs.data.attributes.map((attribute) => ({
-    uid: uid(),
-    attributeId: attribute.attributeId,
-    required: attribute.required,
-  }));
+  const inherited = specs.data.attributes.filter((attribute) => attribute.inherited);
+  const initial: DraftItem[] = specs.data.attributes
+    .filter((attribute) => !attribute.inherited)
+    .map((attribute) => ({
+      uid: uid(),
+      attributeId: attribute.attributeId,
+      required: attribute.required,
+    }));
   return (
     <TemplateForm
       key={`${categoryId}-${specs.dataUpdatedAt}`}
       categoryId={categoryId}
       categoryName={categoryName}
       initial={initial}
+      inherited={inherited}
       save={save}
       onGoAttributes={onGoAttributes}
     />
@@ -554,12 +560,14 @@ function TemplateForm({
   categoryId,
   categoryName,
   initial,
+  inherited,
   save,
   onGoAttributes,
 }: {
   categoryId: string;
   categoryName: string;
   initial: DraftItem[];
+  inherited: AttributeSchemaItem[];
   save: ReturnType<typeof useReplaceAdminCategorySpecs>;
   onGoAttributes: () => void;
 }) {
@@ -571,7 +579,7 @@ function TemplateForm({
   const dirty = plain(items) !== baseline;
   const defs = definitions.data ?? [];
   const byId = new Map(defs.map((definition) => [definition.id, definition]));
-  const used = new Set(items.map((item) => item.attributeId).filter(Boolean));
+  const used = new Set([...inherited.map((attribute) => attribute.attributeId), ...items.map((item) => item.attributeId)].filter(Boolean));
 
   const patchItem = (index: number, patch: Partial<DraftItem>) =>
     setItems((current) => current.map((item, at) => (at === index ? {...item, ...patch} : item)));
@@ -604,7 +612,7 @@ function TemplateForm({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold">{tc("editorTitle", {name: categoryName})}</h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">{tc("summary", {items: items.length})}</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{tc("summary", {items: items.length, inherited: inherited.length})}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {dirty ? (
@@ -638,6 +646,30 @@ function TemplateForm({
             {tc("goAttributes")}
           </Button>
         </div>
+      ) : null}
+
+      {inherited.length > 0 ? (
+        <section className="mt-5" aria-label={tc("inheritedTitle")}>
+          <h3 className="text-sm font-medium">{tc("inheritedTitle")}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">{tc("inheritedHint")}</p>
+          <ul className="mt-2 divide-y rounded-xl border bg-muted/30">
+            {inherited.map((attribute) => (
+              <li key={attribute.attributeId} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-sm">
+                <span className="min-w-52 flex-1 font-medium">
+                  {attribute.displayName} <span className="font-normal text-muted-foreground">({attribute.key})</span>
+                </span>
+                <span className="flex w-28 items-center gap-1.5 text-xs text-muted-foreground">
+                  {attribute.dataType ? (
+                    <Badge className={cn("px-2 py-0", TYPE_TONE[attribute.dataType])}>{tc(`dataTypes.${attribute.dataType}`)}</Badge>
+                  ) : null}
+                  {attribute.unit}
+                </span>
+                {attribute.required ? <span className="text-xs text-muted-foreground">{tc("required")}</span> : null}
+                <Badge className="px-2 py-0 text-xs">{tc("inheritedFrom", {name: attribute.sourceCategoryName ?? ""})}</Badge>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       <div className="mt-5 space-y-3">

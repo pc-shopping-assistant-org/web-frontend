@@ -16,6 +16,9 @@ export type SpecAttributeDto = {
   allowedValues?: string[] | null;
   required: boolean;
   displayOrder: number;
+  inherited?: boolean;
+  sourceCategoryId?: string | null;
+  sourceCategoryName?: string | null;
 };
 /** promotion-service discount; `state` is the status combined with the validity period. */
 export type DiscountDto = {

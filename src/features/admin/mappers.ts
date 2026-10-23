@@ -55,6 +55,8 @@ export function mapSpecAttribute(attribute: SpecAttributeDto): AttributeSchemaIt
     displayOrder: number(attribute.displayOrder),
     filterable: false,
     comparable: false,
+    inherited: attribute.inherited ?? false,
+    sourceCategoryName: attribute.sourceCategoryName ?? undefined,
   };
 }
 

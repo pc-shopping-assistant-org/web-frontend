@@ -24,8 +24,11 @@ export type AttributeSchemaItem = {
   displayName: string;
   displayOrder: number;
   filterable: boolean;
+  /** Provided by an ancestor category: shown on this one, edited on the one it comes from. */
+  inherited?: boolean;
   key: string;
   required: boolean;
+  sourceCategoryName?: string;
   unit?: string;
 };
 
