@@ -65,9 +65,9 @@ describe("storefront catalog reads", () => {
   it("names and orders specifications from the category attribute template", async () => {
     stubFetch({
       categoryId: "c1",
-      groups: [
-        {displayOrder: 1, attributes: [{key: "type", displayName: "RAM type", unit: null, displayOrder: 0}]},
-        {displayOrder: 0, attributes: [{key: "gb", displayName: "RAM", unit: "GB", displayOrder: 0}]},
+      attributes: [
+        {key: "type", displayName: "RAM type", unit: null, displayOrder: 1},
+        {key: "gb", displayName: "RAM", unit: "GB", displayOrder: 0},
       ],
     });
 

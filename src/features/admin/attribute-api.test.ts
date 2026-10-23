@@ -63,23 +63,23 @@ describe("attribute definitions", () => {
 
 describe("category specification form", () => {
   it("replaces the whole form of a category in one call", async () => {
-    const fetchMock = stubFetch({categoryId: category, groups: []});
+    const fetchMock = stubFetch({categoryId: category, attributes: []});
 
     await replaceCategorySpecs(category, {
-      groups: [{name: "General", displayOrder: 0, attributes: [{attributeId: attribute, required: true, displayOrder: 0}]}],
+      attributes: [{attributeId: attribute, required: true, displayOrder: 0}],
     });
 
     expect(fetchMock.mock.calls[0][0]).toBe(`/api/backend/catalog-service/categories/${category}/attributes`);
     expect(fetchMock.mock.calls[0][1].method).toBe("PUT");
-    expect(JSON.parse(fetchMock.mock.calls[0][1].body).groups[0].attributes[0]).toEqual({
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).attributes[0]).toEqual({
       attributeId: attribute,
       required: true,
       displayOrder: 0,
     });
   });
 
-  it("rejects a group without a name", () => {
+  it("rejects an attribute that is not an id", () => {
     stubFetch(null);
-    expect(() => replaceCategorySpecs(category, {groups: [{name: " ", attributes: []}]})).toThrow();
+    expect(() => replaceCategorySpecs(category, {attributes: [{attributeId: "not-an-id"}]})).toThrow();
   });
 });

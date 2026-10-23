@@ -20,6 +20,7 @@ import {useAddToCart, useCart} from "@/features/cart/queries";
 import {useCategorySpecLabels, useProductBySlug, useProductReviews, useProducts} from "../queries";
 import {CatalogCategoryIcon} from "./catalog-category-icon";
 import {ProductCard} from "./product-card";
+import {ProductGalleryStrip} from "./product-gallery-strip";
 import {ProductIllustration, productArtKind} from "./product-card";
 
 type Variant = NonNullable<import("@/features/catalog/contracts/responses").ProductDetail["variants"]>[number];
@@ -150,29 +151,13 @@ export function ProductDetailPage({slug}: {slug: string}) {
             )}
           </div>
           {images.length > 1 ? (
-            <div className="grid grid-cols-5 gap-2" aria-label={t("productGallery")}>
-              {images.map((image, index) => (
-                <button
-                  type="button"
-                  key={image.id ?? index}
-                  className={cn(
-                    "relative aspect-square overflow-hidden rounded-md border bg-muted/20 transition",
-                    activeImage?.id === image.id ? "border-primary ring-1 ring-primary" : "hover:border-primary/50",
-                  )}
-                  onClick={() => setSelectedImageId(image.id)}
-                  aria-label={`${t("viewImage")} ${index + 1}`}
-                  aria-pressed={activeImage?.id === image.id}
-                >
-                  {image.imageUrl ? (
-                    <Image src={image.imageUrl} alt={product.name ?? ""} fill sizes="6rem" unoptimized className="object-cover" />
-                  ) : (
-                    <span className="flex h-full items-center justify-center">
-                      <CatalogCategoryIcon categoryName={product.category?.name ?? product.name} className="size-6 text-primary/45" />
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
+            <ProductGalleryStrip
+              images={images}
+              activeId={activeImage?.id}
+              alt={product.name ?? ""}
+              onSelect={setSelectedImageId}
+              placeholder={<CatalogCategoryIcon categoryName={product.category?.name ?? product.name} className="size-6 text-primary/45" />}
+            />
           ) : null}
         </div>
 
@@ -350,6 +335,10 @@ export function ProductDetailPage({slug}: {slug: string}) {
       </div>
 
       <div ref={belowFoldRef} className="[content-visibility:auto] [contain-intrinsic-size:1400px]">
+        <Panel title={t("descriptionTitle")}>
+          <p className="whitespace-pre-line text-sm leading-7">{product.description ?? t("noDescription")}</p>
+        </Panel>
+
         <Panel title={t("technicalDetails")}>
           {specifications.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("specificationsEmpty")}</p>
@@ -369,10 +358,6 @@ export function ProductDetailPage({slug}: {slug: string}) {
               ))}
             </dl>
           )}
-        </Panel>
-
-        <Panel title={t("descriptionTitle")}>
-          <p className="whitespace-pre-line text-sm leading-7">{product.description ?? t("noDescription")}</p>
         </Panel>
 
         <ProductReviews productId={product.id} enabled={belowFoldReady} />

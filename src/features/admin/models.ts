@@ -24,22 +24,18 @@ export type AttributeSchemaItem = {
   displayName: string;
   displayOrder: number;
   filterable: boolean;
+  /** Provided by an ancestor category: shown on this one, edited on the one it comes from. */
+  inherited?: boolean;
   key: string;
   required: boolean;
+  sourceCategoryName?: string;
   unit?: string;
-};
-
-export type GroupSchemaItem = {
-  groupId: string;
-  groupName: string;
-  displayOrder: number;
-  attributes: AttributeSchemaItem[];
 };
 
 export type CategorySpecs = {
   categoryId: string;
   categoryName: string;
-  groups: GroupSchemaItem[];
+  attributes: AttributeSchemaItem[];
 };
 
 export type DiscountSummary = {

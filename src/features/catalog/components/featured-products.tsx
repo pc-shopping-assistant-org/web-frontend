@@ -10,8 +10,11 @@ import {FeaturedProductsSkeleton} from "@/components/ui/loading-skeletons";
 import type {ProductSummary} from "@/features/catalog/contracts/responses";
 import {ProductCard} from "./product-card";
 
-/** Most products shown at once: two rows of four on a wide screen. The rest is one tap away in the category. */
-const VISIBLE_PRODUCTS = 8;
+/**
+ * Most products shown at once: two rows of six on a wide screen. A multiple of 2, 3, 4 and 6, the column counts of the
+ * grid, so the last row is never short. The rest is one tap away in the category.
+ */
+const VISIBLE_PRODUCTS = 12;
 /** Most category chips; the categories with the most products come first. */
 const VISIBLE_CHIPS = 8;
 const ALL = "all";
@@ -43,19 +46,13 @@ export function FeaturedProducts({
   return (
     <div className="space-y-5 [content-visibility:auto] [contain-intrinsic-size:1200px]">
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]" role="group" aria-label={t("categoryTitle")}>
-        <FilterChip active={!group} onClick={() => setSelected(ALL)} label={t("filterAll")} count={products.length} />
+        <FilterChip active={!group} onClick={() => setSelected(ALL)} label={t("filterAll")} />
         {chips.map((chip) => (
-          <FilterChip
-            key={chip.id}
-            active={chip.id === group?.id}
-            onClick={() => setSelected(chip.id)}
-            label={chip.name}
-            count={chip.products.length}
-          />
+          <FilterChip key={chip.id} active={chip.id === group?.id} onClick={() => setSelected(chip.id)} label={chip.name} />
         ))}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
         {shown.slice(0, VISIBLE_PRODUCTS).map((product, index) => (
           <ProductCard key={product.id ?? product.seoName ?? index} product={product} compact />
         ))}
@@ -77,7 +74,7 @@ export function FeaturedProducts({
 }
 
 /** A filter, not a link: it narrows the grid below in place, so choosing a category costs no page load. */
-function FilterChip({active, onClick, label, count}: {active: boolean; onClick: () => void; label: string; count: number}) {
+function FilterChip({active, onClick, label}: {active: boolean; onClick: () => void; label: string}) {
   return (
     <button
       type="button"
@@ -93,7 +90,6 @@ function FilterChip({active, onClick, label, count}: {active: boolean; onClick: 
       <span className="max-w-40 truncate" title={label}>
         {label}
       </span>
-      <span className={cn("text-xs tabular-nums", active ? "text-primary-foreground/80" : "text-muted-foreground")}>{count}</span>
     </button>
   );
 }
