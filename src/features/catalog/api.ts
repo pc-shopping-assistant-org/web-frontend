@@ -81,7 +81,11 @@ export async function searchProducts(keyword: string, filters: Omit<ProductFilte
   }
   const response = await backendFetch<ProductSearchPageDto>(`/search-service/products/search?${params.toString()}`);
   return mapProductPage({
-    items: (response.content ?? []).map((hit) => ({...hit, status: ResourceStatus.Active})),
+    items: (response.content ?? []).map((hit) => ({
+      ...hit,
+      status: ResourceStatus.Active,
+      totalQuantity: hit.inStock === false ? 0 : undefined,
+    })),
     nextCursor: response.last ? null : String(response.page + 1),
     hasNext: !response.last,
     size: response.content?.length ?? 0,

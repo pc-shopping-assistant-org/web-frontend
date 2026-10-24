@@ -101,6 +101,14 @@ describe("storefront text search", () => {
     expect(page.items[0]).toMatchObject({id: "p1", seoName: "rtx-4070", brandName: "Asus", imageUrl: "http://img/a.png", status: "ACTIVE"});
   });
 
+  it("preserves an out-of-stock search hit for storefront labeling", async () => {
+    stubFetch({content: [{...hit, inStock: false}], page: 0, size: 1, last: true});
+
+    const page = await searchProducts("rtx 4070");
+
+    expect(page.items[0].totalQuantity).toBe(0);
+  });
+
   it("reads the cursor as the page number and stops on the last page", async () => {
     const fetchMock = stubFetch({content: [hit], page: 2, size: 12, totalElements: 25, totalPages: 3, last: true});
 
