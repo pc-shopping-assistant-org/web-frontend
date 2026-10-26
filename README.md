@@ -117,9 +117,8 @@ use local fixtures and committed snapshots, not live backend/AI credentials.
 Only a push/manual dispatch on `release/vX.Y.Z` (or `release/vX.Y.Z-rc.N`)
 builds/publishes an image tagged `X.Y.Z` (or `X.Y.Z-rc.N`) and `sha-<full commit>`.
 For example, `release/v1.0.0` publishes `web-frontend:1.0.0`. PRs, other branches/tags and merge queues
-verify only. After a release push publishes the image, CI proposes its tag in
-`infra/release/images.lock` (requires `INFRA_RELEASE_PR_TOKEN`). Only a merge into
-infra `release/production` deploys the stack; see `../infra/README.md` for SSH setup.
+verify only. Select the published web tag in the server's `infra/.release.env`,
+then run the infra release workflow to deploy; see `../infra/README.md` for SSH setup.
 Runtime endpoints and Google config come from server
 `infra/.env.docker`; Docker context excludes all `.env*`, with no deployment env
 build arguments. Select `Verify Next.js application` as a required branch check.
