@@ -114,6 +114,9 @@ GitHub Actions runs these gates on every push, pull request and merge queue
 type generation runs before TypeScript on a clean checkout. Tests/OpenAPI checks
 use local fixtures and committed snapshots, not live backend/AI credentials.
 
+New CI runs cancel older runs of the same workflow on the same branch or PR,
+including release branches.
+
 Only a push/manual dispatch on `release/vX.Y.Z` (or `release/vX.Y.Z-rc.N`)
 builds/publishes an image tagged `X.Y.Z` (or `X.Y.Z-rc.N`) and `sha-<full commit>`.
 For example, `release/v1.0.0` publishes `web-frontend:1.0.0`. PRs, other branches/tags and merge queues
