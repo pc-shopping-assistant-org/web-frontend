@@ -4,6 +4,13 @@ import {getCategorySpecLabels, getProductBySlug, getProducts, listProducts, sear
 
 afterEach(() => vi.restoreAllMocks());
 
+function okResponse(payload: unknown) {
+  return new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {
+    status: 200,
+    headers: {"content-type": "application/json"},
+  });
+}
+
 function stubFetch(payload: unknown) {
   const fetchMock = vi.fn().mockImplementation(
     async () =>
@@ -134,6 +141,23 @@ describe("storefront text search", () => {
     expect(fetchMock.mock.calls[0][0]).toBe(
       "/api/backend/search-service/products/search?q=card&page=0&size=12&categoryId=c1&brandId=b1&minPrice=10&maxPrice=20",
     );
+  });
+
+  it("falls back to the last page when the asked page is past the end", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(okResponse({items: [], hasNext: false, size: 0, page: 541, totalPages: 109, totalElements: 1625}))
+      .mockResolvedValueOnce(
+        okResponse({items: [{id: "p1", name: "Card", seoName: "card", status: "ACTIVE"}], hasNext: false, size: 1, page: 108, totalPages: 109, totalElements: 1625}),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const page = await listProducts({page: 541, limit: 15});
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/backend/catalog-service/products?page=108&limit=15");
+    expect(page.page).toBe(108);
+    expect(page.items).toHaveLength(1);
   });
 
   it("lists through the catalog when the keyword is blank", async () => {

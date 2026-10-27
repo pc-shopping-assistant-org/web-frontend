@@ -2,7 +2,7 @@
 
 import {SlidersHorizontal, X} from "lucide-react";
 import {useTranslations} from "next-intl";
-import {useMemo, useState, useSyncExternalStore} from "react";
+import {useEffect, useMemo, useState, useSyncExternalStore} from "react";
 
 import {Button} from "@/components/ui/button";
 import {Pagination} from "@/components/ui/pagination";
@@ -59,6 +59,11 @@ export function CatalogPage({
   const categories = useCategories();
   const brands = useBrands();
   const products = query.data?.items ?? [];
+  // The page the list really shows: the last one when the asked page was past the end
+  const shownPage = query.data?.page ?? filters.page;
+  useEffect(() => {
+    if (shownPage !== filters.page) syncCatalogUrl(router, {...filters, page: shownPage});
+  }, [shownPage, filters, router]);
   // `SiteHeader` shares the `catalog/categories` query key, and this page is
   // lazy loaded, so its chunk can hydrate after the header has already resolved
   // that query: the server prerenders the loading state while the client
@@ -217,7 +222,7 @@ export function CatalogPage({
                 <CompareTray products={products} ids={compareIds} onClear={() => setCompareIds([])} />
                 <Pagination
                   className="mt-8"
-                  page={filters.page + 1}
+                  page={shownPage + 1}
                   totalPages={query.data?.totalPages ?? 1}
                   onPageChange={movePage}
                   previousLabel={t("previous")}
