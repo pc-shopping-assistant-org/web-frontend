@@ -7,7 +7,7 @@ import {useState} from "react";
 import {Link} from "@/i18n/navigation";
 import {cn} from "@/lib/utils";
 import {FeaturedProductsSkeleton} from "@/components/ui/loading-skeletons";
-import type {ProductSummary} from "@/features/catalog/contracts/responses";
+import type {CategoryTree, ProductSummary} from "@/features/catalog/contracts/responses";
 import {ProductCard} from "./product-card";
 
 /**
@@ -15,16 +15,18 @@ import {ProductCard} from "./product-card";
  * grid, so the last row is never short. The rest is one tap away in the category.
  */
 const VISIBLE_PRODUCTS = 12;
-/** Most category chips; the categories with the most products come first. */
+/** Most category chips; the catalog's navigation order applies here too. */
 const VISIBLE_CHIPS = 8;
 const ALL = "all";
 
 export function FeaturedProducts({
   products,
+  categories = [],
   pending = false,
   unavailable = false,
 }: {
   products: ProductSummary[];
+  categories?: CategoryTree[];
   pending?: boolean;
   unavailable?: boolean;
 }) {
@@ -37,7 +39,7 @@ export function FeaturedProducts({
   if (products.length === 0)
     return <div className="rounded-2xl border border-dashed p-12 text-center text-sm text-muted-foreground">{t("noProducts")}</div>;
 
-  const groups = groupProducts(products, t("uncategorized"), locale);
+  const groups = groupProducts(products, categories, t("uncategorized"), locale);
   const chips = groups.slice(0, VISIBLE_CHIPS);
   const group = chips.find((chip) => chip.id === selected);
   const shown = group ? group.products : products;
@@ -96,7 +98,13 @@ function FilterChip({active, onClick, label}: {active: boolean; onClick: () => v
 
 type ProductGroup = {id: string; name: string; products: ProductSummary[]};
 
-function groupProducts(products: ProductSummary[], uncategorized: string, locale: string): ProductGroup[] {
+function groupProducts(products: ProductSummary[], categories: CategoryTree[], uncategorized: string, locale: string): ProductGroup[] {
+  const order = new Map<string, number>();
+  const visit = (nodes: CategoryTree[]) => nodes.forEach((node) => {
+    order.set(node.id, order.size);
+    visit(node.children);
+  });
+  visit(categories);
   const groups = new Map<string, ProductGroup>();
   for (const product of products) {
     const id = product.categoryId ?? "uncategorized";
@@ -105,6 +113,7 @@ function groupProducts(products: ProductSummary[], uncategorized: string, locale
     groups.set(id, current);
   }
   return [...groups.values()].sort(
-    (left, right) => right.products.length - left.products.length || left.name.localeCompare(right.name, locale),
+    (left, right) => (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER)
+      || left.name.localeCompare(right.name, locale),
   );
 }

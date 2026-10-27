@@ -926,6 +926,10 @@
       "activate": "Activate"
     },
     "categoryPage": {
+      "hardwareType": "Hardware type",
+      "selectHardwareType": "Default: Other",
+      "reorderHint": "Drag the handle to reorder categories with the same parent. You can also enter the order in the edit form.",
+      "dragCategory": "Drag to reorder {name}",
       "addNew": "Add category",
       "addTitle": "Add category",
       "addDescription": "Pick a parent if this is a subcategory.",

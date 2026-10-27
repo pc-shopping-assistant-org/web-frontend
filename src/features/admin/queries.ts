@@ -24,6 +24,7 @@ import {
   getAttributes,
   getAdminBrands,
   getAdminCategories,
+  getHardwareTypes,
   getCategorySpecsSchema,
   getDiscounts,
   getAdminProductById,
@@ -38,6 +39,7 @@ import {
   updateDiscountStatus,
   updateProductStatus,
   replaceCategorySpecs,
+  reorderCategories,
   syncSearchIndex,
   getDeadLetterStatus,
   replayDeadLetters,
@@ -152,6 +154,9 @@ function useAdminMutation<TVariables, TData>(mutationFn: (variables: TVariables)
 export function useAdminCategories() {
   return useQuery({queryKey: ["admin", "categories"], queryFn: getAdminCategories});
 }
+export function useHardwareTypes() {
+  return useQuery({queryKey: ["catalog", "hardware-types"], queryFn: getHardwareTypes});
+}
 export function useAdminBrands() {
   return useQuery({queryKey: ["admin", "brands"], queryFn: getAdminBrands});
 }
@@ -174,6 +179,9 @@ export function useDeleteAdminAttribute() {
 }
 export function useUpdateAdminCategory() {
   return useAdminMutation(({id, request}: {id: string; request: Parameters<typeof updateCategory>[1]}) => updateCategory(id, request));
+}
+export function useReorderAdminCategories() {
+  return useAdminMutation(reorderCategories);
 }
 export function useDeleteAdminCategory() {
   return useAdminMutation(deleteCategory);

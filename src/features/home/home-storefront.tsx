@@ -50,10 +50,9 @@ export function HomeStorefront() {
   const categoryTree = getActiveCategoryTree(categories.data ?? []);
   const featuredProducts = products.data?.items ?? [];
   const categoryCounts = getCategoryCounts(categories.data ?? []);
-  // Only the top-level categories that have products, the fullest first: every category as a chip is a wall of tags
+  // Keep the admin's category order while limiting the chips to populated roots.
   const topCategories = categoryTree
     .filter((category) => (categoryCounts.get(category.id) ?? 0) > 0)
-    .sort((left, right) => (categoryCounts.get(right.id) ?? 0) - (categoryCounts.get(left.id) ?? 0))
     .slice(0, TOP_CATEGORY_COUNT);
 
   return (
@@ -93,7 +92,7 @@ export function HomeStorefront() {
               <IconArrowRight className="size-4" aria-hidden="true" />
             </Link>
           </div>
-          <FeaturedProducts products={featuredProducts} pending={products.isPending} unavailable={products.isError} />
+          <FeaturedProducts products={featuredProducts} categories={categories.data ?? []} pending={products.isPending} unavailable={products.isError} />
         </section>
 
         <ShopByGoal />
@@ -109,7 +108,7 @@ export function HomeStorefront() {
   );
 }
 
-/** The fullest top-level categories under the search box: where most people start. The whole tree is in the menu below. */
+/** Populated top-level categories in navigation order; the whole tree is in the menu below. */
 function HeroCategoryChips({categories, counts, pending}: {categories: HomeCategoryNode[]; counts: Map<string, number>; pending: boolean}) {
   const t = useTranslations("home");
   if (!pending && categories.length === 0) return null;

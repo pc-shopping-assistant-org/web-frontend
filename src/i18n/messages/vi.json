@@ -926,6 +926,10 @@
       "activate": "Kích hoạt"
     },
     "categoryPage": {
+      "hardwareType": "Loại phần cứng",
+      "selectHardwareType": "Mặc định: Khác",
+      "reorderHint": "Kéo biểu tượng bên trái để sắp xếp danh mục cùng cấp. Có thể nhập thứ tự trong form sửa.",
+      "dragCategory": "Kéo để sắp xếp {name}",
       "addNew": "Thêm danh mục",
       "addTitle": "Thêm danh mục",
       "addDescription": "Chọn danh mục cha nếu đây là danh mục con.",

@@ -77,6 +77,8 @@ export function ProductCard({
   const price = product.minPrice ?? product.maxPrice;
   const theme = productTheme(product.categoryName);
   const listing = variant === "listing";
+  const outOfStock = product.totalQuantity === 0;
+  const quickAddLabel = outOfStock ? t("outOfStock") : addToCart.isPending ? t("addingToCart") : t("quickAdd");
 
   async function quickAdd(event: MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -120,7 +122,7 @@ export function ProductCard({
   if (listing) {
     const hasRange = product.minPrice != null && product.maxPrice != null && product.maxPrice > product.minPrice;
     const iconButton =
-      "inline-flex size-8 items-center justify-center rounded-lg border bg-background text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:cursor-wait disabled:opacity-60";
+      "inline-flex size-8 items-center justify-center rounded-lg border bg-background text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary disabled:cursor-not-allowed disabled:opacity-60";
     return (
       <Card className="group flex h-full flex-col overflow-hidden rounded-xl border-border/70 shadow-none transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
         {productHref ? (
@@ -149,6 +151,7 @@ export function ProductCard({
             {hasRange ? <span className="mr-1 text-xs font-normal text-muted-foreground">{t("from")}</span> : null}
             {formatMoney(price, locale)}
           </p>
+          {outOfStock ? <p className="text-xs font-medium text-destructive">{t("outOfStock")}</p> : null}
           {(product.reviewCount ?? 0) > 0 ? (
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
               <IconStar className="size-3 fill-amber-400 text-amber-400" />
@@ -172,9 +175,9 @@ export function ProductCard({
                   type="button"
                   className={iconButton}
                   onClick={(event) => void quickAdd(event)}
-                  disabled={addToCart.isPending}
-                  aria-label={addToCart.isPending ? t("addingToCart") : t("quickAdd")}
-                  title={addToCart.isPending ? t("addingToCart") : t("quickAdd")}
+                  disabled={addToCart.isPending || outOfStock}
+                  aria-label={quickAddLabel}
+                  title={quickAddLabel}
                 >
                   {addToCart.isPending ? <IconLoader2 className="size-4 animate-spin" /> : <IconShoppingCart className="size-4" />}
                 </button>
@@ -290,13 +293,13 @@ export function ProductCard({
                 <button
                   type="button"
                   className={cn(
-                    "inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10 disabled:cursor-wait disabled:opacity-60",
+                    "inline-flex min-w-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-0 text-primary transition hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60",
                     compact ? "h-8" : "h-9",
                   )}
                   onClick={(event) => void quickAdd(event)}
-                  disabled={addToCart.isPending}
-                  aria-label={addToCart.isPending ? t("addingToCart") : t("quickAdd")}
-                  title={addToCart.isPending ? t("addingToCart") : t("quickAdd")}
+                  disabled={addToCart.isPending || outOfStock}
+                  aria-label={quickAddLabel}
+                  title={quickAddLabel}
                 >
                   {addToCart.isPending ? <IconLoader2 className="size-4 animate-spin" /> : <IconShoppingCart className="size-4" />}
                 </button>
@@ -417,7 +420,9 @@ function ProductVisual({
         <Badge className="max-w-[65%] truncate border-white/80 bg-white/80 text-xs text-foreground/70 backdrop-blur">
           {product.categoryName ?? t("category")}
         </Badge>
-        {product.status === ResourceStatus.Active ? (
+        {product.totalQuantity === 0 ? (
+          <Badge className="border-rose-200 bg-rose-50 text-rose-700">{t("outOfStock")}</Badge>
+        ) : product.status === ResourceStatus.Active ? (
           <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">{t("activeCatalog")}</Badge>
         ) : product.status ? (
           <Badge className="border-slate-200 bg-slate-100 text-slate-600">{t("inactiveCatalog")}</Badge>

@@ -62,12 +62,20 @@ export const createCategoryRequestSchema = z
     seoName: optionalText,
     description: optionalText,
     parentId: optionalUuid,
+    displayOrder: z.number().int().nonnegative().optional(),
+    hardwareTypeCode: optionalText,
   })
   .strict();
 
 export const updateCategoryRequestSchema = createCategoryRequestSchema
   .extend({
     status: optionalEnum(EDITABLE_RESOURCE_STATUS_VALUES),
+  })
+  .strict();
+
+export const reorderCategoriesRequestSchema = z
+  .object({
+    items: z.array(z.object({id: uuid, displayOrder: z.number().int().nonnegative()}).strict()).min(1),
   })
   .strict();
 
@@ -150,6 +158,7 @@ export type CreateProductRequest = z.infer<typeof createProductRequestSchema>;
 export type UpdateProductRequest = z.infer<typeof updateProductRequestSchema>;
 export type CreateCategoryRequest = z.infer<typeof createCategoryRequestSchema>;
 export type UpdateCategoryRequest = z.infer<typeof updateCategoryRequestSchema>;
+export type ReorderCategoriesRequest = z.infer<typeof reorderCategoriesRequestSchema>;
 export type CreateBrandRequest = z.infer<typeof createBrandRequestSchema>;
 export type UpdateBrandRequest = z.infer<typeof updateBrandRequestSchema>;
 export type CreateSupplierRequest = z.infer<typeof createSupplierRequestSchema>;
