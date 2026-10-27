@@ -1,22 +1,22 @@
 "use client";
 
-import {KeyRound, LoaderCircle, LogOut, Pencil, Plus, Save, ShieldCheck, Trash2, Upload, X} from "lucide-react";
-import Image from "next/image";
+import {ClipboardList, KeyRound, LoaderCircle, MapPin, Pencil, Plus, Save, ShieldCheck, User, Lock, X} from "lucide-react";
 import {useTranslations} from "next-intl";
-import {useMemo, useState, type ChangeEvent, type FormEvent} from "react";
+import {useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode} from "react";
 
 import {Button} from "@/components/ui/button";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card";
+import {Card, CardContent} from "@/components/ui/card";
 import {ConfirmAction} from "@/components/ui/confirm-action";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {AccountPageSkeleton} from "@/components/ui/loading-skeletons";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
-import {Select} from "@/components/ui/select";
+import {PersonAvatar} from "@/components/ui/person-avatar";
 import {Skeleton} from "@/components/ui/skeleton";
 import {Textarea} from "@/components/ui/textarea";
-import {Link, useRouter} from "@/i18n/navigation";
+import {Link} from "@/i18n/navigation";
 import {ApiClientError} from "@/lib/api/envelope";
+import {cn} from "@/lib/utils";
 import type {CustomerAddress} from "@/features/account/contracts/responses";
 import type {CustomerAddressRequest} from "@/features/account/contracts/requests";
 import type {UploadedImage} from "@/features/auth/models";
@@ -25,7 +25,6 @@ import {Gender} from "@/lib/domain/account-enums";
 
 import {
   useChangePassword,
-  useLogout,
   useProfile,
   useUpdateProfile,
   useUploadAvatar,
@@ -45,19 +44,43 @@ type ProfileDraft = {
 
 type AddressDraft = CustomerAddressRequest & {id?: string};
 
+type Section = "profile" | "addresses" | "password";
+
+const TAB_PARAM = "tab";
+
+/** The section named by the address of the page, so a link can open the addresses or the password directly. */
+function requestedSection(): string | null {
+  return typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get(TAB_PARAM);
+}
+
+const NAV_ITEM = "flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm transition hover:text-primary";
+
 export function AccountPage() {
   const t = useTranslations("account");
   const nav = useTranslations("nav");
   const common = useTranslations("common");
-  const router = useRouter();
   const profile = useProfile();
   const role = profile.data?.role?.toUpperCase();
   const isStaff = isStaffRole(role);
   const addresses = useAddresses(Boolean(profile.data) && !isStaff);
   const updateProfile = useUpdateProfile();
-  const logout = useLogout();
   const [profileDraft, setProfileDraft] = useState<ProfileDraft | null>(null);
   const [addressDraft, setAddressDraft] = useState<AddressDraft | null>(null);
+  const [requested, setRequested] = useState<string | null>(requestedSection);
+  // An employee has no delivery addresses
+  const sections: Section[] = isStaff ? ["profile", "password"] : ["profile", "addresses", "password"];
+  const section = sections.find((candidate) => candidate === requested) ?? "profile";
+
+  function openSection(next: Section) {
+    setRequested(next);
+    const url = new URL(window.location.href);
+    if (next === "profile") {
+      url.searchParams.delete(TAB_PARAM);
+    } else {
+      url.searchParams.set(TAB_PARAM, next);
+    }
+    window.history.replaceState(null, "", url);
+  }
 
   const profileDefaults = useMemo<ProfileDraft>(
     () => ({
@@ -85,15 +108,6 @@ export function AccountPage() {
         avatarFileId: draft.avatarFileId,
       })
       .catch(() => undefined);
-  }
-
-  async function signOut() {
-    try {
-      await logout.mutateAsync();
-    } finally {
-      router.push("/");
-      router.refresh();
-    }
   }
 
   if (profile.isPending) {
@@ -139,140 +153,226 @@ export function AccountPage() {
     }));
   }
 
-  return (
-    <section className="page-wrap py-12 sm:py-16">
-      <div className="mb-10 flex flex-wrap items-end justify-between gap-4">
-        <div className="space-y-3">
-          <p className="eyebrow">{t("profile")}</p>
-          <h1 className="text-4xl font-semibold tracking-tight">{t("title")}</h1>
-          <p className="text-muted-foreground">{t("description")}</p>
-        </div>
-        <Button variant="outline" onClick={() => void signOut()} disabled={logout.isPending}>
-          <LogOut className="size-4" />
-          {t("logout")}
-        </Button>
-      </div>
+  const hasPassword = profile.data?.hasPassword ?? true;
+  const displayName = profile.data?.fullName ?? profile.data?.email ?? nav("account");
+  const person = {avatarUrl: profile.data?.avatarUrl, firstName: profile.data?.firstName || displayName};
+  const heading: Record<Section, {title: string; description: string}> = {
+    profile: {title: t("profile"), description: t("profileDescription")},
+    addresses: {title: t("addresses"), description: t("addressesDescription")},
+    password: {title: t("changePassword"), description: hasPassword ? t("changePasswordDescription") : t("setPasswordDescription")},
+  };
+  const sectionIcon: Record<Section, ReactNode> = {
+    profile: <User className="size-4" aria-hidden="true" />,
+    addresses: <MapPin className="size-4" aria-hidden="true" />,
+    password: <Lock className="size-4" aria-hidden="true" />,
+  };
 
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("profile")}</CardTitle>
-            <CardDescription>{t("profileDescription")}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-6" onSubmit={(event) => void saveProfile(event)}>
-              <AvatarPicker
-                url={draft.avatarUrl}
-                onUploaded={(image) =>
-                  setProfileDraft((current) => ({...(current ?? profileDefaults), avatarFileId: image.id, avatarUrl: image.url}))
+  return (
+    <section className="page-wrap py-6 sm:py-10">
+      <div className="grid gap-5 lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+        <aside className="min-w-0">
+          <div className="flex items-center gap-3 pb-4 lg:border-b lg:pb-5">
+            <PersonAvatar person={person} className="size-12 text-lg" />
+            <div className="min-w-0">
+              <p title={displayName} className="truncate text-sm font-semibold">
+                {displayName}
+              </p>
+              <button
+                type="button"
+                onClick={() => openSection("profile")}
+                className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground transition hover:text-primary"
+              >
+                <Pencil className="size-3" aria-hidden="true" />
+                {t("editProfile")}
+              </button>
+            </div>
+          </div>
+
+          <nav aria-label={nav("myAccount")} className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pt-4">
+            <p className="hidden items-center gap-2 px-3 pb-1 text-sm font-semibold lg:flex">
+              <User className="size-4 text-primary" aria-hidden="true" />
+              {nav("myAccount")}
+            </p>
+            {sections.map((item) => (
+              <button
+                key={item}
+                type="button"
+                aria-current={item === section ? "page" : undefined}
+                onClick={() => openSection(item)}
+                className={cn(
+                  NAV_ITEM,
+                  "lg:pl-9",
+                  item === section ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground",
+                )}
+              >
+                <span className="lg:hidden">{sectionIcon[item]}</span>
+                {heading[item].title}
+              </button>
+            ))}
+            {!isStaff ? (
+              <Link href="/orders" className={cn(NAV_ITEM, "text-muted-foreground lg:mt-1 lg:font-semibold lg:text-foreground")}>
+                <ClipboardList className="size-4 lg:text-primary" aria-hidden="true" />
+                {nav("myOrders")}
+              </Link>
+            ) : (
+              <Link href="/admin" className={cn(NAV_ITEM, "font-medium text-primary lg:mt-1")}>
+                <ShieldCheck className="size-4" aria-hidden="true" />
+                {t("openAdmin")}
+              </Link>
+            )}
+          </nav>
+        </aside>
+
+        <main className="min-w-0 rounded-xl border bg-card">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 sm:px-8 sm:py-5">
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold">{heading[section].title}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{heading[section].description}</p>
+            </div>
+            {section === "addresses" ? (
+              <Button
+                size="sm"
+                onClick={() =>
+                  setAddressDraft({
+                    recipientName: "",
+                    phone: "",
+                    addressLine: "",
+                    default: false,
+                  })
+                }
+              >
+                <Plus className="size-4" />
+                {t("addAddress")}
+              </Button>
+            ) : null}
+          </div>
+
+          <div className="px-5 py-6 sm:px-8 sm:py-8">
+            {section === "profile" ? (
+              <form className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_15rem]" onSubmit={(event) => void saveProfile(event)}>
+                <div className="space-y-5">
+                  <FormRow label={t("email")}>
+                    <p className="break-all text-sm">{profile.data?.email}</p>
+                  </FormRow>
+                  <FormRow label={t("lastName")} htmlFor="profile-last-name">
+                    <Input
+                      id="profile-last-name"
+                      value={draft.lastName}
+                      onChange={(event) => updateDraft("lastName", event.target.value)}
+                      required
+                      className="max-w-md"
+                    />
+                  </FormRow>
+                  <FormRow label={t("firstName")} htmlFor="profile-first-name">
+                    <Input
+                      id="profile-first-name"
+                      value={draft.firstName}
+                      onChange={(event) => updateDraft("firstName", event.target.value)}
+                      required
+                      className="max-w-md"
+                    />
+                  </FormRow>
+                  <FormRow label={t("phone")} htmlFor="profile-phone">
+                    <Input
+                      id="profile-phone"
+                      value={draft.phone}
+                      onChange={(event) => updateDraft("phone", event.target.value)}
+                      className="max-w-md"
+                    />
+                    {profile.data && !profile.data.phone ? (
+                      <p className="mt-2 max-w-md text-xs leading-5 text-muted-foreground">{t("phoneMissingHint")}</p>
+                    ) : null}
+                  </FormRow>
+                  <FormRow label={t("gender")}>
+                    <div role="radiogroup" aria-label={t("gender")} className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                      {[
+                        {value: Gender.Male, label: t("male")},
+                        {value: Gender.Female, label: t("female")},
+                        {value: Gender.Other, label: t("other")},
+                      ].map((option) => (
+                        <label key={option.value} className="inline-flex cursor-pointer items-center gap-2 text-sm">
+                          <input
+                            type="radio"
+                            name="profile-gender"
+                            value={option.value}
+                            checked={draft.gender === option.value}
+                            onChange={() => updateDraft("gender", option.value)}
+                            className="size-4 accent-primary"
+                          />
+                          {option.label}
+                        </label>
+                      ))}
+                    </div>
+                  </FormRow>
+                  <FormRow label={t("birthday")} htmlFor="profile-birthday">
+                    <Input
+                      id="profile-birthday"
+                      type="date"
+                      value={draft.birthday}
+                      onChange={(event) => updateDraft("birthday", event.target.value)}
+                      className="max-w-md"
+                    />
+                  </FormRow>
+                  <FormRow>
+                    <div className="space-y-3">
+                      {updateProfile.isError ? <ErrorMessage error={updateProfile.error} /> : null}
+                      {updateProfile.isSuccess ? <p className="text-sm text-emerald-700">{t("saved")}</p> : null}
+                      <Button type="submit" disabled={updateProfile.isPending || !draft.firstName.trim() || !draft.lastName.trim()}>
+                        <Save className="size-4" />
+                        {updateProfile.isPending ? common("loading") : t("save")}
+                      </Button>
+                    </div>
+                  </FormRow>
+                </div>
+                <AvatarPicker
+                  person={{avatarUrl: draft.avatarUrl, firstName: draft.firstName || displayName}}
+                  onUploaded={(image) =>
+                    setProfileDraft((current) => ({...(current ?? profileDefaults), avatarFileId: image.id, avatarUrl: image.url}))
+                  }
+                />
+              </form>
+            ) : null}
+
+            {section === "addresses" ? (
+              <AddressList
+                addresses={addresses.data ?? []}
+                loading={addresses.isPending}
+                error={addresses.error}
+                onEdit={(address) =>
+                  setAddressDraft({
+                    id: address.id,
+                    recipientName: address.recipientName ?? "",
+                    phone: address.phone ?? "",
+                    addressLine: address.addressLine ?? "",
+                    default: address.default ?? false,
+                  })
                 }
               />
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field
-                  id="profile-last-name"
-                  label={t("lastName")}
-                  value={draft.lastName}
-                  onChange={(value) => updateDraft("lastName", value)}
-                  required
-                />
-                <Field
-                  id="profile-first-name"
-                  label={t("firstName")}
-                  value={draft.firstName}
-                  onChange={(value) => updateDraft("firstName", value)}
-                  required
-                />
-                <div className="space-y-2">
-                  <Label htmlFor="profile-email">{t("email")}</Label>
-                  <Input id="profile-email" type="email" value={profile.data?.email ?? ""} readOnly disabled />
-                </div>
-                <div className="space-y-2">
-                  <Field id="profile-phone" label={t("phone")} value={draft.phone} onChange={(value) => updateDraft("phone", value)} />
-                  {profile.data && !profile.data.phone ? (
-                    <p className="text-xs leading-5 text-muted-foreground">{t("phoneMissingHint")}</p>
-                  ) : null}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="profile-gender">{t("gender")}</Label>
-                  <Select
-                    id="profile-gender"
-                    value={draft.gender}
-                    onChange={(event) => updateDraft("gender", event.target.value as ProfileDraft["gender"])}
-                  >
-                    <option value="">—</option>
-                    <option value={Gender.Male}>{t("male")}</option>
-                    <option value={Gender.Female}>{t("female")}</option>
-                    <option value={Gender.Other}>{t("other")}</option>
-                  </Select>
-                </div>
-                <Field
-                  id="profile-birthday"
-                  label={t("birthday")}
-                  type="date"
-                  value={draft.birthday}
-                  onChange={(value) => updateDraft("birthday", value)}
-                />
-              </div>
-              {updateProfile.isError ? <ErrorMessage error={updateProfile.error} /> : null}
-              {updateProfile.isSuccess ? <p className="text-sm text-emerald-700">{t("saved")}</p> : null}
-              <Button type="submit" disabled={updateProfile.isPending || !draft.firstName.trim() || !draft.lastName.trim()}>
-                <Save className="size-4" />
-                {updateProfile.isPending ? common("loading") : t("save")}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+            ) : null}
 
-        <div className="space-y-6">
-          <AddressCard
-            addresses={addresses.data ?? []}
-            loading={addresses.isPending}
-            error={addresses.error}
-            staff={isStaff}
-            onAdd={() =>
-              setAddressDraft({
-                recipientName: "",
-                phone: "",
-                addressLine: "",
-                default: false,
-              })
-            }
-            onEdit={(address) =>
-              setAddressDraft({
-                id: address.id,
-                recipientName: address.recipientName ?? "",
-                phone: address.phone ?? "",
-                addressLine: address.addressLine ?? "",
-                default: address.default ?? false,
-              })
-            }
-          />
-          <ChangePasswordCard hasPassword={profile.data?.hasPassword ?? true} />
-        </div>
-      </div>
-
-      <div className="mt-8 flex flex-wrap gap-3">
-        {isStaff ? (
-          <Link
-            href="/admin"
-            className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-          >
-            {t("openAdmin")}
-          </Link>
-        ) : (
-          <>
-            <Link href="/orders" className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted">
-              {t("orders")}
-            </Link>
-            <Link href="/cart" className="inline-flex h-9 items-center rounded-lg border px-3 text-sm font-medium hover:bg-muted">
-              {t("cart")}
-            </Link>
-          </>
-        )}
+            {section === "password" ? <ChangePasswordForm hasPassword={hasPassword} /> : null}
+          </div>
+        </main>
       </div>
 
       {addressDraft ? <AddressDialog draft={addressDraft} onClose={() => setAddressDraft(null)} /> : null}
     </section>
+  );
+}
+
+/** One line of a form: the label on the left from the small breakpoint up, above the input before that; without a label it aligns with the inputs. */
+function FormRow({label, htmlFor, children}: {label?: string; htmlFor?: string; children: ReactNode}) {
+  return (
+    <div className="grid gap-2 sm:grid-cols-[8.5rem_minmax(0,1fr)] sm:items-start sm:gap-6">
+      {label ? (
+        <Label htmlFor={htmlFor} className="font-normal text-muted-foreground sm:pt-2.5 sm:text-right">
+          {label}
+        </Label>
+      ) : (
+        <span className="hidden sm:block" aria-hidden="true" />
+      )}
+      <div className="min-w-0 sm:pt-0.5">{children}</div>
+    </div>
   );
 }
 
@@ -299,7 +399,7 @@ function Field({
   );
 }
 
-function AvatarPicker({url, onUploaded}: {url?: string; onUploaded: (image: UploadedImage) => void}) {
+function AvatarPicker({person, onUploaded}: {person: {avatarUrl?: string; firstName: string}; onUploaded: (image: UploadedImage) => void}) {
   const t = useTranslations("account");
   const upload = useUploadAvatar();
   const [error, setError] = useState<unknown>(null);
@@ -317,55 +417,38 @@ function AvatarPicker({url, onUploaded}: {url?: string; onUploaded: (image: Uplo
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-2xl border bg-muted/20 p-4">
-      <div className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-primary/10 text-xl font-semibold text-primary">
-        {url ? (
-          <Image src={url} alt="" fill sizes="64px" unoptimized className="object-cover" />
-        ) : (
-          <span aria-hidden="true">{t("profile").charAt(0)}</span>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold">{t("avatar")}</p>
-        <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("avatarHint")}</p>
-        <label
-          htmlFor="profile-avatar"
-          className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium transition hover:border-primary/40 hover:bg-primary/5"
-        >
-          {upload.isPending ? <LoaderCircle className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-          {upload.isPending ? t("uploadingAvatar") : t("chooseAvatar")}
-        </label>
-        <input
-          id="profile-avatar"
-          type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
-          className="sr-only"
-          onChange={(event) => void handleChange(event)}
-          disabled={upload.isPending}
-        />
-      </div>
-      {error ? (
-        <div className="w-full">
-          <ErrorMessage error={error} />
-        </div>
-      ) : null}
+    <div className="order-first flex flex-col items-center gap-4 border-b pb-6 text-center lg:order-last lg:border-b-0 lg:border-l lg:pb-0 lg:pl-8">
+      <PersonAvatar person={person} className="size-28 text-4xl" />
+      <label
+        htmlFor="profile-avatar"
+        className="inline-flex cursor-pointer items-center gap-2 rounded-lg border bg-background px-4 py-2 text-sm font-medium transition hover:border-primary/40 hover:bg-primary/5"
+      >
+        {upload.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}
+        {upload.isPending ? t("uploadingAvatar") : t("chooseAvatar")}
+      </label>
+      <input
+        id="profile-avatar"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="sr-only"
+        onChange={(event) => void handleChange(event)}
+        disabled={upload.isPending}
+      />
+      <p className="text-xs leading-5 text-muted-foreground">{t("avatarHint")}</p>
+      {error ? <ErrorMessage error={error} /> : null}
     </div>
   );
 }
 
-function AddressCard({
+function AddressList({
   addresses,
   loading,
   error,
-  staff,
-  onAdd,
   onEdit,
 }: {
   addresses: CustomerAddress[];
   loading: boolean;
   error: unknown;
-  staff: boolean;
-  onAdd: () => void;
   onEdit: (address: CustomerAddress) => void;
 }) {
   const t = useTranslations("account");
@@ -373,108 +456,72 @@ function AddressCard({
   const setDefault = useSetDefaultAddress();
   const remove = useDeleteAddress();
 
-  if (staff) {
-    return (
-      <Card className="border-primary/20 bg-primary/[0.03]">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="size-5 text-primary" />
-            {t("staffProfileTitle")}
-          </CardTitle>
-          <CardDescription>{t("staffProfileDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link
-            href="/admin"
-            className="inline-flex h-9 items-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition hover:bg-primary/90"
-          >
-            {t("openAdmin")}
-          </Link>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader className="flex-row items-center justify-between gap-3">
-        <div className="min-w-0">
-          <CardTitle>{t("addresses")}</CardTitle>
-          <CardDescription>{t("addressesDescription")}</CardDescription>
-        </div>
-        <Button size="sm" onClick={onAdd}>
-          <Plus className="size-4" />
-          {t("addAddress")}
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-24 rounded-xl" />
-        ) : error ? (
-          <ErrorMessage error={error} />
-        ) : addresses.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noAddresses")}</p>
-        ) : (
-          <div className="space-y-3">
-            {addresses.map((address) => (
-              <div key={address.id} className="rounded-xl border p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium">{address.recipientName}</p>
-                      {address.default ? (
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                          {t("defaultAddress")}
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{address.phone}</p>
-                    <p className="mt-1 text-sm leading-6">{address.addressLine}</p>
-                  </div>
-                  <div className="flex shrink-0 gap-1">
-                    <Button size="icon-sm" variant="ghost" aria-label={t("editAddress")} onClick={() => onEdit(address)}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    {address.id ? (
-                      <ConfirmAction
-                        title={t("confirmRemoveAddressTitle")}
-                        description={t("confirmRemoveAddressDescription")}
-                        confirmLabel={t("removeAddress")}
-                        cancelLabel={t("cancel")}
-                        onConfirm={() => remove.mutateAsync(address.id!)}
-                        size="icon-sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        ariaLabel={t("removeAddress")}
-                      >
-                        <Trash2 className="size-4" />
-                      </ConfirmAction>
-                    ) : null}
-                  </div>
+    <div>
+      {loading ? (
+        <Skeleton className="h-24 rounded-xl" />
+      ) : error ? (
+        <ErrorMessage error={error} />
+      ) : addresses.length === 0 ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">{t("noAddresses")}</p>
+      ) : (
+        <ul className="divide-y">
+          {addresses.map((address) => (
+            <li key={address.id} className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 py-5 first:pt-0 last:pb-0">
+              <div className="min-w-0 flex-1 basis-64 space-y-1">
+                <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="font-medium">{address.recipientName}</span>
+                  <span className="text-sm text-muted-foreground">{address.phone}</span>
+                </p>
+                <p className="text-sm leading-6 text-muted-foreground">{address.addressLine}</p>
+                {address.default ? (
+                  <span className="mt-1 inline-block rounded border border-primary/40 px-2 py-0.5 text-xs font-medium text-primary">
+                    {t("defaultAddress")}
+                  </span>
+                ) : null}
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-2">
+                <div className="flex items-center gap-1">
+                  <Button size="sm" variant="ghost" className="text-primary hover:text-primary" onClick={() => onEdit(address)}>
+                    {t("editAddress")}
+                  </Button>
+                  {address.id ? (
+                    <ConfirmAction
+                      title={t("confirmRemoveAddressTitle")}
+                      description={t("confirmRemoveAddressDescription")}
+                      confirmLabel={t("removeAddress")}
+                      cancelLabel={t("cancel")}
+                      onConfirm={() => remove.mutateAsync(address.id!)}
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      ariaLabel={t("removeAddress")}
+                    >
+                      {t("removeAddress")}
+                    </ConfirmAction>
+                  ) : null}
                 </div>
                 {!address.default && address.id ? (
                   <Button
                     size="sm"
                     variant="outline"
-                    className="mt-3"
                     onClick={() => void setDefault.mutateAsync(address.id!).catch(() => undefined)}
                     disabled={setDefault.isPending}
                   >
-                    <ShieldCheck className="size-4" />
                     {t("makeDefault")}
                   </Button>
                 ) : null}
               </div>
-            ))}
-          </div>
-        )}
-        {create.isError || setDefault.isError || remove.isError ? (
-          <div className="mt-4">
-            <ErrorMessage error={create.error ?? setDefault.error ?? remove.error} />
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+            </li>
+          ))}
+        </ul>
+      )}
+      {create.isError || setDefault.isError || remove.isError ? (
+        <div className="mt-4">
+          <ErrorMessage error={create.error ?? setDefault.error ?? remove.error} />
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -578,7 +625,7 @@ function AddressDialog({draft, onClose}: {draft: AddressDraft; onClose: () => vo
   );
 }
 
-function ChangePasswordCard({hasPassword}: {hasPassword: boolean}) {
+function ChangePasswordForm({hasPassword}: {hasPassword: boolean}) {
   const t = useTranslations("account");
   const common = useTranslations("common");
   const change = useChangePassword();
@@ -607,23 +654,24 @@ function ChangePasswordCard({hasPassword}: {hasPassword: boolean}) {
     change.reset();
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("changePassword")}</CardTitle>
-        <CardDescription>{hasPassword ? t("changePasswordDescription") : t("setPasswordDescription")}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {awaitingOtp ? (
-          <form method="post" className="space-y-4" onSubmit={(event) => void submitOtp(event)}>
-            <p className="text-sm text-emerald-700">{t("otpSent")}</p>
-            <Field
-              id="change-otp"
-              label={t("otp")}
-              value={otp}
-              onChange={(value) => setOtp(value.replace(/\D/g, "").slice(0, 6))}
-              required
-            />
+  if (awaitingOtp) {
+    return (
+      <form method="post" className="space-y-5" onSubmit={(event) => void submitOtp(event)}>
+        <FormRow>
+          <p className="text-sm text-emerald-700">{t("otpSent")}</p>
+        </FormRow>
+        <FormRow label={t("otp")} htmlFor="change-otp">
+          <Input
+            id="change-otp"
+            value={otp}
+            inputMode="numeric"
+            onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            required
+            className="max-w-md"
+          />
+        </FormRow>
+        <FormRow>
+          <div className="space-y-3">
             {confirm.isError ? <ErrorMessage error={confirm.error} /> : null}
             <div className="flex flex-wrap items-center gap-2">
               <Button type="submit" disabled={confirm.isPending || otp.length !== 6}>
@@ -633,36 +681,46 @@ function ChangePasswordCard({hasPassword}: {hasPassword: boolean}) {
                 {t("cancel")}
               </Button>
             </div>
-          </form>
-        ) : (
-          <form method="post" className="space-y-4" onSubmit={(event) => void requestOtp(event)}>
-            {hasPassword ? (
-              <Field
-                id="old-password"
-                label={t("oldPassword")}
-                type="password"
-                value={values.currentPassword}
-                onChange={(value) => setValues((current) => ({...current, currentPassword: value}))}
-                required
-              />
-            ) : null}
-            <Field
-              id="new-password-account"
-              label={t("newPassword")}
-              type="password"
-              value={values.newPassword}
-              onChange={(value) => setValues((current) => ({...current, newPassword: value}))}
-              required
-            />
-            <p className="text-xs leading-5 text-muted-foreground">{t("passwordHint")}</p>
-            {change.isError ? <ErrorMessage error={change.error} /> : null}
-            {confirm.isSuccess ? <p className="text-sm text-emerald-700">{t("passwordChanged")}</p> : null}
-            <Button type="submit" disabled={change.isPending || (hasPassword && !values.currentPassword) || !passwordReady}>
-              {change.isPending ? common("loading") : t("sendOtp")}
-            </Button>
-          </form>
-        )}
-      </CardContent>
-    </Card>
+          </div>
+        </FormRow>
+      </form>
+    );
+  }
+
+  return (
+    <form method="post" className="space-y-5" onSubmit={(event) => void requestOtp(event)}>
+      {hasPassword ? (
+        <FormRow label={t("oldPassword")} htmlFor="old-password">
+          <Input
+            id="old-password"
+            type="password"
+            value={values.currentPassword}
+            onChange={(event) => setValues((current) => ({...current, currentPassword: event.target.value}))}
+            required
+            className="max-w-md"
+          />
+        </FormRow>
+      ) : null}
+      <FormRow label={t("newPassword")} htmlFor="new-password-account">
+        <Input
+          id="new-password-account"
+          type="password"
+          value={values.newPassword}
+          onChange={(event) => setValues((current) => ({...current, newPassword: event.target.value}))}
+          required
+          className="max-w-md"
+        />
+        <p className="mt-2 max-w-md text-xs leading-5 text-muted-foreground">{t("passwordHint")}</p>
+      </FormRow>
+      <FormRow>
+        <div className="space-y-3">
+          {change.isError ? <ErrorMessage error={change.error} /> : null}
+          {confirm.isSuccess ? <p className="text-sm text-emerald-700">{t("passwordChanged")}</p> : null}
+          <Button type="submit" disabled={change.isPending || (hasPassword && !values.currentPassword) || !passwordReady}>
+            {change.isPending ? common("loading") : t("sendOtp")}
+          </Button>
+        </div>
+      </FormRow>
+    </form>
   );
 }

@@ -239,6 +239,9 @@ export function mapOrderSummaryPage(dto: OrderSummaryPageDto): OrderSummaryPage 
     nextCursor: dto.nextCursor ?? undefined,
     hasNext: dto.hasNext ?? false,
     size: number(dto.size),
+    page: dto.page ?? undefined,
+    totalElements: dto.totalElements ?? undefined,
+    totalPages: dto.totalPages ?? undefined,
   };
 }
 

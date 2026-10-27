@@ -156,12 +156,7 @@ export function PaymentListPage() {
             }
             pager={
               page.totalPages > 1 ? (
-                <AdminPagination
-                  hasPrev={page.page > 0}
-                  hasNext={!page.last}
-                  onPrev={() => go(pageNumber - 1)}
-                  onNext={() => go(pageNumber + 1)}
-                />
+                <AdminPagination page={page.page} totalPages={page.totalPages} onPageChange={go} />
               ) : undefined
             }
           />

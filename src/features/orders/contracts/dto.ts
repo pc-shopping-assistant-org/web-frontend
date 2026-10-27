@@ -67,12 +67,16 @@ export type OrderSummaryDto = {
   createdAt?: string | null;
 };
 
-/** order-service keyset page: forward only. */
+/** order-service page: keyset (forward only), or numbered when a `page` was asked for. */
 export type OrderSummaryPageDto = {
   items: OrderSummaryDto[];
   nextCursor?: string | null;
   hasNext: boolean;
   size: number;
+  /** Only for a numbered page: its zero-based number and the totals. */
+  page?: number | null;
+  totalElements?: number | null;
+  totalPages?: number | null;
 };
 
 /** One row of the order list of the shop. */

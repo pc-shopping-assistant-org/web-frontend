@@ -1,6 +1,6 @@
 "use client";
 
-import {Ban, ChevronLeft, ChevronRight, KeyRound, Search, X} from "lucide-react";
+import {Ban, KeyRound, Search, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {useState} from "react";
 
@@ -10,6 +10,7 @@ import {ConfirmAction} from "@/components/ui/confirm-action";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {OrdersPageSkeleton} from "@/components/ui/loading-skeletons";
 import {Input} from "@/components/ui/input";
+import {Pagination} from "@/components/ui/pagination";
 import {Select} from "@/components/ui/select";
 import {StatusBadge} from "@/components/ui/status-badge";
 import {Link} from "@/i18n/navigation";
@@ -20,7 +21,6 @@ import {cn} from "@/lib/utils";
 import {OrderStatus} from "@/lib/domain/commerce-enums";
 
 import {useProfile} from "@/features/auth/queries";
-import {useCursorTrail} from "@/lib/hooks/use-cursor-trail";
 import {useCancelOrder, useOrders} from "./queries";
 
 const statuses = ["", ...Object.values(OrderStatus)];
@@ -38,10 +38,9 @@ export function OrdersPage() {
     limit: 10,
     keyword: undefined as string | undefined,
     status: undefined as string | undefined,
-    cursor: undefined as string | undefined,
+    page: 0,
   });
   const query = useOrders(filters, Boolean(profile.data) && !isStaff);
-  const trail = useCursorTrail(JSON.stringify({...filters, cursor: undefined}));
   const cancel = useCancelOrder();
   const orders = query.data?.items ?? [];
   const requiresLogin = profile.isError && profile.error instanceof ApiClientError && profile.error.status === 401;
@@ -52,7 +51,7 @@ export function OrdersPage() {
       ...current,
       keyword: keyword.trim() || undefined,
       status: status || undefined,
-      cursor: undefined,
+      page: 0,
     }));
   }
 
@@ -63,7 +62,7 @@ export function OrdersPage() {
       ...current,
       keyword: undefined,
       status: undefined,
-      cursor: undefined,
+      page: 0,
     }));
   }
 
@@ -247,34 +246,16 @@ export function OrdersPage() {
         </div>
       ) : null}
 
-      {!query.isPending && !query.isError && (trail.hasPrev || query.data?.hasNext) ? (
-        <div className="mt-8 flex justify-center gap-2">
-          <Button
-            variant="outline"
-            disabled={!trail.hasPrev}
-            onClick={() => {
-              setFilters((current) => ({...current, cursor: trail.prevCursor}));
-              trail.pop();
-            }}
-          >
-            <ChevronLeft className="size-4" />
-            {common("back")}
-          </Button>
-          <Button
-            variant="outline"
-            disabled={!query.data?.hasNext || !query.data?.nextCursor}
-            onClick={() => {
-              trail.push(filters.cursor);
-              setFilters((current) => ({
-                ...current,
-                cursor: query.data?.nextCursor,
-              }));
-            }}
-          >
-            {t("next")}
-            <ChevronRight className="size-4" />
-          </Button>
-        </div>
+      {!query.isPending && !query.isError ? (
+        <Pagination
+          className="mt-8"
+          page={filters.page + 1}
+          totalPages={query.data?.totalPages ?? 1}
+          onPageChange={(next) => setFilters((current) => ({...current, page: next - 1}))}
+          previousLabel={t("previous")}
+          nextLabel={t("next")}
+          pageLabel={(number) => t("pageNumber", {page: number})}
+        />
       ) : null}
     </section>
   );

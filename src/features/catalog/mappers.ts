@@ -206,6 +206,9 @@ export function mapProductPage(dto: ProductPageDto): ProductPage {
     items: (dto.items ?? []).map(mapProductSummary),
     nextCursor: dto.nextCursor ?? undefined,
     size: number(dto.size),
+    page: dto.page ?? undefined,
+    totalElements: dto.totalElements ?? undefined,
+    totalPages: dto.totalPages ?? undefined,
   };
 }
 

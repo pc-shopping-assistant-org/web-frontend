@@ -7,7 +7,6 @@ import {
   IconHome,
   IconLayoutGrid,
   IconLayoutDashboard,
-  IconClipboardList,
   IconMenu2,
   IconSearch,
   IconShoppingCart,
@@ -17,8 +16,10 @@ import {
 } from "@tabler/icons-react";
 import Image from "next/image";
 import {useTranslations} from "next-intl";
-import {useState, type FormEvent} from "react";
+import {useCallback, useState, type FormEvent} from "react";
 
+import {AccountMenu} from "@/components/layout/account-menu";
+import {MobileMenu} from "@/components/layout/mobile-menu";
 import {Link, usePathname, useRouter} from "@/i18n/navigation";
 import type {Locale} from "@/i18n/routing";
 import {cn} from "@/lib/utils";
@@ -42,6 +43,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
   const categories = useCategories();
   const logout = useLogout();
   const [open, setOpen] = useState(false);
+  const closeMenu = useCallback(() => setOpen(false), []);
   const [searchTerm, setSearchTerm] = useState("");
   const links = [
     {href: "/" as const, label: t("home"), icon: IconHome},
@@ -50,18 +52,9 @@ export function SiteHeader({locale}: {locale: Locale}) {
     {href: "/assistant" as const, label: t("assistant"), icon: IconRobot},
     ...(!isStaff ? [{href: "/cart" as const, label: t("cart"), icon: IconShoppingCart}] : []),
   ];
-  const primaryLinks = profile.isSuccess ? [...links, {href: "/orders" as const, label: t("orders"), icon: IconClipboardList}] : links;
 
   const otherLocale: Locale = locale === "vi" ? "en" : "vi";
-  const visibleLinks = isStaff ? primaryLinks.filter(({href}) => href !== "/orders") : primaryLinks;
   const profileName = profile.data?.fullName ?? profile.data?.email ?? t("account");
-  const profileInitials =
-    profileName
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(-2)
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("") || "U";
 
   async function signOut() {
     try {
@@ -123,7 +116,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
         </button>
 
         <nav className="hidden items-center gap-0 lg:flex" aria-label="Primary navigation">
-          {visibleLinks.map(({href, label, icon: Icon}) => (
+          {links.map(({href, label, icon: Icon}) => (
             <Link
               key={href}
               href={href}
@@ -154,25 +147,13 @@ export function SiteHeader({locale}: {locale: Locale}) {
                   {t("admin")}
                 </Link>
               ) : null}
-              <Link
-                href="/account"
-                className="ml-1 inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2 py-1.5 text-sm font-medium hover:bg-muted"
-                aria-label={profileName}
-                title={profileName}
-              >
-                <span className="flex size-6 items-center justify-center rounded-md bg-primary/10 text-[0.65rem] font-bold text-primary">
-                  {profileInitials}
-                </span>
-                <span className="hidden xl:inline">{t("account")}</span>
-              </Link>
-              <button
-                type="button"
-                className="shrink-0 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
-                onClick={() => void signOut()}
-                disabled={logout.isPending}
-              >
-                {t("logout")}
-              </button>
+              <AccountMenu
+                name={profileName}
+                person={{avatarUrl: profile.data.avatarUrl, firstName: profile.data.firstName}}
+                showOrders={!isStaff}
+                signingOut={logout.isPending}
+                onSignOut={() => void signOut()}
+              />
             </>
           ) : (
             <>
@@ -195,103 +176,28 @@ export function SiteHeader({locale}: {locale: Locale}) {
         </nav>
       </div>
 
-      {open ? (
-        <nav className="border-t px-4 py-3 lg:hidden" aria-label="Mobile navigation">
-          <form
-            className="relative mb-3"
-            onSubmit={(event) => {
-              submitSearch(event);
-              setOpen(false);
-            }}
-          >
-            <label className="sr-only" htmlFor="mobile-product-search">
-              {home("searchLabel")}
-            </label>
-            <IconSearch
-              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <input
-              id="mobile-product-search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder={home("searchPlaceholder")}
-              className="h-10 w-full rounded-xl border bg-muted/40 pl-9 pr-3 text-sm outline-none transition focus:border-primary/40 focus:bg-background focus:ring-2 focus:ring-primary/10"
-            />
-          </form>
-          <div className="flex flex-col gap-1">
-            <Link
-              href="/products"
-              onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-3 text-sm font-medium text-primary hover:bg-primary/5"
-            >
-              <span className="flex items-center gap-2">
-                <IconLayoutGrid className="size-4" />
-                {t("catalogMenu")}
-              </span>
-            </Link>
-            {visibleLinks.map(({href, label, icon: Icon}) => (
-              <Link key={href} href={href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
-                <span className="flex items-center gap-2">
-                  {Icon ? <Icon className="size-4 text-muted-foreground" /> : null}
-                  {label}
-                  {href === "/cart" && cart.data?.totalItems ? (
-                    <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
-                      {cart.data.totalItems > 99 ? "99+" : cart.data.totalItems}
-                    </span>
-                  ) : null}
-                </span>
-              </Link>
-            ))}
-            {profile.isSuccess ? (
-              <>
-                {isStaff ? (
-                  <Link
-                    href="/admin"
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg px-3 py-3 text-sm font-medium text-primary hover:bg-primary/5"
-                  >
-                    <span className="flex items-center gap-2">
-                      <IconLayoutDashboard className="size-4" />
-                      {t("admin")}
-                    </span>
-                  </Link>
-                ) : null}
-                <Link href="/account" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
-                  {profile.data.fullName ?? t("account")}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false);
-                    void signOut();
-                  }}
-                  className="rounded-lg px-3 py-3 text-left text-sm hover:bg-muted"
-                >
-                  {t("logout")}
-                </button>
-              </>
-            ) : (
-              <>
-                <Link href="/login" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
-                  {t("login")}
-                </Link>
-                <Link href="/register" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm hover:bg-muted">
-                  {t("register")}
-                </Link>
-              </>
-            )}
-            <Link
-              href={pathname}
-              locale={otherLocale}
-              onClick={() => setOpen(false)}
-              className="rounded-lg px-3 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted"
-            >
-              {otherLocale}
-            </Link>
-          </div>
-        </nav>
-      ) : null}
+      <MobileMenu
+        open={open}
+        onClose={closeMenu}
+        links={links}
+        cartCount={cart.data?.totalItems ?? 0}
+        account={
+          profile.isSuccess
+            ? {name: profileName, email: profile.data.email, person: {avatarUrl: profile.data.avatarUrl, firstName: profile.data.firstName}}
+            : null
+        }
+        isStaff={isStaff}
+        locale={locale}
+        pathname={pathname}
+        searchTerm={searchTerm}
+        onSearchTermChange={setSearchTerm}
+        onSearch={(event) => {
+          submitSearch(event);
+          closeMenu();
+        }}
+        signingOut={logout.isPending}
+        onSignOut={() => void signOut()}
+      />
     </header>
   );
 }
@@ -321,11 +227,11 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
       </summary>
       <div className="absolute left-0 top-[calc(100%+0.65rem)] z-50 w-[22rem] rounded-2xl border bg-background p-3 shadow-2xl shadow-slate-950/10">
         <div className="flex items-center justify-between gap-3 border-b px-2 pb-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold">{t("catalogMenuTitle")}</p>
             <p className="mt-1 text-xs text-muted-foreground">{t("catalogMenuDescription")}</p>
           </div>
-          <Link href="/products" className="text-xs font-semibold text-primary hover:underline">
+          <Link href="/products" className="shrink-0 whitespace-nowrap text-xs font-semibold text-primary hover:underline">
             {t("viewAll")}
           </Link>
         </div>
