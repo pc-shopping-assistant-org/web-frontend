@@ -29,6 +29,8 @@ import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 export type ProductFilters = {
   cursor?: string;
+  /** Zero-based number of the page; when set the response carries the totals. */
+  page?: number;
   limit?: number;
   categoryId?: string;
   brandId?: string;
@@ -59,17 +61,24 @@ type ProductSearchHitDto = {
   inStock?: boolean;
   mainImageUrl?: string | null;
 };
-type ProductSearchPageDto = {content: ProductSearchHitDto[]; page: number; size: number; last: boolean};
+type ProductSearchPageDto = {
+  content: ProductSearchHitDto[];
+  page: number;
+  size: number;
+  last: boolean;
+  totalElements?: number;
+  totalPages?: number;
+};
 
 const DEFAULT_SEARCH_SIZE = 12;
 
 /**
  * Text search through search-service (Elasticsearch): by name, brand, category and description, tolerant of accents and typos,
  * and narrowed by the same category, brand and price filters as the catalog list.
- * It pages by number, so the next page number travels as the cursor the catalog list also uses.
+ * It pages by number: `page` when given, otherwise the cursor carries the next page number.
  */
 export async function searchProducts(keyword: string, filters: Omit<ProductFilters, "keyword"> = {}) {
-  const page = Number.parseInt(filters.cursor ?? "0", 10);
+  const page = filters.page ?? Number.parseInt(filters.cursor ?? "0", 10);
   const params = new URLSearchParams({
     q: keyword,
     page: String(Number.isNaN(page) ? 0 : page),
@@ -85,6 +94,9 @@ export async function searchProducts(keyword: string, filters: Omit<ProductFilte
     nextCursor: response.last ? null : String(response.page + 1),
     hasNext: !response.last,
     size: response.content?.length ?? 0,
+    page: response.page,
+    totalElements: response.totalElements,
+    totalPages: response.totalPages,
   });
 }
 

@@ -41,6 +41,8 @@ const PROMOTION = "/promotion-service";
 
 export type OrderFilters = {
   cursor?: string;
+  /** Zero-based number of the page; when set the response carries the totals. */
+  page?: number;
   limit?: number;
   keyword?: string;
   status?: string;

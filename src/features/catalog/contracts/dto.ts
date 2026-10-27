@@ -65,6 +65,10 @@ export type ProductPageDto = {
   nextCursor?: string | null;
   hasNext: boolean;
   size: number;
+  /** Only for a numbered page: its zero-based number and the totals. */
+  page?: number | null;
+  totalElements?: number | null;
+  totalPages?: number | null;
 };
 /** Products still arrive in the old shape until the product phases are integrated. */
 export type LegacyCategoryDto = BackendSchema["CategoryResponse"];

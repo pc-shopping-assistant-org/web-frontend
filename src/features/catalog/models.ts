@@ -114,6 +114,10 @@ export type ProductPage = {
   items: ProductSummary[];
   nextCursor?: string;
   size: number;
+  /** Only for a numbered page: its zero-based number and the totals. */
+  page?: number;
+  totalElements?: number;
+  totalPages?: number;
 };
 
 export type ProductReview = {

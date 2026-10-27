@@ -22,6 +22,7 @@ export default async function ProductsPage({searchParams}: {searchParams: Promis
       initialBrandId={value("brandId")}
       initialMinPrice={numberValue("minPrice")}
       initialMaxPrice={numberValue("maxPrice")}
+      initialPage={numberValue("page") || undefined}
     />
   );
 }

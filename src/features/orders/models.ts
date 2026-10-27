@@ -172,12 +172,15 @@ export type OrderSummary = {
   createdAt?: string;
 };
 
-/** Orders are paged by cursor, forward only. */
+/** Orders are paged by cursor (forward only), or by number when a `page` was asked for. */
 export type OrderSummaryPage = {
   items: OrderSummary[];
   nextCursor?: string;
   hasNext: boolean;
   size: number;
+  page?: number;
+  totalElements?: number;
+  totalPages?: number;
 };
 
 export type OrderStatusChange = {
