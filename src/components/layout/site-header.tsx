@@ -321,11 +321,11 @@ function CatalogMenu({categories}: {categories: CategoryTree[]}) {
       </summary>
       <div className="absolute left-0 top-[calc(100%+0.65rem)] z-50 w-[22rem] rounded-2xl border bg-background p-3 shadow-2xl shadow-slate-950/10">
         <div className="flex items-center justify-between gap-3 border-b px-2 pb-3">
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-semibold">{t("catalogMenuTitle")}</p>
             <p className="mt-1 text-xs text-muted-foreground">{t("catalogMenuDescription")}</p>
           </div>
-          <Link href="/products" className="text-xs font-semibold text-primary hover:underline">
+          <Link href="/products" className="shrink-0 whitespace-nowrap text-xs font-semibold text-primary hover:underline">
             {t("viewAll")}
           </Link>
         </div>
