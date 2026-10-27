@@ -219,12 +219,7 @@ function Customers() {
               {page.totalPages > 1 ? ` · ${t("pageOf", {page: page.page + 1, total: page.totalPages})}` : ""}
             </p>
             {page.totalPages > 1 ? (
-              <AdminPagination
-                hasPrev={page.page > 0}
-                hasNext={!page.last}
-                onPrev={() => setPageNumber((current) => Math.max(0, current - 1))}
-                onNext={() => setPageNumber((current) => current + 1)}
-              />
+              <AdminPagination page={page.page} totalPages={page.totalPages} onPageChange={setPageNumber} />
             ) : null}
           </div>
         ) : null}

@@ -12,7 +12,7 @@ import {StatusBadge} from "@/components/ui/status-badge";
 import {Link} from "@/i18n/navigation";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-import {AdminPagination} from "./admin-pagination";
+import {AdminCursorPagination} from "./admin-pagination";
 import {DataTable, EmptyBox, FilterField, FilterPanel, ListFooter, PageHeader} from "./list-kit";
 import {SupplierCreateForm} from "./management-forms";
 import {useAdminSuppliers} from "./queries";
@@ -108,7 +108,7 @@ export function SupplierListPage() {
           <ListFooter
             summary={t("showingItems", {count: items.length})}
             pager={
-              <AdminPagination
+              <AdminCursorPagination
                 hasPrev={Boolean(page.hasPrev)}
                 hasNext={Boolean(page.hasNext)}
                 onPrev={() => setCursor(page.prevCursor)}
