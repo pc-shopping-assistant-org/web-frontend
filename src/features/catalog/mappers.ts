@@ -2,6 +2,7 @@ import type {
   BrandDto,
   CategoryDto,
   CategoryTreeDto,
+  HardwareTypeDto,
   LegacyBrandDto,
   LegacyCategoryDto,
   ProductDetailDto,
@@ -20,6 +21,7 @@ import type {
   Brand,
   Category,
   CategoryTree,
+  HardwareType,
   ProductDetail,
   ProductImage,
   ProductOption,
@@ -90,7 +92,9 @@ export function mapCategoryResponse(dto: CategoryDto): Category {
     name: dto.name,
     parentId: dto.parentId ?? undefined,
     seoName: dto.seoName,
+    hardwareType: dto.hardwareType ?? undefined,
     description: dto.description ?? undefined,
+    displayOrder: dto.displayOrder ?? 0,
     status: dto.status,
     createdAt: dto.createdAt,
     productCount: dto.productCount,
@@ -104,6 +108,10 @@ export function mapCategoryTree(dto: CategoryTreeDto): CategoryTree {
   };
 }
 
+export function mapHardwareType(dto: HardwareTypeDto): HardwareType {
+  return {id: dto.id, code: dto.code, nameVi: dto.nameVi, nameEn: dto.nameEn, displayOrder: dto.displayOrder};
+}
+
 /** The admin list is flat; the tree is rebuilt from `parentId`, orphans fall back to the root. */
 export function buildCategoryTree(flat: CategoryDto[]): CategoryTree[] {
   const nodes = new Map<string, CategoryTree>(flat.map((dto) => [dto.id, {...mapCategoryResponse(dto), children: []}]));
@@ -112,6 +120,13 @@ export function buildCategoryTree(flat: CategoryDto[]): CategoryTree[] {
     const parent = node.parentId ? nodes.get(node.parentId) : undefined;
     (parent ? parent.children : roots).push(node);
   }
+  const order = (left: Category, right: Category) =>
+    (left.displayOrder ?? 0) - (right.displayOrder ?? 0) || left.name.localeCompare(right.name);
+  const sort = (items: CategoryTree[]) => {
+    items.sort(order);
+    items.forEach((item) => sort(item.children));
+  };
+  sort(roots);
   return roots;
 }
 

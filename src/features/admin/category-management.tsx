@@ -1,7 +1,7 @@
 "use client";
 
-import {ChevronRight, Plus} from "lucide-react";
-import {useTranslations} from "next-intl";
+import {ChevronRight, GripVertical, Plus} from "lucide-react";
+import {useLocale, useTranslations} from "next-intl";
 import {useId, useState, type FormEvent} from "react";
 
 import {Button} from "@/components/ui/button";
@@ -20,12 +20,20 @@ import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-
 import {cn} from "@/lib/utils";
 
 import {flattenCategories} from "./list-helpers";
-import {useAdminCategories, useCreateAdminCategory, useDeleteAdminCategory, useUpdateAdminCategory} from "./queries";
+import {
+  useAdminCategories,
+  useHardwareTypes,
+  useCreateAdminCategory,
+  useDeleteAdminCategory,
+  useReorderAdminCategories,
+  useUpdateAdminCategory,
+} from "./queries";
 
 /** What the dialog is for: a new category (maybe already under a parent) or the edit of one. */
 type DialogState = {mode: "create"; parentId?: string} | {mode: "edit"; category: CategoryTree};
 
 const INDENT_REM = 1.5;
+const DISPLAY_ORDER_STEP = 10;
 
 type Row = {category: CategoryTree; depth: number};
 
@@ -47,13 +55,25 @@ function idsUnder(category: CategoryTree): Set<string> {
   return ids;
 }
 
+function siblingsOf(nodes: CategoryTree[], parentId: string | null): CategoryTree[] | undefined {
+  if (parentId === null) return nodes;
+  for (const node of nodes) {
+    if (node.id === parentId) return node.children;
+    const nested = siblingsOf(node.children ?? [], parentId);
+    if (nested) return nested;
+  }
+  return undefined;
+}
+
 export function CategoryManagement() {
   const t = useTranslations("admin");
   const tc = useTranslations("admin.categoryPage");
   const categories = useAdminCategories();
   const remove = useDeleteAdminCategory();
+  const reorder = useReorderAdminCategories();
   const [dialog, setDialog] = useState<DialogState | null>(null);
   const [folded, setFolded] = useState<Set<string>>(new Set());
+  const [draggedId, setDraggedId] = useState<string | null>(null);
   const tree = categories.data ?? [];
   const rows = visibleRows(tree, folded);
 
@@ -63,6 +83,23 @@ export function CategoryManagement() {
       if (!next.delete(id)) next.add(id);
       return next;
     });
+  }
+
+  function dropCategory(targetId: string) {
+    if (reorder.isPending || !draggedId || draggedId === targetId) return;
+    const dragged = rows.find((row) => row.category.id === draggedId)?.category;
+    const target = rows.find((row) => row.category.id === targetId)?.category;
+    if (!dragged || !target || (dragged.parentId ?? null) !== (target.parentId ?? null)) return;
+    const siblings = siblingsOf(tree, dragged.parentId ?? null);
+    if (!siblings) return;
+    const from = siblings.findIndex((item) => item.id === draggedId);
+    const to = siblings.findIndex((item) => item.id === targetId);
+    if (from < 0 || to < 0) return;
+    const reordered = [...siblings];
+    const [moved] = reordered.splice(from, 1);
+    reordered.splice(to, 0, moved);
+    reorder.mutate({items: reordered.map((item, index) => ({id: item.id, displayOrder: (index + 1) * DISPLAY_ORDER_STEP}))});
+    setDraggedId(null);
   }
 
   return (
@@ -79,6 +116,8 @@ export function CategoryManagement() {
       </div>
 
       <Card className="p-4 sm:p-5">
+        <p className="mb-3 text-sm text-muted-foreground">{tc("reorderHint")}</p>
+        {reorder.isError ? <ErrorMessage error={reorder.error} /> : null}
         {categories.isPending ? (
           <Skeleton className="h-64 rounded-xl" />
         ) : categories.isError ? (
@@ -100,6 +139,9 @@ export function CategoryManagement() {
                     {t("status")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
+                    {t("displayOrder")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
                     {tc("actions")}
                   </th>
                 </tr>
@@ -109,9 +151,32 @@ export function CategoryManagement() {
                   const children = category.children ?? [];
                   const open = !(category.id && folded.has(category.id));
                   return (
-                    <tr key={category.id} className="border-t transition hover:bg-muted/20">
+                    <tr
+                      key={category.id}
+                      onDragEnd={() => setDraggedId(null)}
+                      onDragOver={(event) => {
+                        if (!reorder.isPending) event.preventDefault();
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        dropCategory(category.id);
+                      }}
+                      className={cn("border-t transition hover:bg-muted/20", draggedId === category.id && "opacity-50")}
+                    >
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5" style={{paddingLeft: `${depth * INDENT_REM}rem`}}>
+                          <span
+                            draggable={!reorder.isPending}
+                            onDragStart={(event) => {
+                              event.dataTransfer.setData("text/plain", category.id);
+                              event.dataTransfer.effectAllowed = "move";
+                              setDraggedId(category.id);
+                            }}
+                            title={tc("dragCategory", {name: category.name})}
+                            className="cursor-grab text-muted-foreground active:cursor-grabbing"
+                          >
+                            <GripVertical className="size-4" aria-hidden="true" />
+                          </span>
                           {children.length > 0 ? (
                             <button
                               type="button"
@@ -141,6 +206,7 @@ export function CategoryManagement() {
                       <td className="px-4 py-3">
                         <StatusBadge status={category.status} />
                       </td>
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">{category.displayOrder ?? 0}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                           <Button
@@ -200,6 +266,8 @@ export function CategoryManagement() {
 function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: CategoryTree[]; onClose: () => void}) {
   const t = useTranslations("admin");
   const tc = useTranslations("admin.categoryPage");
+  const locale = useLocale();
+  const hardwareTypes = useHardwareTypes();
   const formId = useId();
   const create = useCreateAdminCategory();
   const update = useUpdateAdminCategory();
@@ -210,6 +278,8 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
     seoName: editing?.seoName ?? "",
     description: editing?.description ?? "",
     parentId: editing ? (editing.parentId ?? "") : state.mode === "create" ? (state.parentId ?? "") : "",
+    displayOrder: editing?.displayOrder ?? 0,
+    hardwareTypeCode: editing?.hardwareType ?? "",
     status: (editing?.status as EditableResourceStatus | undefined) ?? ResourceStatus.Active,
   });
   /** A category cannot go under itself or under one of its own children. */
@@ -224,6 +294,8 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
       seoName: form.seoName.trim(),
       description: form.description.trim(),
       parentId: form.parentId || undefined,
+      displayOrder: form.displayOrder,
+      hardwareTypeCode: form.hardwareTypeCode || undefined,
     };
     try {
       if (editing) await update.mutateAsync({id: editing.id!, request: {...body, status: form.status}});
@@ -247,7 +319,7 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
           <Button type="button" variant="outline" disabled={mutation.isPending} onClick={onClose}>
             {t("cancel")}
           </Button>
-          <Button type="submit" form={formId} disabled={mutation.isPending || !form.name.trim()}>
+          <Button type="submit" form={formId} disabled={mutation.isPending || hardwareTypes.isPending || hardwareTypes.isError || !form.name.trim()}>
             {editing ? t("save") : tc("create")}
           </Button>
         </>
@@ -281,6 +353,34 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
         <div className="space-y-2">
           <Label htmlFor={`${formId}-seo`}>{t("seoName")}</Label>
           <Input id={`${formId}-seo`} value={form.seoName} maxLength={255} onChange={(event) => set({seoName: event.target.value})} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${formId}-hardware-type`}>{tc("hardwareType")}</Label>
+          <Select
+            id={`${formId}-hardware-type`}
+            value={form.hardwareTypeCode}
+            disabled={hardwareTypes.isPending || hardwareTypes.isError}
+            onChange={(event) => set({hardwareTypeCode: event.target.value})}
+          >
+            <option value="">{tc("selectHardwareType")}</option>
+            {hardwareTypes.data?.map((type) => (
+              <option key={type.id} value={type.code}>
+                {locale === "vi" ? type.nameVi : type.nameEn}
+              </option>
+            ))}
+          </Select>
+          {hardwareTypes.isError ? <ErrorMessage error={hardwareTypes.error} /> : null}
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${formId}-display-order`}>{t("displayOrder")}</Label>
+          <Input
+            id={`${formId}-display-order`}
+            type="number"
+            min={0}
+            step={1}
+            value={form.displayOrder}
+            onChange={(event) => set({displayOrder: Math.max(0, Number.parseInt(event.target.value, 10) || 0)})}
+          />
         </div>
         {editing ? (
           <div className="space-y-2">

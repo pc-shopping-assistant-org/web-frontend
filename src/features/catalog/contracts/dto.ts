@@ -75,7 +75,9 @@ export type CategoryDto = {
   id: string;
   name: string;
   seoName: string;
+  hardwareType?: string | null;
   description?: string | null;
+  displayOrder?: number | null;
   parentId?: string | null;
   status: string;
   createdAt?: string;
@@ -83,6 +85,14 @@ export type CategoryDto = {
   productCount?: number;
 };
 export type CategoryTreeDto = CategoryDto;
+
+export type HardwareTypeDto = {
+  id: string;
+  code: string;
+  nameVi: string;
+  nameEn: string;
+  displayOrder: number;
+};
 
 /** catalog-service brand with the URL of its logo already resolved. */
 export type BrandDto = {

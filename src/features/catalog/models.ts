@@ -25,7 +25,9 @@ export type Category = {
   name: string;
   parentId?: string;
   seoName?: string;
+  hardwareType?: string;
   description?: string;
+  displayOrder?: number;
   status?: string;
   createdAt?: string;
   /** Products the shop lists in this category and everything under it; only the storefront lists carry it. */
@@ -34,6 +36,14 @@ export type Category = {
 
 export type CategoryTree = Category & {
   children: CategoryTree[];
+};
+
+export type HardwareType = {
+  id: string;
+  code: string;
+  nameVi: string;
+  nameEn: string;
+  displayOrder: number;
 };
 
 /** A variant option such as `Color: Blue`. */
