@@ -10,8 +10,8 @@ import {
   mapSuppliersPage,
 } from "@/features/admin/mappers";
 import type {DiscountsPageDto, SuppliersPageDto} from "@/features/admin/contracts/dto";
-import type {CategoryDto, BrandDto, HardwareTypeDto} from "@/features/catalog/contracts/dto";
-import {buildCategoryTree, mapBrandResponse, mapCategoryResponse, mapHardwareType} from "@/features/catalog/mappers";
+import type {CategoryDto, BrandDto} from "@/features/catalog/contracts/dto";
+import {buildCategoryTree, mapBrandResponse, mapCategoryResponse} from "@/features/catalog/mappers";
 import type {ProductDetailDto, ProductPageDto, ProductVariantDto, ReviewDto, ReviewsPageDto} from "@/features/catalog/contracts/dto";
 import {mapProductDetail, mapProductPage, mapProductVariant, mapReview, mapReviewsPage} from "@/features/catalog/mappers";
 import type {} from "@/features/orders/contracts/dto";
@@ -242,9 +242,6 @@ export function replaceCategorySpecs(categoryId: string, request: ReplaceCategor
 /** Every category including inactive ones, as a tree. */
 export async function getAdminCategories() {
   return buildCategoryTree(await backendFetch<CategoryDto[]>(`${CATALOG}/categories/admin`));
-}
-export async function getHardwareTypes() {
-  return (await backendFetch<HardwareTypeDto[]>(`${CATALOG}/hardware-types`)).map(mapHardwareType);
 }
 export function createCategory(request: CreateCategoryRequest) {
   const payload = parseRequest(createCategoryRequestSchema, request);

@@ -1,6 +1,6 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 
-import {getCategorySpecLabels, getProductBySlug, getProducts, listProducts, searchProducts} from "./api";
+import {getCategorySpecLabels, getHardwareTypes, getProductBySlug, getProducts, listProducts, searchProducts} from "./api";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -166,5 +166,20 @@ describe("storefront text search", () => {
     await listProducts({keyword: "  ", categoryId: "c1", limit: 12});
 
     expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/products?categoryId=c1&limit=12");
+  });
+});
+
+describe("hardware types of the master table", () => {
+  it("reads them from catalog-service in the order of the table", async () => {
+    const fetchMock = stubFetch([
+      {id: "2", code: "OTHER", nameVi: "Khác", nameEn: "Other", displayOrder: 999},
+      {id: "1", code: "CPU", nameVi: "CPU", nameEn: "CPU", displayOrder: 10},
+    ]);
+
+    const types = await getHardwareTypes();
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/hardware-types");
+    expect(types.map((type) => type.code)).toEqual(["CPU", "OTHER"]);
+    expect(types[1]).toMatchObject({nameVi: "Khác", nameEn: "Other"});
   });
 });

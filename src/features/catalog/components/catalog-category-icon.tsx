@@ -61,12 +61,42 @@ const categoryIconRules: CategoryIconRule[] = [
   {keywords: ["console", "game"], icon: IconDeviceGamepad2},
 ];
 
-export function getCatalogCategoryIcon(categoryName?: string | null): TablerIcon {
+/** The icon of each hardware type code of the master table; a code not listed here falls back to the name guess. */
+const hardwareTypeIcons: Record<string, TablerIcon> = {
+  CPU: IconCpu,
+  MAINBOARD: IconComponents,
+  RAM: IconDeviceSdCard,
+  GPU: IconComponents,
+  PSU: IconPlugConnected,
+  CASE: IconServer2,
+  COOLER: IconWind,
+  STORAGE: IconDatabase,
+  SSD: IconDatabase,
+  HDD: IconDatabase,
+  MONITOR: IconDeviceTv,
+  MOUSE: IconMouse,
+  KEYBOARD: IconKeyboard,
+  HEADSET: IconHeadphones,
+  PREBUILT_PC: IconDevicesPc,
+  PC_GAMING: IconDevicesPc,
+  PC_WORKSTATION: IconDevicesPc,
+  PC_OFFICE: IconDevicesPc,
+  PC_AI: IconDevicesPc,
+  PC_MINI: IconDevicesPc,
+};
+
+export function getCatalogCategoryIcon(categoryName?: string | null, hardwareType?: string | null): TablerIcon {
+  const byType = hardwareType ? hardwareTypeIcons[hardwareType] : undefined;
+  if (byType) return byType;
   const normalizedName = categoryName?.toLocaleLowerCase() ?? "";
   return categoryIconRules.find(({keywords}) => keywords.some((keyword) => normalizedName.includes(keyword)))?.icon ?? IconLayoutGrid;
 }
 
-export function CatalogCategoryIcon({categoryName, ...props}: {categoryName?: string | null} & ComponentPropsWithoutRef<"svg">) {
-  const Icon = getCatalogCategoryIcon(categoryName);
+export function CatalogCategoryIcon({
+  categoryName,
+  hardwareType,
+  ...props
+}: {categoryName?: string | null; hardwareType?: string | null} & ComponentPropsWithoutRef<"svg">) {
+  const Icon = getCatalogCategoryIcon(categoryName, hardwareType);
   return createElement(Icon, {"aria-hidden": true, ...props});
 }

@@ -2,6 +2,7 @@ import {backendFetch} from "@/lib/api/client";
 import type {
   BrandDto,
   CategoryTreeDto,
+  HardwareTypeDto,
   ProductDetailDto,
   ProductPageDto,
   OrderLineProductDto,
@@ -13,6 +14,7 @@ import type {
 import {
   mapBrandResponse,
   mapCategoryTree,
+  mapHardwareType,
   mapProductDetail,
   mapProductPage,
   mapProductReview,
@@ -139,6 +141,12 @@ export async function getCategorySpecLabels(categoryId: string): Promise<SpecLab
 export async function getCategories() {
   const response = await backendFetch<CategoryTreeDto[]>("/catalog-service/categories/tree");
   return response.map(mapCategoryTree);
+}
+
+/** The hardware types of the master table, each with its name in both languages (public read). */
+export async function getHardwareTypes() {
+  const response = await backendFetch<HardwareTypeDto[]>("/catalog-service/hardware-types");
+  return response.map(mapHardwareType).sort((left, right) => left.displayOrder - right.displayOrder);
 }
 
 export async function getBrands() {
