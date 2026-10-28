@@ -51,6 +51,8 @@ export type ProductDetailDto = {
   brandName?: string | null;
   categoryId?: string | null;
   categoryName?: string | null;
+  /** Code of the hardware type of its category (master table), null while the category has none. */
+  hardwareType?: string | null;
   specifications?: Record<string, unknown>;
   description?: string | null;
   status: string;

@@ -2,6 +2,7 @@ import {backendFetch} from "@/lib/api/client";
 import type {
   BrandDto,
   CategoryTreeDto,
+  HardwareTypeDto,
   ProductDetailDto,
   ProductPageDto,
   OrderLineProductDto,
@@ -13,6 +14,7 @@ import type {
 import {
   mapBrandResponse,
   mapCategoryTree,
+  mapHardwareType,
   mapProductDetail,
   mapProductPage,
   mapProductReview,
@@ -105,9 +107,16 @@ export async function searchProducts(keyword: string, filters: Omit<ProductFilte
 }
 
 /** A keyword goes to the search, without one the catalog lists; both narrow by category, brand and price. */
-export function listProducts(filters: ProductFilters = {}) {
+export async function listProducts(filters: ProductFilters = {}) {
   const keyword = filters.keyword?.trim();
-  return keyword ? searchProducts(keyword, filters) : getProducts({...filters, keyword: undefined});
+  const read = (page?: number) =>
+    keyword ? searchProducts(keyword, {...filters, page}) : getProducts({...filters, keyword: undefined, page});
+  const result = await read(filters.page);
+  // A page past the end (a hand-edited URL) comes back empty: show the last page instead
+  if (filters.page && result.items.length === 0 && result.totalPages && filters.page >= result.totalPages) {
+    return read(result.totalPages - 1);
+  }
+  return result;
 }
 
 export async function getProductBySlug(seoName: string) {
@@ -132,6 +141,12 @@ export async function getCategorySpecLabels(categoryId: string): Promise<SpecLab
 export async function getCategories() {
   const response = await backendFetch<CategoryTreeDto[]>("/catalog-service/categories/tree");
   return response.map(mapCategoryTree);
+}
+
+/** The hardware types of the master table, each with its name in both languages (public read). */
+export async function getHardwareTypes() {
+  const response = await backendFetch<HardwareTypeDto[]>("/catalog-service/hardware-types");
+  return response.map(mapHardwareType).sort((left, right) => left.displayOrder - right.displayOrder);
 }
 
 export async function getBrands() {
