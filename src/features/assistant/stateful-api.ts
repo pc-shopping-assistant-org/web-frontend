@@ -115,3 +115,11 @@ async function readSavedResult(path: string, runId: string, conversationId: stri
     });
   }
 }
+
+/** Resume delivery only; never submit a new turn or open another SSE. */
+export async function waitForRunResult(conversationId: string, runId: string, signal?: AbortSignal): Promise<ChatData> {
+  const result = await readSavedResult(`/conversations/${conversationId}/runs/${runId}`, runId, conversationId, signal);
+  if (result.run.run_id !== runId || result.run.conversation_id !== conversationId || result.revision !== result.run.base_revision + 1)
+    throw invalidStream();
+  return mapStatefulTurn(result);
+}

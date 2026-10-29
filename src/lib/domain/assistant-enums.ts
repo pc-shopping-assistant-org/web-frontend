@@ -15,6 +15,17 @@ export enum ChatStreamEventType {
   Error = "ERROR",
 }
 
+export enum AssistantRunStatus {
+  Pending = "PENDING",
+  Running = "RUNNING",
+  Recovering = "RECOVERING",
+  WaitingInput = "WAITING_INPUT",
+  Completed = "COMPLETED",
+  FailedRetryable = "FAILED_RETRYABLE",
+  FailedTerminal = "FAILED_TERMINAL",
+  Cancelled = "CANCELLED",
+}
+
 export enum FlexibleTurnStatus {
   Completed = "COMPLETED",
   Unresolved = "UNRESOLVED",

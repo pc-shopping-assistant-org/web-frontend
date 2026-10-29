@@ -9,15 +9,17 @@ const AssistantPage = dynamic(() => import("@/features/assistant/assistant-page"
 });
 
 export function AssistantRouteClient({
+  initialConversationId,
   initialProductIds,
   initialPrompt,
   invalidBuild,
 }: {
+  initialConversationId?: string;
   initialProductIds?: string[];
   initialPrompt?: string;
   invalidBuild?: boolean;
 }) {
   return (
-    <AssistantPage key={initialPrompt} initialProductIds={initialProductIds} initialPrompt={initialPrompt} invalidBuild={invalidBuild} />
+    <AssistantPage key={initialConversationId ?? initialPrompt} initialConversationId={initialConversationId} initialProductIds={initialProductIds} initialPrompt={initialPrompt} invalidBuild={invalidBuild} />
   );
 }

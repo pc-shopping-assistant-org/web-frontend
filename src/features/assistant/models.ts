@@ -48,3 +48,9 @@ export type EvaluateData = {
   answer: string;
   product: AssistantProduct;
 };
+
+export type ChatTurn = {
+  runId?: string;
+  prompt: string;
+  response?: ChatData | SearchData | ConsultData | CompareData | EvaluateData;
+};

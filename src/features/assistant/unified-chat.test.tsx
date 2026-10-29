@@ -4,6 +4,11 @@ import {afterEach, expect, it, vi} from "vitest";
 import {AssistantPage} from "./assistant-page";
 import {ApiClientError} from "@/lib/api/envelope";
 import {AiMode} from "@/lib/domain/assistant-enums";
+import {loadConversationHistory} from "./conversation-history";
+import {waitForRunResult} from "./stateful-api";
+
+vi.mock("./conversation-history", () => ({loadConversationHistory: vi.fn(), setConversationUrl: vi.fn()}));
+vi.mock("./stateful-api", () => ({waitForRunResult: vi.fn()}));
 
 const profile = vi.hoisted(() => ({data: {id: "user"} as {id: string} | undefined, error: null as unknown}));
 vi.mock("@/features/auth/queries", () => ({useProfile: () => profile}));
@@ -64,6 +69,32 @@ it("renders assistant Markdown while keeping the user's message literal and prod
   expect(screen.getByText("Giải thích **RAM**")).toBeInTheDocument();
   expect(screen.getAllByText("RTX 4070 Super").some((element) => element.tagName === "P")).toBe(true);
   expect(screen.getByRole("link", {name: "viewProduct"})).toHaveAttribute("href", "/products/rtx-4070-super");
+});
+
+it("restores URL conversation history on reload and continues using its original identity", async () => {
+  vi.mocked(loadConversationHistory).mockResolvedValueOnce({turns: [{prompt: "Laptop?", response: {
+    conversation_id: "saved", intent: AiMode.Chat, answer: "**Budget?**", products: [],
+  }}], pendingRunId: undefined});
+  const user = userEvent.setup();
+  render(<AssistantPage initialConversationId="saved" />);
+  expect(await screen.findByText("Budget?")).toBeInTheDocument();
+  expect(streamChat).not.toHaveBeenCalled();
+  await user.type(screen.getByRole("textbox", {name: "promptLabel"}), "25 triệu");
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(streamChat).toHaveBeenCalledWith("25 triệu", "saved", expect.any(Object), expect.any(AbortSignal), {selectedProductIds: []});
+});
+
+it("waits for an already admitted run after reload instead of unlocking or resubmitting", async () => {
+  vi.mocked(loadConversationHistory).mockResolvedValueOnce({turns: [{runId: "pending", prompt: "Lập trình backend"}], pendingRunId: "pending"});
+  let complete!: (value: Awaited<ReturnType<typeof waitForRunResult>>) => void;
+  vi.mocked(waitForRunResult).mockImplementationOnce(() => new Promise((resolve) => {complete = resolve;}));
+  render(<AssistantPage initialConversationId="saved" />);
+  expect(await screen.findByText("Lập trình backend")).toBeInTheDocument();
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeDisabled();
+  expect(streamChat).not.toHaveBeenCalled();
+  await act(async () => complete({conversation_id: "saved", intent: AiMode.Chat, answer: "Chọn máy gọn nhẹ", products: []}));
+  expect(await screen.findByText("Chọn máy gọn nhẹ")).toBeInTheDocument();
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeEnabled();
 });
 
 it("uses the same Markdown rendering while streaming without unlocking the composer", async () => {

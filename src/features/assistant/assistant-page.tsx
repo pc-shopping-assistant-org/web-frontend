@@ -24,15 +24,19 @@ import {streamChat, type ChatData, type CompareData, type ConsultData, type Eval
 import type {Confirmation} from "./contracts/stateful";
 import {MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
 import {AssistantMarkdown} from "./assistant-markdown";
+import {loadConversationHistory, setConversationUrl} from "./conversation-history";
+import {waitForRunResult} from "./stateful-api";
+import type {ChatTurn} from "./models";
 
 type Result = ChatData | SearchData | ConsultData | CompareData | EvaluateData;
-type ChatTurn = {prompt: string; response: Result};
 
 export function AssistantPage({
+  initialConversationId,
   initialProductIds = [],
   initialPrompt = "",
   invalidBuild = false,
 }: {
+  initialConversationId?: string;
   initialProductIds?: string[];
   initialPrompt?: string;
   invalidBuild?: boolean;
@@ -45,18 +49,45 @@ export function AssistantPage({
   const [prompt, setPrompt] = useState(initialPrompt);
   const [productIds, setProductIds] = useState<string[]>(initialProductIds);
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
-  const [conversationId, setConversationId] = useState<string>();
+  const [conversationId, setConversationId] = useState<string | undefined>(initialConversationId);
   const [streamingPrompt, setStreamingPrompt] = useState("");
   const [streamingAnswer, setStreamingAnswer] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(Boolean(initialConversationId));
   const [error, setError] = useState<unknown>(null);
   const streamController = useRef<AbortController | null>(null);
-  const lastResponse = chatTurns.at(-1)?.response;
+  const lastResponse = chatTurns.findLast((turn) => turn.response)?.response;
   const proposal = lastResponse && "stateful" in lastResponse ? lastResponse.stateful?.proposal : null;
   const proposalChanges = proposal?.changes ?? [];
   const clarificationOptions = lastResponse && "stateful" in lastResponse ? (lastResponse.stateful?.clarificationOptions ?? []) : [];
 
   useEffect(() => () => streamController.current?.abort(), []);
+
+  useEffect(() => {
+    if (!initialConversationId) return;
+    const controller = new AbortController();
+    streamController.current = controller;
+    void (async () => {
+      try {
+        const history = await loadConversationHistory(initialConversationId, controller.signal);
+        if (controller.signal.aborted) return;
+        setChatTurns(history.turns);
+        if (history.pendingRunId) {
+          const result = await waitForRunResult(initialConversationId, history.pendingRunId, controller.signal);
+          if (!controller.signal.aborted)
+            setChatTurns((turns) => turns.map((turn) => turn.runId === history.pendingRunId ? {...turn, response: result} : turn));
+        }
+      } catch (cause) {
+        if (!controller.signal.aborted) {
+          if (cause instanceof ApiClientError && cause.status === 401) setSignInOpen(true);
+          else setError(cause);
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+        if (streamController.current === controller) streamController.current = null;
+      }
+    })();
+    return () => controller.abort();
+  }, [initialConversationId]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -83,7 +114,10 @@ export function AssistantPage({
         conversationId,
         {
           onStart: (id) => {
-            if (!controller.signal.aborted) setConversationId(id);
+            if (!controller.signal.aborted) {
+              setConversationId(id);
+              setConversationUrl(id);
+            }
           },
           onDelta: (delta) => {
             if (!controller.signal.aborted) setStreamingAnswer((current) => current + delta);
@@ -116,6 +150,7 @@ export function AssistantPage({
   }
 
   function newConversation() {
+    setConversationUrl();
     setConversationId(undefined);
     setChatTurns([]);
     setProductIds([]);
@@ -522,7 +557,7 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
               <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">{t("you")}</p>
               <p className="whitespace-pre-wrap">{turn.prompt}</p>
             </div>
-            <div className="min-w-0 max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
+            {turn.response ? <div className="min-w-0 max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
               <div className="mb-1 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 <Bot className="size-3.5 text-primary" />
                 {t("assistantLabel")}
@@ -531,8 +566,8 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
                 ) : null}
               </div>
               <AssistantMarkdown>{"answer" in turn.response ? turn.response.answer : t("noAnswer")}</AssistantMarkdown>
-            </div>
-            {("products" in turn.response && turn.response.products?.length) || ("product" in turn.response && turn.response.product) ? (
+            </div> : null}
+            {turn.response && (("products" in turn.response && turn.response.products?.length) || ("product" in turn.response && turn.response.product)) ? (
               <div className="ml-0 sm:ml-4">
                 <AssistantResult result={turn.response} locale={locale} hideAnswer />
               </div>

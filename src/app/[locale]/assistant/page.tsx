@@ -4,6 +4,7 @@ import {buildQuestion} from "@/features/pc-builder/ask-ai";
 import {selectionSchema} from "@/features/pc-builder/contracts";
 
 import {AssistantRouteClient} from "./assistant-route-client";
+import {CONVERSATION_ID_PARAM} from "@/features/assistant/constants";
 
 export const metadata: Metadata = {title: "AI assistant"};
 export default async function AssistantRoute({
@@ -31,6 +32,7 @@ export default async function AssistantRoute({
     .safeParse(raw ? [...new Set(String(raw).split(",").filter(Boolean))] : []);
   return (
     <AssistantRouteClient
+      initialConversationId={typeof params[CONVERSATION_ID_PARAM] === "string" ? params[CONVERSATION_ID_PARAM] : undefined}
       initialProductIds={!params.build && parsed.success ? parsed.data : []}
       initialPrompt={initialPrompt}
       invalidBuild={invalidBuild}
