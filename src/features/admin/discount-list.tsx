@@ -122,12 +122,7 @@ export function DiscountListPage() {
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">{tl("showing", {count: page.totalElements})}</p>
             {page.totalPages > 1 ? (
-              <AdminPagination
-                hasPrev={page.page > 0}
-                hasNext={!page.last}
-                onPrev={() => setPageNumber((current) => Math.max(0, current - 1))}
-                onNext={() => setPageNumber((current) => current + 1)}
-              />
+              <AdminPagination page={page.page} totalPages={page.totalPages} onPageChange={setPageNumber} />
             ) : null}
           </div>
         ) : null}

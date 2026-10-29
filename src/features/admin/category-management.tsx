@@ -16,13 +16,14 @@ import {Skeleton} from "@/components/ui/skeleton";
 import {StatusBadge} from "@/components/ui/status-badge";
 import {Textarea} from "@/components/ui/textarea";
 import type {CategoryTree} from "@/features/catalog/contracts/responses";
+import {hardwareTypeName, hardwareTypeNames} from "@/features/catalog/hardware-types";
+import {useHardwareTypes} from "@/features/catalog/queries";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
 import {cn} from "@/lib/utils";
 
 import {flattenCategories} from "./list-helpers";
 import {
   useAdminCategories,
-  useHardwareTypes,
   useCreateAdminCategory,
   useDeleteAdminCategory,
   useReorderAdminCategories,
@@ -68,7 +69,9 @@ function siblingsOf(nodes: CategoryTree[], parentId: string | null): CategoryTre
 export function CategoryManagement() {
   const t = useTranslations("admin");
   const tc = useTranslations("admin.categoryPage");
+  const locale = useLocale();
   const categories = useAdminCategories();
+  const typeNames = hardwareTypeNames(useHardwareTypes().data, locale);
   const remove = useDeleteAdminCategory();
   const reorder = useReorderAdminCategories();
   const [dialog, setDialog] = useState<DialogState | null>(null);
@@ -131,6 +134,9 @@ export function CategoryManagement() {
                 <tr>
                   <th scope="col" className="px-4 py-3 font-medium">
                     {tc("name")}
+                  </th>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    {tc("hardwareType")}
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
                     {t("description")}
@@ -197,6 +203,9 @@ export function CategoryManagement() {
                             </span>
                           ) : null}
                         </div>
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {(category.hardwareType && typeNames.get(category.hardwareType)) || "—"}
                       </td>
                       <td className="max-w-xs px-4 py-3 text-muted-foreground">
                         <span className="line-clamp-1" title={category.description ?? undefined}>
@@ -365,7 +374,7 @@ function CategoryDialog({state, tree, onClose}: {state: DialogState; tree: Categ
             <option value="">{tc("selectHardwareType")}</option>
             {hardwareTypes.data?.map((type) => (
               <option key={type.id} value={type.code}>
-                {locale === "vi" ? type.nameVi : type.nameEn}
+                {hardwareTypeName(type, locale)}
               </option>
             ))}
           </Select>

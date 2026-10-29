@@ -2,6 +2,7 @@ import {backendFetch} from "@/lib/api/client";
 import type {
   BrandDto,
   CategoryTreeDto,
+  HardwareTypeDto,
   ProductDetailDto,
   ProductPageDto,
   OrderLineProductDto,
@@ -13,6 +14,7 @@ import type {
 import {
   mapBrandResponse,
   mapCategoryTree,
+  mapHardwareType,
   mapProductDetail,
   mapProductDetailToSummary,
   mapProductPage,
@@ -30,6 +32,8 @@ import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
 export type ProductFilters = {
   cursor?: string;
+  /** Zero-based number of the page; when set the response carries the totals. */
+  page?: number;
   limit?: number;
   categoryId?: string;
   brandId?: string;
@@ -60,17 +64,24 @@ type ProductSearchHitDto = {
   inStock?: boolean;
   mainImageUrl?: string | null;
 };
-type ProductSearchPageDto = {content: ProductSearchHitDto[]; page: number; size: number; last: boolean};
+type ProductSearchPageDto = {
+  content: ProductSearchHitDto[];
+  page: number;
+  size: number;
+  last: boolean;
+  totalElements?: number;
+  totalPages?: number;
+};
 
 const DEFAULT_SEARCH_SIZE = 12;
 
 /**
  * Text search through search-service (Elasticsearch): by name, brand, category and description, tolerant of accents and typos,
  * and narrowed by the same category, brand and price filters as the catalog list.
- * It pages by number, so the next page number travels as the cursor the catalog list also uses.
+ * It pages by number: `page` when given, otherwise the cursor carries the next page number.
  */
 export async function searchProducts(keyword: string, filters: Omit<ProductFilters, "keyword"> = {}) {
-  const page = Number.parseInt(filters.cursor ?? "0", 10);
+  const page = filters.page ?? Number.parseInt(filters.cursor ?? "0", 10);
   const params = new URLSearchParams({
     q: keyword,
     page: String(Number.isNaN(page) ? 0 : page),
@@ -90,13 +101,23 @@ export async function searchProducts(keyword: string, filters: Omit<ProductFilte
     nextCursor: response.last ? null : String(response.page + 1),
     hasNext: !response.last,
     size: response.content?.length ?? 0,
+    page: response.page,
+    totalElements: response.totalElements,
+    totalPages: response.totalPages,
   });
 }
 
 /** A keyword goes to the search, without one the catalog lists; both narrow by category, brand and price. */
-export function listProducts(filters: ProductFilters = {}) {
+export async function listProducts(filters: ProductFilters = {}) {
   const keyword = filters.keyword?.trim();
-  return keyword ? searchProducts(keyword, filters) : getProducts({...filters, keyword: undefined});
+  const read = (page?: number) =>
+    keyword ? searchProducts(keyword, {...filters, page}) : getProducts({...filters, keyword: undefined, page});
+  const result = await read(filters.page);
+  // A page past the end (a hand-edited URL) comes back empty: show the last page instead
+  if (filters.page && result.items.length === 0 && result.totalPages && filters.page >= result.totalPages) {
+    return read(result.totalPages - 1);
+  }
+  return result;
 }
 
 export async function getProductBySlug(seoName: string) {
@@ -131,6 +152,12 @@ export async function getCategorySpecLabels(categoryId: string): Promise<SpecLab
 export async function getCategories() {
   const response = await backendFetch<CategoryTreeDto[]>("/catalog-service/categories/tree");
   return response.map(mapCategoryTree);
+}
+
+/** The hardware types of the master table, each with its name in both languages (public read). */
+export async function getHardwareTypes() {
+  const response = await backendFetch<HardwareTypeDto[]>("/catalog-service/hardware-types");
+  return response.map(mapHardwareType).sort((left, right) => left.displayOrder - right.displayOrder);
 }
 
 export async function getBrands() {

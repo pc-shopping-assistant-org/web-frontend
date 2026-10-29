@@ -1,11 +1,11 @@
 "use client";
 
-import {ChevronLeft, ChevronRight, SlidersHorizontal, X} from "lucide-react";
+import {SlidersHorizontal, X} from "lucide-react";
 import {useTranslations} from "next-intl";
-import {useMemo, useState, useSyncExternalStore} from "react";
+import {useEffect, useMemo, useState, useSyncExternalStore} from "react";
 
 import {Button} from "@/components/ui/button";
-import {useCursorTrail} from "@/lib/hooks/use-cursor-trail";
+import {Pagination} from "@/components/ui/pagination";
 import {ProductGridSkeleton} from "@/components/ui/loading-skeletons";
 import {useRouter} from "@/i18n/navigation";
 import {Link} from "@/i18n/navigation";
@@ -29,6 +29,8 @@ type CatalogPageProps = {
   initialBrandId?: string;
   initialMinPrice?: number;
   initialMaxPrice?: number;
+  /** 1-based page number from the URL. */
+  initialPage?: number;
 };
 
 export function CatalogPage({
@@ -37,13 +39,14 @@ export function CatalogPage({
   initialBrandId,
   initialMinPrice,
   initialMaxPrice,
+  initialPage = 1,
 }: CatalogPageProps = {}) {
   const t = useTranslations("catalog");
   const common = useTranslations("common");
   const router = useRouter();
   const [filters, setFilters] = useState({
     limit: PAGE_SIZE,
-    cursor: undefined as string | undefined,
+    page: Math.max(initialPage - 1, 0),
     keyword: initialKeyword || undefined,
     categoryId: initialCategoryId || undefined,
     brandId: initialBrandId || undefined,
@@ -56,6 +59,11 @@ export function CatalogPage({
   const categories = useCategories();
   const brands = useBrands();
   const products = query.data?.items ?? [];
+  // The page the list really shows: the last one when the asked page was past the end
+  const shownPage = query.data?.page ?? filters.page;
+  useEffect(() => {
+    if (shownPage !== filters.page) syncCatalogUrl(router, {...filters, page: shownPage});
+  }, [shownPage, filters, router]);
   // `SiteHeader` shares the `catalog/categories` query key, and this page is
   // lazy loaded, so its chunk can hydrate after the header has already resolved
   // that query: the server prerenders the loading state while the client
@@ -76,7 +84,7 @@ export function CatalogPage({
 
   /** Every change of what is shown goes back to the first page and into the URL. */
   function update(patch: Partial<CatalogUrlFilters>) {
-    const next = {...filters, ...patch, cursor: undefined};
+    const next = {...filters, ...patch, page: 0};
     setFilters(next);
     setCompareIds([]);
     syncCatalogUrl(router, next);
@@ -86,11 +94,11 @@ export function CatalogPage({
     update({keyword: undefined, categoryId: undefined, brandId: undefined, minPrice: undefined, maxPrice: undefined});
   }
 
-  const trail = useCursorTrail(JSON.stringify({...filters, cursor: undefined}));
-  function movePage(cursor?: string) {
-    const next = {...filters, cursor};
+  function movePage(page: number) {
+    const next = {...filters, page: page - 1};
     setFilters(next);
     syncCatalogUrl(router, next);
+    window.scrollTo({top: 0, behavior: "smooth"});
   }
 
   const selectedCategoryName = categoryList.find((category) => category.value === filters.categoryId)?.label;
@@ -160,7 +168,7 @@ export function CatalogPage({
               ) : null}
             </Button>
             {query.data ? (
-              <p className="text-sm text-muted-foreground">{t("resultCount", {count: query.data.size ?? products.length})}</p>
+              <p className="text-sm text-muted-foreground">{t("resultCount", {count: query.data.totalElements ?? query.data.size ?? products.length})}</p>
             ) : null}
             {filters.keyword || activeFilters.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2" aria-label={t("filteredResults")}>
@@ -174,38 +182,6 @@ export function CatalogPage({
                 {activeFilters.map(({key, label}) => (
                   <FilterChip key={key} label={label} onRemove={() => update({[key]: undefined})} removeLabel={t("removeFilter")} />
                 ))}
-              </div>
-            ) : null}
-            {trail.hasPrev || query.data?.hasNext ? (
-              <div className="ml-auto flex items-center gap-1.5">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={t("previous")}
-                  title={t("previous")}
-                  disabled={!trail.hasPrev}
-                  onClick={() => {
-                    trail.pop();
-                    movePage(trail.prevCursor);
-                  }}
-                >
-                  <ChevronLeft className="size-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon-sm"
-                  aria-label={t("next")}
-                  title={t("next")}
-                  disabled={!query.data?.hasNext || !query.data?.nextCursor}
-                  onClick={() => {
-                    trail.push(filters.cursor);
-                    movePage(query.data?.nextCursor);
-                  }}
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
               </div>
             ) : null}
           </div>
@@ -244,32 +220,15 @@ export function CatalogPage({
                   }}
                 />
                 <CompareTray products={products} ids={compareIds} onClear={() => setCompareIds([])} />
-                {trail.hasPrev || query.data?.hasNext ? (
-                  <div className="mt-8 flex justify-center gap-2">
-                    <Button
-                      variant="outline"
-                      disabled={!trail.hasPrev}
-                      onClick={() => {
-                        trail.pop();
-                        movePage(trail.prevCursor);
-                      }}
-                    >
-                      <ChevronLeft className="size-4" />
-                      {t("previous")}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      disabled={!query.data?.hasNext || !query.data?.nextCursor}
-                      onClick={() => {
-                        trail.push(filters.cursor);
-                        movePage(query.data?.nextCursor);
-                      }}
-                    >
-                      {t("next")}
-                      <ChevronRight className="size-4" />
-                    </Button>
-                  </div>
-                ) : null}
+                <Pagination
+                  className="mt-8"
+                  page={shownPage + 1}
+                  totalPages={query.data?.totalPages ?? 1}
+                  onPageChange={movePage}
+                  previousLabel={t("previous")}
+                  nextLabel={t("next")}
+                  pageLabel={(page) => t("pageNumber", {page})}
+                />
               </div>
             ) : null}
           </div>
@@ -349,6 +308,8 @@ function CompareTray({
 }
 
 type CatalogUrlFilters = {
+  /** Zero-based page. */
+  page?: number;
   keyword?: string;
   categoryId?: string;
   brandId?: string;
@@ -358,11 +319,12 @@ type CatalogUrlFilters = {
 
 function syncCatalogUrl(router: ReturnType<typeof useRouter>, filters: CatalogUrlFilters) {
   const params = new URLSearchParams();
-  // Paging state (limit, cursor) is not part of the shareable URL
+  // The page is 1-based in the URL and left out for the first one; the page size is not part of it
   for (const key of ["keyword", "categoryId", "brandId", "minPrice", "maxPrice"] as const) {
     const value = filters[key];
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
+  if (filters.page) params.set("page", String(filters.page + 1));
   const query = params.toString();
   router.replace(query ? `/products?${query}` : "/products");
 }

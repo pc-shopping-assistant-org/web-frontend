@@ -15,7 +15,7 @@ import type {Review} from "@/features/catalog/contracts/responses";
 import {Link} from "@/i18n/navigation";
 import {ReviewStatus} from "@/lib/domain/catalog-enums";
 
-import {AdminPagination} from "./admin-pagination";
+import {AdminCursorPagination} from "./admin-pagination";
 import {EmptyBox, FilterField, FilterPanel, ListFooter, PageHeader, StatusTabs} from "./list-kit";
 import {toNumber} from "./list-helpers";
 import {useAdminReviewStatus, useAdminReviews} from "./queries";
@@ -121,7 +121,7 @@ export function ReviewListPage() {
           <ListFooter
             summary={t("showingItems", {count: items.length})}
             pager={
-              <AdminPagination
+              <AdminCursorPagination
                 hasPrev={page.hasPrev}
                 hasNext={page.hasNext}
                 onPrev={() => setCursor(page.prevCursor)}

@@ -1,6 +1,7 @@
 /** Query filters owned by the admin adapter; they are not UI response models. */
 export type AdminProductFilter = {
   cursor?: string;
+  page?: number;
   limit?: number;
   categoryId?: string;
   brandId?: string;

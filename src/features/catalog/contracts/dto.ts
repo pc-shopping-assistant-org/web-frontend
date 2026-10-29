@@ -51,6 +51,8 @@ export type ProductDetailDto = {
   brandName?: string | null;
   categoryId?: string | null;
   categoryName?: string | null;
+  /** Code of the hardware type of its category (master table), null while the category has none. */
+  hardwareType?: string | null;
   specifications?: Record<string, unknown>;
   description?: string | null;
   status: string;
@@ -65,6 +67,10 @@ export type ProductPageDto = {
   nextCursor?: string | null;
   hasNext: boolean;
   size: number;
+  /** Only for a numbered page: its zero-based number and the totals. */
+  page?: number | null;
+  totalElements?: number | null;
+  totalPages?: number | null;
 };
 /** Products still arrive in the old shape until the product phases are integrated. */
 export type LegacyCategoryDto = BackendSchema["CategoryResponse"];

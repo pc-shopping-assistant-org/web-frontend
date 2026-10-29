@@ -1,8 +1,15 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 
-import {getCategorySpecLabels, getProductBySlug, getProducts, listProducts, searchProducts} from "./api";
+import {getCategorySpecLabels, getHardwareTypes, getProductBySlug, getProducts, listProducts, searchProducts} from "./api";
 
 afterEach(() => vi.restoreAllMocks());
+
+function okResponse(payload: unknown) {
+  return new Response(JSON.stringify({data: payload, message: "SUCCESS", errors: []}), {
+    status: 200,
+    headers: {"content-type": "application/json"},
+  });
+}
 
 function stubFetch(payload: unknown) {
   const fetchMock = vi.fn().mockImplementation(
@@ -136,11 +143,43 @@ describe("storefront text search", () => {
     );
   });
 
+  it("falls back to the last page when the asked page is past the end", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(okResponse({items: [], hasNext: false, size: 0, page: 541, totalPages: 109, totalElements: 1625}))
+      .mockResolvedValueOnce(
+        okResponse({items: [{id: "p1", name: "Card", seoName: "card", status: "ACTIVE"}], hasNext: false, size: 1, page: 108, totalPages: 109, totalElements: 1625}),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const page = await listProducts({page: 541, limit: 15});
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toBe("/api/backend/catalog-service/products?page=108&limit=15");
+    expect(page.page).toBe(108);
+    expect(page.items).toHaveLength(1);
+  });
+
   it("lists through the catalog when the keyword is blank", async () => {
     const fetchMock = stubFetch({content: [], items: [], page: 0, size: 0, last: true, hasNext: false});
 
     await listProducts({keyword: "  ", categoryId: "c1", limit: 12});
 
     expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/products?categoryId=c1&limit=12");
+  });
+});
+
+describe("hardware types of the master table", () => {
+  it("reads them from catalog-service in the order of the table", async () => {
+    const fetchMock = stubFetch([
+      {id: "2", code: "OTHER", nameVi: "Khác", nameEn: "Other", displayOrder: 999},
+      {id: "1", code: "CPU", nameVi: "CPU", nameEn: "CPU", displayOrder: 10},
+    ]);
+
+    const types = await getHardwareTypes();
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/hardware-types");
+    expect(types.map((type) => type.code)).toEqual(["CPU", "OTHER"]);
+    expect(types[1]).toMatchObject({nameVi: "Khác", nameEn: "Other"});
   });
 });

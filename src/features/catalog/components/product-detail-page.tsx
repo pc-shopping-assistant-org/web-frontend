@@ -156,7 +156,7 @@ export function ProductDetailPage({slug}: {slug: string}) {
               activeId={activeImage?.id}
               alt={product.name ?? ""}
               onSelect={setSelectedImageId}
-              placeholder={<CatalogCategoryIcon categoryName={product.category?.name ?? product.name} className="size-6 text-primary/45" />}
+              placeholder={<CatalogCategoryIcon categoryName={product.category?.name ?? product.name} hardwareType={product.category?.hardwareType} className="size-6 text-primary/45" />}
             />
           ) : null}
         </div>

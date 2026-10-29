@@ -151,12 +151,7 @@ function Employees() {
               <p className="text-xs text-muted-foreground">
                 {t("pageOf", {page: page.page + 1, total: page.totalPages})} · {t("totalEmployees", {count: page.totalElements})}
               </p>
-              <AdminPagination
-                hasPrev={page.page > 0}
-                hasNext={!page.last}
-                onPrev={() => setPageNumber((current) => Math.max(0, current - 1))}
-                onNext={() => setPageNumber((current) => current + 1)}
-              />
+              <AdminPagination page={page.page} totalPages={page.totalPages} onPageChange={setPageNumber} />
             </div>
           ) : null}
         </>

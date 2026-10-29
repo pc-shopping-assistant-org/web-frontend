@@ -24,7 +24,6 @@ import {
   getAttributes,
   getAdminBrands,
   getAdminCategories,
-  getHardwareTypes,
   getCategorySpecsSchema,
   getDiscounts,
   getAdminProductById,
@@ -153,9 +152,6 @@ function useAdminMutation<TVariables, TData>(mutationFn: (variables: TVariables)
 }
 export function useAdminCategories() {
   return useQuery({queryKey: ["admin", "categories"], queryFn: getAdminCategories});
-}
-export function useHardwareTypes() {
-  return useQuery({queryKey: ["catalog", "hardware-types"], queryFn: getHardwareTypes});
 }
 export function useAdminBrands() {
   return useQuery({queryKey: ["admin", "brands"], queryFn: getAdminBrands});

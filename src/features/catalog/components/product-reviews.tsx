@@ -1,6 +1,6 @@
 "use client";
 
-import {ChevronLeft, ChevronRight, Star} from "lucide-react";
+import {Star} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import {useState} from "react";
 
@@ -8,6 +8,7 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent} from "@/components/ui/card";
 import {ErrorMessage} from "@/components/ui/error-message";
+import {Pagination} from "@/components/ui/pagination";
 import {Skeleton} from "@/components/ui/skeleton";
 import {useProfile} from "@/features/auth/queries";
 import {isStaffRole} from "@/lib/auth/roles";
@@ -150,20 +151,16 @@ export function ProductReviews({productId, enabled = true}: {productId: string; 
                 </Card>
               ))}
             </div>
-            {page && page.totalPages > 1 ? (
-              <div className="mt-6 flex items-center justify-center gap-2">
-                <Button variant="outline" disabled={page.page === 0} onClick={() => setPageNumber((current) => Math.max(0, current - 1))}>
-                  <ChevronLeft className="size-4" />
-                  {t("previous")}
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {page.page + 1}/{page.totalPages}
-                </span>
-                <Button variant="outline" disabled={page.last} onClick={() => setPageNumber((current) => current + 1)}>
-                  {t("next")}
-                  <ChevronRight className="size-4" />
-                </Button>
-              </div>
+            {page ? (
+              <Pagination
+                className="mt-6"
+                page={page.page + 1}
+                totalPages={page.totalPages}
+                onPageChange={(next) => setPageNumber(next - 1)}
+                previousLabel={t("previous")}
+                nextLabel={t("next")}
+                pageLabel={(number) => t("pageNumber", {page: number})}
+              />
             ) : null}
           </>
         )}

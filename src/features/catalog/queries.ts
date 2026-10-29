@@ -1,12 +1,15 @@
 "use client";
 
 import {keepPreviousData, useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {useLocale} from "next-intl";
+import {useCallback} from "react";
 
 import {
   createProductReview,
   getBrands,
   getCategories,
   getCategorySpecLabels,
+  getHardwareTypes,
   getMyProductReviews,
   getOrderLineProduct,
   getReviewedOrderItems,
@@ -17,6 +20,8 @@ import {
   updateProductReview,
   type ProductFilters,
 } from "./api";
+import {localizeCategoryNames} from "./hardware-types";
+import type {CategoryTree} from "./models";
 
 export const catalogKeys = {
   all: ["catalog"] as const,
@@ -24,6 +29,7 @@ export const catalogKeys = {
   product: (slug: string) => ["catalog", "product", slug] as const,
   categories: ["catalog", "categories"] as const,
   brands: ["catalog", "brands"] as const,
+  hardwareTypes: ["catalog", "hardware-types"] as const,
   reviews: (productId: string, page: number) => ["catalog", "reviews", productId, "list", page] as const,
   myReviews: (productId: string) => ["catalog", "reviews", productId, "mine"] as const,
 };
@@ -37,8 +43,17 @@ export function useProducts(filters: ProductFilters = {}, options: {enabled?: bo
   });
 }
 
+/** The master table changes rarely, so it is kept for a while; `useLocale` picks the name, see `hardware-types.ts`. */
+export function useHardwareTypes() {
+  return useQuery({queryKey: catalogKeys.hardwareTypes, queryFn: getHardwareTypes, staleTime: 300_000});
+}
+
+/** The category tree for the storefront, its names in the page language (see `localizeCategoryNames`). */
 export function useCategories() {
-  return useQuery({queryKey: catalogKeys.categories, queryFn: getCategories, staleTime: 300_000});
+  const locale = useLocale();
+  const hardwareTypes = useHardwareTypes().data;
+  const select = useCallback((tree: CategoryTree[]) => localizeCategoryNames(tree, hardwareTypes, locale), [hardwareTypes, locale]);
+  return useQuery({queryKey: catalogKeys.categories, queryFn: getCategories, staleTime: 300_000, select});
 }
 
 export function useCategorySpecLabels(categoryId?: string) {

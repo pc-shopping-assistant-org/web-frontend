@@ -194,7 +194,7 @@ export function mapProductDetail(dto: ProductDetailDto): ProductDetail {
     createdAt: dto.createdAt,
     updatedAt: dto.updatedAt,
     brand: dto.brandId ? {id: dto.brandId, name: dto.brandName ?? ""} : undefined,
-    category: dto.categoryId ? {id: dto.categoryId, name: dto.categoryName ?? ""} : undefined,
+    category: dto.categoryId ? {id: dto.categoryId, name: dto.categoryName ?? "", hardwareType: dto.hardwareType ?? undefined} : undefined,
     images,
     variants: (dto.variants ?? []).map(mapProductVariant),
   };
@@ -230,6 +230,9 @@ export function mapProductPage(dto: ProductPageDto): ProductPage {
     items: (dto.items ?? []).map(mapProductSummary),
     nextCursor: dto.nextCursor ?? undefined,
     size: number(dto.size),
+    page: dto.page ?? undefined,
+    totalElements: dto.totalElements ?? undefined,
+    totalPages: dto.totalPages ?? undefined,
   };
 }
 

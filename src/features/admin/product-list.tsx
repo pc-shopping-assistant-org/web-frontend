@@ -17,7 +17,6 @@ import {CatalogCategoryIcon} from "@/features/catalog/components/catalog-categor
 import type {ProductSummary} from "@/features/catalog/contracts/responses";
 import {useBrands, useCategories} from "@/features/catalog/queries";
 import {Link} from "@/i18n/navigation";
-import {useCursorTrail} from "@/lib/hooks/use-cursor-trail";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 import {formatMoney} from "@/lib/format";
 import {cn} from "@/lib/utils";
@@ -42,11 +41,12 @@ export function ProductListPage() {
   const brands = useBrands();
   const [status, setStatus] = useState<string>("");
   const [draft, setDraft] = useState(EMPTY_FILTERS);
-  const [applied, setApplied] = useState({...EMPTY_FILTERS, cursor: undefined as string | undefined});
+  const [applied, setApplied] = useState(EMPTY_FILTERS);
+  const [pageNumber, setPageNumber] = useState(0);
   const [moreOpen, setMoreOpen] = useState(false);
   const query = useAdminProducts({
     limit: PAGE_SIZE,
-    cursor: applied.cursor,
+    page: pageNumber,
     keyword: applied.keyword || undefined,
     status: status || undefined,
     categoryId: applied.categoryId || undefined,
@@ -54,19 +54,20 @@ export function ProductListPage() {
     minPrice: toNumber(applied.minPrice),
     maxPrice: toNumber(applied.maxPrice),
   });
-  const trail = useCursorTrail(JSON.stringify({...applied, status, cursor: undefined}));
   const statusMutation = useAdminProductStatus();
   const remove = useDeleteAdminProduct();
-  const page = query.data ? {...query.data, hasPrev: trail.hasPrev, prevCursor: trail.prevCursor} : undefined;
+  const page = query.data;
   const filtered = Boolean(applied.keyword || applied.categoryId || applied.brandId || applied.minPrice || applied.maxPrice);
 
   function apply(event?: FormEvent) {
     event?.preventDefault();
-    setApplied({...draft, keyword: draft.keyword.trim(), cursor: undefined});
+    setApplied({...draft, keyword: draft.keyword.trim()});
+    setPageNumber(0);
   }
   function reset() {
     setDraft(EMPTY_FILTERS);
-    setApplied({...EMPTY_FILTERS, cursor: undefined});
+    setApplied(EMPTY_FILTERS);
+    setPageNumber(0);
   }
 
   return (
@@ -86,7 +87,10 @@ export function ProductListPage() {
             type="button"
             role="tab"
             aria-selected={status === tab}
-            onClick={() => setStatus(tab)}
+            onClick={() => {
+              setStatus(tab);
+              setPageNumber(0);
+            }}
             className={cn(
               "-mb-px shrink-0 border-b-2 px-1 pb-3 text-sm transition",
               status === tab ? "border-primary font-medium text-primary" : "border-transparent text-muted-foreground hover:text-foreground",
@@ -224,21 +228,9 @@ export function ProductListPage() {
                 </table>
               </div>
             )}
-            {page && (page.hasPrev || page.hasNext) ? (
-              <div className="mt-5 flex justify-end">
-                <AdminPagination
-                  hasPrev={Boolean(page.hasPrev)}
-                  hasNext={Boolean(page.hasNext)}
-                  onPrev={() => {
-                    const cursor = trail.prevCursor;
-                    trail.pop();
-                    setApplied((current) => ({...current, cursor}));
-                  }}
-                  onNext={() => {
-                    trail.push(applied.cursor);
-                    setApplied((current) => ({...current, cursor: page.nextCursor}));
-                  }}
-                />
+            {page?.totalPages && page.totalPages > 1 ? (
+              <div className="mt-5">
+                <AdminPagination page={page.page ?? 0} totalPages={page.totalPages} onPageChange={setPageNumber} />
               </div>
             ) : null}
           </>
