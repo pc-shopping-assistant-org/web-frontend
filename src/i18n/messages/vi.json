@@ -539,6 +539,7 @@
     "selectedCount": "Đã chọn {count}/{max}",
     "selectedProducts": "Sản phẩm đã chọn",
     "selectedProductFallback": "Sản phẩm đã chọn",
+    "answerTable": "Bảng trong câu trả lời AI",
     "removeProduct": "Bỏ sản phẩm",
     "noCatalogProducts": "Không tìm thấy sản phẩm đang hoạt động.",
     "empty": "Câu trả lời bám theo sản phẩm thật sẽ xuất hiện ở đây.",

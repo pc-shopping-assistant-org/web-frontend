@@ -539,6 +539,7 @@
     "selectedCount": "Selected {count}/{max}",
     "selectedProducts": "Selected products",
     "selectedProductFallback": "Selected product",
+    "answerTable": "Table in the AI answer",
     "removeProduct": "Remove product",
     "noCatalogProducts": "No active products found.",
     "empty": "Your catalog-grounded answer will appear here.",

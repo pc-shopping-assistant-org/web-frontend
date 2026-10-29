@@ -23,6 +23,7 @@ import {ApiClientError} from "@/lib/api/envelope";
 import {streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
 import type {Confirmation} from "./contracts/stateful";
 import {MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
+import {AssistantMarkdown} from "./assistant-markdown";
 
 type Result = ChatData | SearchData | ConsultData | CompareData | EvaluateData;
 type ChatTurn = {prompt: string; response: Result};
@@ -397,7 +398,7 @@ function AssistantResult({result, locale, hideAnswer = false}: {result: Result; 
         <CardTitle>{t("response")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        {!hideAnswer ? <p className="whitespace-pre-wrap leading-7">{answer ?? t("noAnswer")}</p> : null}
+        {!hideAnswer ? <AssistantMarkdown>{answer ?? t("noAnswer")}</AssistantMarkdown> : null}
         {isComparison && comparisonKeys.length > 0 ? (
           <div className="overflow-x-auto rounded-xl border">
             <table className="min-w-full text-left text-sm">
@@ -521,7 +522,7 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
               <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">{t("you")}</p>
               <p className="whitespace-pre-wrap">{turn.prompt}</p>
             </div>
-            <div className="max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
+            <div className="min-w-0 max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
               <div className="mb-1 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 <Bot className="size-3.5 text-primary" />
                 {t("assistantLabel")}
@@ -529,7 +530,7 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
                   <Badge className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
                 ) : null}
               </div>
-              <p className="whitespace-pre-wrap">{"answer" in turn.response ? turn.response.answer : t("noAnswer")}</p>
+              <AssistantMarkdown>{"answer" in turn.response ? turn.response.answer : t("noAnswer")}</AssistantMarkdown>
             </div>
             {("products" in turn.response && turn.response.products?.length) || ("product" in turn.response && turn.response.product) ? (
               <div className="ml-0 sm:ml-4">
@@ -552,13 +553,13 @@ function StreamingChatTurn({prompt, answer}: {prompt: string; answer: string}) {
           <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">{t("you")}</p>
           <p className="whitespace-pre-wrap">{prompt}</p>
         </div>
-        <div className="max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
+        <div className="min-w-0 max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
           <div className="mb-1 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             <Bot className="size-3.5 text-primary" />
             {t("assistantLabel")}
             <span className="size-1.5 animate-pulse rounded-full bg-primary" />
           </div>
-          <p className="whitespace-pre-wrap">{answer || t("streaming")}</p>
+          <AssistantMarkdown>{answer || t("streaming")}</AssistantMarkdown>
         </div>
       </CardContent>
     </Card>

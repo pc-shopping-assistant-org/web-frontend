@@ -1,8 +1,9 @@
-import {render, screen, cleanup, waitFor} from "@testing-library/react";
+import {render, screen, cleanup, waitFor, act} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {afterEach, expect, it, vi} from "vitest";
 import {AssistantPage} from "./assistant-page";
 import {ApiClientError} from "@/lib/api/envelope";
+import {AiMode} from "@/lib/domain/assistant-enums";
 
 const profile = vi.hoisted(() => ({data: {id: "user"} as {id: string} | undefined, error: null as unknown}));
 vi.mock("@/features/auth/queries", () => ({useProfile: () => profile}));
@@ -47,6 +48,40 @@ afterEach(() => {
   productQueryFilters.length = 0;
   profile.data = {id: "user"};
   profile.error = null;
+});
+
+it("renders assistant Markdown while keeping the user's message literal and product cards intact", async () => {
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "test", intent: AiMode.Chat, answer: "## Gợi ý\n\nChọn **RAM 32GB**.\n\n- Dễ nâng cấp\n- Đủ bộ nhớ\n\n| RAM | Giá |\n| --- | --- |\n| 32GB | 2 triệu |",
+    products: [{id: "p1", name: "RTX 4070 Super", seo_name: "rtx-4070-super", list_price: 15990000, specifications: {}, image_url: "", description: "", status: "ACTIVE"}],
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Giải thích **RAM**" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByRole("heading", {name: "Gợi ý"})).toBeInTheDocument();
+  expect(screen.getByText("RAM 32GB").tagName).toBe("STRONG");
+  expect(screen.getByRole("table")).toBeInTheDocument();
+  expect(screen.getByText("Giải thích **RAM**")).toBeInTheDocument();
+  expect(screen.getAllByText("RTX 4070 Super").some((element) => element.tagName === "P")).toBe(true);
+  expect(screen.getByRole("link", {name: "viewProduct"})).toHaveAttribute("href", "/products/rtx-4070-super");
+});
+
+it("uses the same Markdown rendering while streaming without unlocking the composer", async () => {
+  let finish!: (value: Awaited<ReturnType<typeof streamChat>>) => void;
+  vi.mocked(streamChat).mockImplementationOnce(async (_message, _conversation, handlers) => {
+    handlers?.onDelta?.("### Đang phân tích\n\nƯu tiên **di động**.");
+    return new Promise((resolve) => {finish = resolve;});
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Laptop mỏng nhẹ" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByRole("heading", {name: "Đang phân tích"})).toBeInTheDocument();
+  expect(screen.getByText("di động").tagName).toBe("STRONG");
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeDisabled();
+  await act(async () => finish({conversation_id: "test", intent: AiMode.Chat, answer: "## Hoàn tất\n\nChọn **mỏng nhẹ**.", products: []}));
+  expect(await screen.findByRole("heading", {name: "Hoàn tất"})).toBeInTheDocument();
+  expect(screen.queryByRole("heading", {name: "Đang phân tích"})).not.toBeInTheDocument();
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeEnabled();
 });
 
 it("shows selected product details as a catalog link instead of exposing its UUID", async () => {
