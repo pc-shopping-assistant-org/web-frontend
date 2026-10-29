@@ -11,6 +11,7 @@ import {
   getOrderLineProduct,
   getReviewedOrderItems,
   getProductBySlug,
+  getProductSummariesByIds,
   getProductReviews,
   listProducts,
   updateProductReview,
@@ -123,5 +124,15 @@ export function useProductBySlug(slug: string) {
     queryKey: catalogKeys.product(slug),
     queryFn: () => getProductBySlug(slug),
     enabled: Boolean(slug),
+  });
+}
+
+export function useProductsByIds(productIds: string[]) {
+  const ids = [...new Set(productIds)].filter(Boolean).sort();
+  return useQuery({
+    queryKey: ["catalog", "products-by-id", ids],
+    queryFn: () => getProductSummariesByIds(ids),
+    enabled: ids.length > 0,
+    staleTime: 300_000,
   });
 }

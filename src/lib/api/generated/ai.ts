@@ -192,6 +192,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/conversations/{conversation_id}/runs/{run_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run Result */
+        get: operations["get_run_result_api_v1_conversations__conversation_id__runs__run_id__result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/evaluate": {
         parameters: {
             query?: never;
@@ -318,6 +335,19 @@ export type components = {
              */
             message: components["schemas"]["ResponseMessage"];
         };
+        /** ApiResponse[NoneType] */
+        ApiResponse_NoneType_: {
+            /** Data */
+            data?: null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
         /** ApiResponse[PageV1[ConversationViewV2]] */
         ApiResponse_PageV1_ConversationViewV2__: {
             data?: components["schemas"]["PageV1_ConversationViewV2_"] | null;
@@ -381,6 +411,19 @@ export type components = {
         /** ApiResponse[Union[EvaluateData, NoneType]] */
         ApiResponse_Union_EvaluateData__NoneType__: {
             data?: components["schemas"]["EvaluateData"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
+        /** ApiResponse[Union[RunCompletedV2, RunErrorV1]] */
+        ApiResponse_Union_RunCompletedV2__RunErrorV1__: {
+            /** Data */
+            data?: components["schemas"]["RunCompletedV2"] | components["schemas"]["RunErrorV1"] | null;
             /** Errors */
             errors?: components["schemas"]["ErrorDetail"][];
             /**
@@ -988,6 +1031,48 @@ export type components = {
          * @enum {string}
          */
         ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_CHAT_STREAM_STARTED" | "AI_CHAT_STREAM_DELTA" | "AI_CHAT_STREAM_COMPLETED" | "AI_CHAT_STREAM_FAILED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND" | "AI_CONVERSATION_CREATED" | "AI_CONVERSATION_RETRIEVED" | "AI_CONVERSATIONS_LISTED" | "AI_CONVERSATION_DELETED" | "AI_MESSAGES_LISTED" | "AI_RUN_ACCEPTED" | "AI_RUN_RETRIEVED" | "AI_RUN_CANCEL_REQUESTED" | "AI_RUN_FAILED" | "AI_STREAM_INTERRUPTED" | "AI_UNAUTHENTICATED" | "AI_CONVERSATION_NOT_FOUND" | "AI_REVISION_CONFLICT" | "AI_REQUEST_CONFLICT" | "AI_REQUEST_VERSION_UNSUPPORTED" | "AI_CONVERSATION_BUSY" | "AI_CONVERSATION_NOT_READY" | "AI_INPUT_REQUIRED";
+        /** RunCompletedV2 */
+        RunCompletedV2: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Event
+             * @constant
+             */
+            event: "COMPLETED";
+            result: components["schemas"]["TurnResultV2"];
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Sequence */
+            sequence: number;
+        };
+        /** RunErrorV1 */
+        RunErrorV1: {
+            code: components["schemas"]["StatefulErrorCode"];
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Event
+             * @constant
+             */
+            event: "ERROR";
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Sequence */
+            sequence: number;
+        };
         /**
          * RunStatus
          * @enum {string}
@@ -1031,6 +1116,11 @@ export type components = {
             /** Query */
             query: string;
         };
+        /**
+         * StatefulErrorCode
+         * @enum {string}
+         */
+        StatefulErrorCode: "AI_UNAUTHENTICATED" | "AI_CONVERSATION_NOT_FOUND" | "AI_REVISION_CONFLICT" | "AI_REQUEST_CONFLICT" | "AI_CONVERSATION_BUSY" | "AI_INPUT_REQUIRED" | "AI_RUN_FAILED" | "AI_STREAM_INTERRUPTED" | "AI_RUN_CANCELLED";
         /** TaskClarificationItemV1 */
         TaskClarificationItemV1: {
             /** Mention */
@@ -1113,6 +1203,25 @@ export type components = {
             selected_product_ids?: string[];
             task_reply?: components["schemas"]["TaskClarificationReplyV1"] | null;
             unit_reply?: components["schemas"]["UnitClarificationReplyV1"] | null;
+        };
+        /** TurnResultV2 */
+        TurnResultV2: {
+            /** Answer */
+            answer: string;
+            build?: components["schemas"]["PublicBuildV1"] | null;
+            flexible?: components["schemas"]["PublicFlexibleStateV2"] | null;
+            /** Products */
+            products?: components["schemas"]["ProductCard"][];
+            /** Revision */
+            revision: number;
+            run: components["schemas"]["RunViewV1"];
+            /**
+             * Schema Version
+             * @default 2
+             * @constant
+             */
+            schema_version: 2;
+            state: components["schemas"]["PublicConsultationV1"];
         };
         /** UnitClarificationReplyV1 */
         UnitClarificationReplyV1: {
@@ -1757,6 +1866,83 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Verified access token required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Gone */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Stateful resources unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_run_result_api_v1_conversations__conversation_id__runs__run_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Union_RunCompletedV2__RunErrorV1__"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_NoneType_"];
                 };
             };
             /** @description Verified access token required */

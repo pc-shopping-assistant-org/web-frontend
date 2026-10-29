@@ -200,6 +200,30 @@ export function mapProductDetail(dto: ProductDetailDto): ProductDetail {
   };
 }
 
+/** Project a detail response into the compact model used by selectors and rails. */
+export function mapProductDetailToSummary(detail: ProductDetail): ProductSummary {
+  const activeVariants = detail.variants.filter((variant) => !variant.status || variant.status === "ACTIVE");
+  const prices = activeVariants.map((variant) => variant.price).filter((price) => Number.isFinite(price));
+  return {
+    id: detail.id,
+    name: detail.name,
+    seoName: detail.seoName,
+    brandId: detail.brand?.id,
+    brandName: detail.brand?.name,
+    categoryId: detail.category?.id,
+    categoryName: detail.category?.name,
+    createdAt: detail.createdAt,
+    imageUrl: detail.imageUrl,
+    maxPrice: prices.length ? Math.max(...prices) : 0,
+    minPrice: prices.length ? Math.min(...prices) : 0,
+    variantCount: detail.variants.length,
+    totalQuantity: activeVariants.reduce((sum, variant) => sum + variant.quantity, 0),
+    ratingAverage: detail.ratingAverage,
+    reviewCount: detail.reviewCount,
+    status: detail.status,
+  };
+}
+
 export function mapProductPage(dto: ProductPageDto): ProductPage {
   return {
     hasNext: dto.hasNext,

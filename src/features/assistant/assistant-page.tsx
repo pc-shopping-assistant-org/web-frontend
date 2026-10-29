@@ -1,6 +1,6 @@
 "use client";
 
-import {ArrowRight, ArrowUpRight, Bot, Check, MessageCircle, PackageSearch, Search, Sparkles, X} from "lucide-react";
+import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, MessageCircle, PackageSearch, Search, Sparkles, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import {useEffect, useRef, useState, type FormEvent} from "react";
@@ -15,7 +15,7 @@ import {Skeleton} from "@/components/ui/skeleton";
 import {Textarea} from "@/components/ui/textarea";
 import {Link} from "@/i18n/navigation";
 import {formatMoney} from "@/lib/format";
-import {useProducts} from "@/features/catalog/queries";
+import {useProducts, useProductsByIds} from "@/features/catalog/queries";
 import {CatalogCategoryIcon} from "@/features/catalog/components/catalog-category-icon";
 import {useProfile} from "@/features/auth/queries";
 import {LoginForm} from "@/features/auth/login-form";
@@ -251,15 +251,15 @@ export function AssistantPage({
 function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (value: string[]) => void; locale: string}) {
   const t = useTranslations("assistant");
   const [keyword, setKeyword] = useState("");
-  const products = useProducts({limit: PRODUCT_PICKER_PAGE_SIZE});
+  const products = useProducts({limit: PRODUCT_PICKER_PAGE_SIZE, keyword: keyword.trim() || undefined});
+  const selectedProductQuery = useProductsByIds(value);
   const max = MAX_SELECTED_PRODUCTS;
   const allProducts = products.data?.items ?? [];
-  const visibleProducts = allProducts.filter((product) =>
-    [product.name, product.brandName, product.categoryName]
-      .filter(Boolean)
-      .some((value) => value!.toLowerCase().includes(keyword.trim().toLowerCase())),
+  const visibleProducts = allProducts;
+  const selectedProducts = [...(selectedProductQuery.data ?? []), ...allProducts].filter(
+    (product, index, items) => value.includes(product.id) && items.findIndex((item) => item.id === product.id) === index,
   );
-  const selectedProducts = allProducts.filter((product) => product.id && value.includes(product.id));
+  const selectedById = new Map(selectedProducts.map((product) => [product.id, product]));
 
   function toggle(productId: string) {
     if (value.includes(productId)) {
@@ -285,6 +285,7 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           className="pl-9"
+          aria-label={t("searchCatalogProducts")}
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
           placeholder={t("searchCatalogProducts")}
@@ -303,36 +304,48 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
             const selected = value.includes(product.id);
             const disabled = !selected && value.length >= max;
             return (
-              <button
+              <div
                 key={product.id ?? index}
-                type="button"
-                className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
+                className={`flex items-center gap-2 rounded-xl border p-2 text-left transition ${
                   selected
                     ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                     : disabled
                       ? "cursor-not-allowed opacity-50"
                       : "hover:border-primary/40 hover:bg-background"
                 }`}
-                onClick={() => toggle(product.id!)}
-                disabled={disabled}
-                aria-pressed={selected}
               >
-                <span className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background text-primary">
-                  {selected ? (
-                    <Check className="size-4" />
-                  ) : product.imageUrl ? (
-                    <Image src={product.imageUrl} alt="" fill sizes="36px" unoptimized className="object-contain p-1" />
-                  ) : (
-                    <CatalogCategoryIcon categoryName={product.categoryName ?? product.name} className="size-4.5" />
-                  )}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{product.name}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {formatMoney(product.minPrice ?? product.maxPrice, locale)}
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 text-left"
+                  onClick={() => toggle(product.id!)}
+                  disabled={disabled}
+                  aria-pressed={selected}
+                >
+                  <span className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-background text-primary">
+                    {selected ? (
+                      <Check className="size-4" />
+                    ) : product.imageUrl ? (
+                      <Image src={product.imageUrl} alt="" fill sizes="36px" unoptimized className="object-contain p-1" />
+                    ) : (
+                      <CatalogCategoryIcon categoryName={product.categoryName ?? product.name} className="size-4.5" />
+                    )}
                   </span>
-                </span>
-              </button>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{product.name}</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      {formatMoney(product.minPrice ?? product.maxPrice, locale)}
+                    </span>
+                  </span>
+                </button>
+                <Link
+                  href={`/products/${encodeURIComponent(product.seoName)}`}
+                  className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-primary"
+                  aria-label={`${t("viewProduct")}: ${product.name}`}
+                  title={t("viewProduct")}
+                >
+                  <ExternalLink className="size-3.5" />
+                </Link>
+              </div>
             );
           })}
         </div>
@@ -340,15 +353,24 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
       {value.length ? (
         <div className="flex flex-wrap gap-2" aria-label={t("selectedProducts")}>
           {value.map((id) => {
-            const product = selectedProducts.find((item) => item.id === id);
+            const product = selectedById.get(id);
             return (
               <span key={id} className="inline-flex max-w-full items-center gap-1.5 rounded-full border bg-background px-2.5 py-1 text-xs">
-                <span className="max-w-56 truncate">{product?.name ?? id}</span>
+                {product ? (
+                  <Link
+                    href={`/products/${encodeURIComponent(product.seoName)}`}
+                    className="max-w-56 truncate font-medium hover:text-primary hover:underline"
+                  >
+                    {product.name}
+                  </Link>
+                ) : (
+                  <span className="max-w-56 truncate">{t("selectedProductFallback")}</span>
+                )}
                 <button
                   type="button"
                   className="rounded-full p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
                   onClick={() => onChange(value.filter((item) => item !== id))}
-                  aria-label={`${t("removeProduct")}: ${product?.name ?? id}`}
+                  aria-label={`${t("removeProduct")}: ${product?.name ?? t("selectedProductFallback")}`}
                 >
                   <X className="size-3" />
                 </button>

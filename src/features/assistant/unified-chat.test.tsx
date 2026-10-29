@@ -1,4 +1,4 @@
-import {render, screen, cleanup} from "@testing-library/react";
+import {render, screen, cleanup, waitFor} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {afterEach, expect, it, vi} from "vitest";
 import {AssistantPage} from "./assistant-page";
@@ -14,7 +14,27 @@ vi.mock("next-intl", () => ({useLocale: () => "vi", useTranslations: () => Objec
 vi.mock("@/i18n/navigation", () => ({
   Link: ({children, href}: {children: React.ReactNode; href: string}) => <a href={href}>{children}</a>,
 }));
-vi.mock("@/features/catalog/queries", () => ({useProducts: () => ({data: {items: []}, isPending: false})}));
+const pickerProduct = {
+  id: "p1",
+  name: "RTX 4070 Super",
+  seoName: "rtx-4070-super",
+  brandName: "ASUS",
+  categoryName: "VGA",
+  imageUrl: undefined,
+  minPrice: 15990000,
+  maxPrice: 15990000,
+};
+const productQueryFilters: Record<string, unknown>[] = [];
+vi.mock("@/features/catalog/queries", () => ({
+  useProducts: (filters: Record<string, unknown> = {}) => {
+    productQueryFilters.push(filters);
+    return {data: {items: [pickerProduct]}, isPending: false};
+  },
+  useProductsByIds: (ids: string[]) => ({
+    data: ids.includes("p1") ? [pickerProduct] : [],
+    isPending: false,
+  }),
+}));
 vi.mock("./api", () => ({
   streamChat: vi.fn(async () => ({conversation_id: "test", answer: "chat answer", products: []})),
   compare: vi.fn(async () => ({answer: "comparison answer", products: []})),
@@ -24,8 +44,21 @@ import {streamChat, compare, evaluate} from "./api";
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  productQueryFilters.length = 0;
   profile.data = {id: "user"};
   profile.error = null;
+});
+
+it("shows selected product details as a catalog link instead of exposing its UUID", async () => {
+  const user = userEvent.setup();
+  render(<AssistantPage initialProductIds={["p1"]} />);
+
+  expect(screen.queryByText("p1")).not.toBeInTheDocument();
+  const productLinks = screen.getAllByRole("link", {name: /RTX 4070 Super/});
+  expect(productLinks.some((link) => link.getAttribute("href") === "/products/rtx-4070-super")).toBe(true);
+
+  await user.type(screen.getByRole("textbox", {name: "searchCatalogProducts"}), "rtx");
+  await waitFor(() => expect(productQueryFilters.some((filters) => filters.keyword === "rtx")).toBe(true));
 });
 
 it("lets guests draft and select products, then prompts sign-in without calling AI or losing the draft", async () => {

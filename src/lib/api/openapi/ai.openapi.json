@@ -1010,6 +1010,114 @@
           }
         }
       }
+    },
+    "/api/v1/conversations/{conversation_id}/runs/{run_id}/result": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Get Run Result",
+        "operationId": "get_run_result_api_v1_conversations__conversation_id__runs__run_id__result_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Union_RunCompletedV2__RunErrorV1__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Verified access token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Stateful resources unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_NoneType_"
+                }
+              }
+            },
+            "description": "Accepted"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3645,6 +3753,218 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "ApiResponse_Union_RunCompletedV2__RunErrorV1__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunCompletedV2"
+              },
+              {
+                "$ref": "#/components/schemas/RunErrorV1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[Union[RunCompletedV2, RunErrorV1]]"
+      },
+      "RunCompletedV2": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence"
+          },
+          "event": {
+            "type": "string",
+            "const": "COMPLETED",
+            "title": "Event"
+          },
+          "result": {
+            "$ref": "#/components/schemas/TurnResultV2"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "run_id",
+          "sequence",
+          "event",
+          "result"
+        ],
+        "title": "RunCompletedV2"
+      },
+      "TurnResultV2": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunViewV1"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "state": {
+            "$ref": "#/components/schemas/PublicConsultationV1"
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Answer"
+          },
+          "build": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicBuildV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "type": "integer",
+            "const": 2,
+            "title": "Schema Version",
+            "default": 2
+          },
+          "flexible": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicFlexibleStateV2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductCard"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Products"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run",
+          "revision",
+          "state",
+          "answer"
+        ],
+        "title": "TurnResultV2"
+      },
+      "RunErrorV1": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence"
+          },
+          "event": {
+            "type": "string",
+            "const": "ERROR",
+            "title": "Event"
+          },
+          "code": {
+            "$ref": "#/components/schemas/StatefulErrorCode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "run_id",
+          "sequence",
+          "event",
+          "code"
+        ],
+        "title": "RunErrorV1"
+      },
+      "StatefulErrorCode": {
+        "type": "string",
+        "enum": [
+          "AI_UNAUTHENTICATED",
+          "AI_CONVERSATION_NOT_FOUND",
+          "AI_REVISION_CONFLICT",
+          "AI_REQUEST_CONFLICT",
+          "AI_CONVERSATION_BUSY",
+          "AI_INPUT_REQUIRED",
+          "AI_RUN_FAILED",
+          "AI_STREAM_INTERRUPTED",
+          "AI_RUN_CANCELLED"
+        ],
+        "title": "StatefulErrorCode"
+      },
+      "ApiResponse_NoneType_": {
+        "properties": {
+          "data": {
+            "type": "null",
+            "title": "Data"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[NoneType]"
       }
     },
     "securitySchemes": {

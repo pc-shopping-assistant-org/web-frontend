@@ -14,6 +14,7 @@ import {
   mapBrandResponse,
   mapCategoryTree,
   mapProductDetail,
+  mapProductDetailToSummary,
   mapProductPage,
   mapProductReview,
   mapProductReviewPage,
@@ -101,6 +102,16 @@ export function listProducts(filters: ProductFilters = {}) {
 export async function getProductBySlug(seoName: string) {
   const response = await backendFetch<ProductDetailDto>(`/catalog-service/products/slug/${encodeURIComponent(seoName)}`);
   return mapProductDetail(response);
+}
+
+export async function getProductById(productId: string) {
+  const response = await backendFetch<ProductDetailDto>(`/catalog-service/products/${encodeURIComponent(productId)}`);
+  return mapProductDetail(response);
+}
+
+export async function getProductSummariesByIds(productIds: string[]) {
+  const products = await Promise.all(productIds.map((productId) => getProductById(productId)));
+  return products.map(mapProductDetailToSummary);
 }
 
 /** How a category names and orders its specification attributes (public read of the attribute template). */
