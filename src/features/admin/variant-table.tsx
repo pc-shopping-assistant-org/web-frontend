@@ -9,12 +9,13 @@ import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/compo
 import {ConfirmAction} from "@/components/ui/confirm-action";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Input} from "@/components/ui/input";
+import {Label} from "@/components/ui/label";
 import {Select} from "@/components/ui/select";
 import type {ProductDetail, ProductVariant} from "@/features/catalog/contracts/responses";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
 
 import {useCreateAdminVariant, useDeleteAdminVariant, useUpdateAdminVariant} from "./queries";
-import {MoneyInput, ValueImage, VariantMatrixEditor} from "./variant-matrix";
+import {CellFields, MoneyInput, ValueImage, VariantMatrixEditor} from "./variant-matrix";
 import {
   buildVariantRequests,
   emptyMatrix,
@@ -55,26 +56,120 @@ function draftOf(variant: ProductVariant): RowDraft {
   };
 }
 
+/** The update the backend takes for an edited row; the options are the columns of the table. */
+function updateRequest(row: RowDraft, optionNames: string[]) {
+  return {
+    price: Number(row.price),
+    quantity: Number(row.quantity),
+    sku: row.sku.trim(),
+    model: row.model.trim() || undefined,
+    barcode: row.barcode.trim() || undefined,
+    releaseAt: row.releaseAt || undefined,
+    description: row.description.trim() || undefined,
+    warrantyMonths: Number(row.warranty),
+    imageFileId: row.image?.fileId,
+    options: optionNames.map((name) => ({name, value: (row.options[name] ?? "").trim()})).filter((option) => option.value),
+    status: row.status,
+  };
+}
+
 /** The variants of a product as a table you edit in place, and the same editor as the create page to add more. */
 export function ProductVariantsSection({product}: {product: ProductDetail}) {
   const t = useTranslations("admin");
   const tv = useTranslations("admin.variantMatrix");
   const variants = product.variants ?? [];
+  const single = variants.length === 1 && variants[0].options.length === 0 ? variants[0] : null;
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{tv("title")}</CardTitle>
-        <CardDescription>{t("variantDescription")}</CardDescription>
+        <CardTitle>{single ? tv("singleTitle") : tv("title")}</CardTitle>
+        <CardDescription>{single ? tv("singleEditDescription") : t("variantDescription")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-8">
-        {variants.length === 0 ? (
+        {single ? (
+          <SingleVariantForm key={single.id} productId={product.id} variant={single} />
+        ) : variants.length === 0 ? (
           <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">{t("noVariants")}</p>
         ) : (
           <VariantRows productId={product.id} variants={variants} />
         )}
-        <AddVariants productId={product.id} />
+        <AddVariants productId={product.id} withSingle={variants.length === 0} />
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The only variant of a product without options is the price and stock of the product itself, so it is edited as a
+ * form like on the create page. It cannot be deleted: the product would have nothing left to sell.
+ */
+function SingleVariantForm({productId, variant}: {productId: string; variant: ProductVariant}) {
+  const t = useTranslations("admin");
+  const tv = useTranslations("admin.variantMatrix");
+  const update = useUpdateAdminVariant();
+  const original = draftOf(variant);
+  const [row, setRow] = useState(original);
+  const [error, setError] = useState<unknown>(null);
+  const dirty = JSON.stringify(row) !== JSON.stringify(original);
+  const patch = (change: Partial<RowDraft>) => {
+    setRow((all) => ({...all, ...change}));
+    setError(null);
+  };
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!isValidCell(row)) {
+      setError(tv("problem.cells", {count: 1}));
+      return;
+    }
+    try {
+      await update.mutateAsync({productId, id: variant.id, request: updateRequest(row, [])});
+    } catch (cause) {
+      setError(cause);
+    }
+  }
+
+  return (
+    <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+      <div className="grid gap-4 sm:grid-cols-3">
+        <CellFields id="variant-edit" cell={row} onChange={(change) => patch(change)} />
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="variant-edit-description">{tv("variantDescription")}</Label>
+          <Input id="variant-edit-description" value={row.description} onChange={(event) => patch({description: event.target.value})} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="variant-edit-status">{t("status")}</Label>
+          <Select
+            id="variant-edit-status"
+            value={row.status}
+            onChange={(event) => patch({status: event.target.value as EditableResourceStatus})}
+          >
+            <option value={ResourceStatus.Active}>{t(`statusValues.${ResourceStatus.Active}`)}</option>
+            <option value={ResourceStatus.Inactive}>{t(`statusValues.${ResourceStatus.Inactive}`)}</option>
+          </Select>
+        </div>
+      </div>
+      {error ? (
+        typeof error === "string" ? (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : (
+          <ErrorMessage error={error} />
+        )
+      ) : null}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={!dirty || update.isPending}>
+          {tv("saveRow")}
+        </Button>
+        {dirty ? (
+          <Button type="button" variant="ghost" onClick={() => setRow(original)}>
+            <Undo2 className="size-4" />
+            {tv("undo")}
+          </Button>
+        ) : null}
+      </div>
+    </form>
   );
 }
 
@@ -108,23 +203,7 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
       return;
     }
     try {
-      await update.mutateAsync({
-        productId,
-        id: variant.id,
-        request: {
-          price: Number(row.price),
-          quantity: Number(row.quantity),
-          sku: row.sku.trim(),
-          model: row.model.trim() || undefined,
-          barcode: row.barcode.trim() || undefined,
-          releaseAt: row.releaseAt || undefined,
-          description: row.description.trim() || undefined,
-          warrantyMonths: Number(row.warranty),
-          imageFileId: row.image?.fileId,
-          options: names.map((name) => ({name, value: (row.options[name] ?? "").trim()})).filter((option) => option.value),
-          status: row.status,
-        },
-      });
+      await update.mutateAsync({productId, id: variant.id, request: updateRequest(row, names)});
       drop(variant.id);
     } catch (error) {
       setErrors((all) => ({...all, [variant.id]: error}));
@@ -323,7 +402,7 @@ function Th({children}: {children: ReactNode}) {
  * New variants, made the way the create page makes them. A variant that fails leaves the ones before it made;
  * pressing the button again makes only those still missing.
  */
-function AddVariants({productId}: {productId: string}) {
+function AddVariants({productId, withSingle}: {productId: string; withSingle: boolean}) {
   const tv = useTranslations("admin.variantMatrix");
   const create = useCreateAdminVariant();
   const [matrix, setMatrix] = useState(emptyMatrix);
@@ -360,6 +439,7 @@ function AddVariants({productId}: {productId: string}) {
         title={tv("addTitle")}
         description={tv("addDescription")}
         value={matrix}
+        withSingle={withSingle}
         onChange={(next) => {
           setMatrix(next);
           setProblem(null);

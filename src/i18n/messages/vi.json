@@ -875,6 +875,7 @@
       "rowCount": "{count} phân loại",
       "singleTitle": "Giá và kho hàng",
       "singleDescription": "Sản phẩm không có phân loại bán với một giá. Để trống giá nếu muốn thêm SKU sau, ở trang chi tiết.",
+      "singleEditDescription": "Sản phẩm này không có phân loại nên chỉ có một SKU. Thêm nhóm phân loại bên dưới nếu muốn bán nhiều lựa chọn.",
       "imageFor": "Ảnh cho {name}",
       "imageFailed": "Tải ảnh lên không được, bấm để thử lại",
       "removeImage": "Bỏ ảnh",

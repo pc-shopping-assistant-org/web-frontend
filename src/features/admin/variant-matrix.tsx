@@ -33,6 +33,7 @@ export function VariantMatrixEditor({
   problem,
   title,
   description,
+  withSingle = true,
 }: {
   value: VariantMatrixState;
   onChange: (next: VariantMatrixState) => void;
@@ -40,6 +41,8 @@ export function VariantMatrixEditor({
   /** Replace the heading and its line of help, for a page where "Variants" is already the title of the card. */
   title?: string;
   description?: string;
+  /** Offer the price and stock of a product without groups; off when the product already has its variants. */
+  withSingle?: boolean;
 }) {
   const t = useTranslations("admin.variantMatrix");
   const rows = variantRows(value);
@@ -81,7 +84,9 @@ export function VariantMatrixEditor({
       ) : null}
 
       {rows.length === 0 ? (
-        <SingleVariant cell={value.single} onChange={(patch) => onChange({...value, single: {...value.single, ...patch}})} />
+        withSingle ? (
+          <SingleVariant cell={value.single} onChange={(patch) => onChange({...value, single: {...value.single, ...patch}})} />
+        ) : null
       ) : (
         <VariantTable value={value} rows={rows} onChange={onChange} setCell={setCell} />
       )}
@@ -185,7 +190,7 @@ function SingleVariant({cell, onChange}: {cell: VariantCell; onChange: (patch: P
   );
 }
 
-function CellFields({id, cell, onChange}: {id: string; cell: VariantCell; onChange: (patch: Partial<VariantCell>) => void}) {
+export function CellFields({id, cell, onChange}: {id: string; cell: VariantCell; onChange: (patch: Partial<VariantCell>) => void}) {
   const t = useTranslations("admin.variantMatrix");
   return (
     <>
