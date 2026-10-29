@@ -873,6 +873,7 @@
       "rowCount": "{count} variants",
       "singleTitle": "Price and stock",
       "singleDescription": "A product without variants sells at one price. Leave the price empty to add SKUs later, on the detail page.",
+      "singleEditDescription": "This product has no variants, so it has a single SKU. Add a variant group below to sell more options.",
       "imageFor": "Image for {name}",
       "imageFailed": "The upload failed, click to try again",
       "removeImage": "Remove image",
