@@ -311,7 +311,7 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
                 </td>
                 <td className="px-3 py-3">
                   <Select
-                    className="h-9 w-36"
+                    className="h-9 w-44"
                     aria-label={`${t("status")} · ${label}`}
                     value={row.status}
                     onChange={(event) => patch(variant, {status: event.target.value as EditableResourceStatus})}
@@ -471,6 +471,8 @@ function VariationsEditor({productId, active}: {productId: string; active: Produ
   const save = useSaveAdminVariations();
   const [open, setOpen] = useState(active.length === 0);
   const [matrix, setMatrix] = useState(() => matrixFromVariants(active));
+  // Taken when the editor opens: an option typed afterwards is new, even once an ordered variant is carried onto it
+  const [locked, setLocked] = useState(() => lockedValueIds(matrix));
   const [problem, setProblem] = useState<VariantProblem | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -481,7 +483,9 @@ function VariationsEditor({productId, active}: {productId: string; active: Produ
   const nameOf = (variant: ProductVariant) => variant.options.map((option) => option.value).join(" / ") || variant.sku;
 
   function start() {
-    setMatrix(matrixFromVariants(active));
+    const loaded = matrixFromVariants(active);
+    setMatrix(loaded);
+    setLocked(lockedValueIds(loaded));
     setProblem(null);
     setError(null);
     setConfirming(false);
@@ -522,7 +526,7 @@ function VariationsEditor({productId, active}: {productId: string; active: Produ
         title={tv("editVariationsTitle")}
         description={tv("editVariationsDescription")}
         value={matrix}
-        lockedValues={lockedValueIds(matrix)}
+        lockedValues={locked}
         onChange={(next) => {
           setMatrix((previous) => carryExisting(previous, next));
           setProblem(null);

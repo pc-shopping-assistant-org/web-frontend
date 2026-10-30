@@ -23,6 +23,9 @@ import {
   type VariantProblem,
 } from "./variant-matrix-model";
 
+/** An existing variant's stock only moves through stock adjustments, so its field reads like text. */
+const READ_ONLY_INPUT = "bg-muted text-muted-foreground focus-visible:ring-0";
+
 /**
  * The seller's way of describing variants: up to two groups ("Color", "Size") with their options, then one row of
  * price, stock and SKU for every combination. It only edits the state; the page turns that into variants.
@@ -189,7 +192,8 @@ function SingleVariant({cell, onChange}: {cell: VariantCell; onChange: (patch: P
     <div className="space-y-3 rounded-xl border p-4">
       <div>
         <p className="font-medium">{t("singleTitle")}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{t("singleDescription")}</p>
+        {/* Leaving the price empty only makes sense while creating; an existing variant keeps its SKU */}
+        {cell.variantId ? null : <p className="mt-1 text-sm text-muted-foreground">{t("singleDescription")}</p>}
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <CellFields id="variant-single" cell={cell} onChange={onChange} />
@@ -227,6 +231,7 @@ export function CellFields({
           inputMode="numeric"
           value={cell.quantity}
           readOnly={stockLocked}
+          className={stockLocked ? READ_ONLY_INPUT : undefined}
           title={stockLocked ? t("stockLocked") : undefined}
           onChange={(event) => onChange({quantity: event.target.value})}
         />
@@ -441,6 +446,7 @@ function VariantTable({
                       inputMode="numeric"
                       value={cell.quantity}
                       readOnly={Boolean(cell.variantId)}
+                      className={cell.variantId ? READ_ONLY_INPUT : undefined}
                       title={cell.variantId ? t("stockLocked") : undefined}
                       onChange={(event) => setCell(row.key, {quantity: event.target.value})}
                     />

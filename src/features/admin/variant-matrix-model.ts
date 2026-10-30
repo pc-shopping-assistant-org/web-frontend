@@ -224,7 +224,7 @@ export function carryExisting(previous: VariantMatrixState, next: VariantMatrixS
   return next;
 }
 
-/** The options that an ordered variant uses: renaming one would turn that variant into another item. */
+/** The options that an ordered variant uses as loaded: renaming one would turn that variant into another item. */
 export function lockedValueIds(state: VariantMatrixState): Set<string> {
   return new Set(
     variantRows(state)
