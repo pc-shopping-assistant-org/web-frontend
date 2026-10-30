@@ -1306,7 +1306,8 @@
     "VARIANT_OPTIONS_MISMATCH": "Mọi phân loại đang bán của sản phẩm phải có cùng các nhóm phân loại. Dùng Sửa phân loại để thêm hoặc bớt nhóm.",
     "DUPLICATE_VARIANT_COMBINATION": "Đã có phân loại khác đang bán với đúng các tùy chọn này.",
     "VARIANT_OPTIONS_LOCKED": "Phân loại đã có đơn hàng nên không đổi được tùy chọn. Hãy tạo phân loại mới và ẩn phân loại cũ.",
-    "STOCK_BELOW_ZERO": "Không thể trừ nhiều hơn số hàng đang có trong kho."
+    "STOCK_BELOW_ZERO": "Không thể trừ nhiều hơn số hàng đang có trong kho.",
+    "VARIANT_LISTED_TWICE": "Một phân loại bị liệt kê hai lần. Hãy tải lại trang rồi thử lại."
   },
   "status": {
     "PENDING_PAYMENT": "Chờ thanh toán",

@@ -1306,7 +1306,8 @@
     "VARIANT_OPTIONS_MISMATCH": "Every variant on sale must have the same option groups. Use Edit variations to add or remove a group.",
     "DUPLICATE_VARIANT_COMBINATION": "Another variant on sale already has exactly these options.",
     "VARIANT_OPTIONS_LOCKED": "This variant has been ordered, so its options cannot change. Create a new variant and hide the old one.",
-    "STOCK_BELOW_ZERO": "You cannot take off more than the stock on hand."
+    "STOCK_BELOW_ZERO": "You cannot take off more than the stock on hand.",
+    "VARIANT_LISTED_TWICE": "The same variant is listed twice. Reload the page and try again."
   },
   "status": {
     "PENDING_PAYMENT": "Pending payment",
