@@ -40,6 +40,8 @@ export type ProductVariantDto = {
   imageFileId?: string | null;
   imageUrl?: string | null;
   status: string;
+  /** Admin reads only: the variant has been ordered, so its option values can no longer change. */
+  hasOrders?: boolean | null;
   options?: ProductOptionDto[];
   createdAt?: string;
 };

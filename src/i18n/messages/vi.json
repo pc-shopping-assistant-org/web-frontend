@@ -875,12 +875,12 @@
       "rowCount": "{count} phân loại",
       "singleTitle": "Giá và kho hàng",
       "singleDescription": "Sản phẩm không có phân loại bán với một giá. Để trống giá nếu muốn thêm SKU sau, ở trang chi tiết.",
-      "singleEditDescription": "Sản phẩm này không có phân loại nên chỉ có một SKU. Thêm nhóm phân loại bên dưới nếu muốn bán nhiều lựa chọn.",
+      "singleEditDescription": "Sản phẩm này không có phân loại nên chỉ có một SKU. Bấm Sửa phân loại bên dưới nếu muốn bán nhiều lựa chọn.",
       "imageFor": "Ảnh cho {name}",
       "imageFailed": "Tải ảnh lên không được, bấm để thử lại",
       "removeImage": "Bỏ ảnh",
       "retry": "Thử lại",
-      "partial": "Đã tạo sản phẩm nhưng mới có {done}/{total} phân loại. Thông tin chung đã lưu; bấm Thử lại để tạo các phân loại còn thiếu, hoặc mở sản phẩm để thêm sau.",
+      "partial": "Đã tạo sản phẩm nhưng chưa lưu được phân loại. Thông tin chung đã lưu; bấm Thử lại để lưu phân loại, hoặc mở sản phẩm để thêm sau.",
       "openCreated": "Mở sản phẩm",
       "problem": {
         "groupName": "Nhập tên cho mỗi nhóm phân loại đã có tùy chọn.",
@@ -888,7 +888,8 @@
         "duplicateValue": "Một nhóm có hai tùy chọn trùng nhau.",
         "cells": "{count} phân loại chưa có giá, kho, bảo hành hoặc SKU hợp lệ (giá, kho, bảo hành là số nguyên; bảo hành từ 1 tháng).",
         "duplicateSku": "Hai phân loại không được dùng chung SKU.",
-        "duplicateBarcode": "Hai phân loại không được dùng chung mã vạch."
+        "duplicateBarcode": "Hai phân loại không được dùng chung mã vạch.",
+        "empty": "Nhập giá cho sản phẩm hoặc thêm ít nhất một phân loại."
       },
       "warranty": "Bảo hành (tháng)",
       "warrantyOf": "Bảo hành của {name}",
@@ -903,10 +904,21 @@
       "image": "Ảnh",
       "saveRow": "Lưu",
       "undo": "Hoàn tác",
-      "addVariants": "Thêm phân loại",
-      "addPartial": "Mới thêm được {done}/{total} phân loại. Bấm Thêm phân loại để thử lại phần còn thiếu.",
-      "addTitle": "Thêm phân loại mới",
-      "addDescription": "Thêm nhóm phân loại như Màu sắc, Dung lượng; mỗi tổ hợp là một SKU có giá và kho riêng. Có thể thêm vào những phân loại đã có ở trên."
+      "optionLocked": "Phân loại này đã có đơn hàng nên không đổi tên được. Hãy thêm tùy chọn mới và xoá tùy chọn cũ (phân loại cũ sẽ được ẩn).",
+      "stockLocked": "Kho của phân loại đã có chỉ thay đổi bằng Điều chỉnh kho, để không làm mất số hàng khách vừa đặt.",
+      "adjustStock": "Điều chỉnh kho",
+      "adjustStockOf": "Điều chỉnh kho của {name}",
+      "adjustStockPlaceholder": "+20 hoặc -1",
+      "adjustStockHint": "Nhập số cộng thêm (nhập hàng) hoặc trừ đi (hỏng, kiểm kê).",
+      "adjustStockPreview": "Kho: {from} → {to}",
+      "editVariations": "Sửa phân loại",
+      "editVariationsTitle": "Sửa phân loại hàng",
+      "editVariationsDescription": "Thêm, bớt nhóm phân loại và tùy chọn rồi lưu một lần. Phân loại đã có giữ nguyên kho và đơn hàng; kho chỉ nhập cho phân loại mới.",
+      "keepVariant": "Phân loại giữ lại làm sản phẩm không phân loại",
+      "leftOutTitle": "{count} phân loại đang bán sẽ không còn trong danh sách",
+      "leftOutDescription": "Phân loại chưa có đơn và hết hàng sẽ bị xoá; phân loại còn lại sẽ bị ẩn để giữ kho và lịch sử đơn.",
+      "confirmSaveVariations": "Vẫn lưu",
+      "saveVariations": "Lưu phân loại"
     },
     "makeCover": "Đặt làm ảnh bìa",
     "removeImage": "Xoá ảnh",
@@ -1290,7 +1302,11 @@
     "EXTERNAL_SERVICE_ERROR": "Dịch vụ bên ngoài gặp lỗi.",
     "AI_PRODUCT_NOT_FOUND": "Không tìm thấy sản phẩm AI yêu cầu.",
     "UNKNOWN": "Có lỗi xảy ra. Vui lòng thử lại.",
-    "PAYLOAD_TOO_LARGE": "Tệp tải lên quá lớn (tối đa 10 MB)."
+    "PAYLOAD_TOO_LARGE": "Tệp tải lên quá lớn (tối đa 10 MB).",
+    "VARIANT_OPTIONS_MISMATCH": "Mọi phân loại đang bán của sản phẩm phải có cùng các nhóm phân loại. Dùng Sửa phân loại để thêm hoặc bớt nhóm.",
+    "DUPLICATE_VARIANT_COMBINATION": "Đã có phân loại khác đang bán với đúng các tùy chọn này.",
+    "VARIANT_OPTIONS_LOCKED": "Phân loại đã có đơn hàng nên không đổi được tùy chọn. Hãy tạo phân loại mới và ẩn phân loại cũ.",
+    "STOCK_BELOW_ZERO": "Không thể trừ nhiều hơn số hàng đang có trong kho."
   },
   "status": {
     "PENDING_PAYMENT": "Chờ thanh toán",

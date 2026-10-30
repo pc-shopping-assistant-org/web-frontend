@@ -34,10 +34,35 @@ export const createProductVariantRequestSchema = z
   })
   .strict();
 
-/** The backend takes the status through its own call, so it is split off by the adapter. */
+/**
+ * The backend takes the status through its own call, so it is split off by the adapter. Stock is not edited here: it
+ * changes only by an adjustment, so an edit never undoes what orders took meanwhile.
+ */
 export const updateProductVariantRequestSchema = createProductVariantRequestSchema
+  .omit({quantity: true})
   .extend({
     status: optionalEnum(EDITABLE_RESOURCE_STATUS_VALUES),
+  })
+  .strict();
+
+/** Stock to add (a delivery) or take off (a count correction); never zero. */
+export const stockAdjustmentRequestSchema = z
+  .object({
+    delta: z.number().int().refine((delta) => delta !== 0),
+  })
+  .strict();
+
+/** One variant of the list that replaces the variations: with an id an existing one (its stock is kept), without one a new one. */
+export const variationItemRequestSchema = createProductVariantRequestSchema
+  .extend({
+    id: optionalUuid,
+    quantity: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
+export const saveVariationsRequestSchema = z
+  .object({
+    variants: z.array(variationItemRequestSchema).min(1),
   })
   .strict();
 
@@ -154,6 +179,9 @@ export type ProductImageRequest = z.infer<typeof productImageRequestSchema>;
 export type VariantOptionRequest = z.infer<typeof variantOptionRequestSchema>;
 export type CreateProductVariantRequest = z.infer<typeof createProductVariantRequestSchema>;
 export type UpdateProductVariantRequest = z.infer<typeof updateProductVariantRequestSchema>;
+export type StockAdjustmentRequest = z.infer<typeof stockAdjustmentRequestSchema>;
+export type VariationItemRequest = z.infer<typeof variationItemRequestSchema>;
+export type SaveVariationsRequest = z.infer<typeof saveVariationsRequestSchema>;
 export type CreateProductRequest = z.infer<typeof createProductRequestSchema>;
 export type UpdateProductRequest = z.infer<typeof updateProductRequestSchema>;
 export type CreateCategoryRequest = z.infer<typeof createCategoryRequestSchema>;

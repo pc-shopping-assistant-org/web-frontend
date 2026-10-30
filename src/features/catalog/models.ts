@@ -77,6 +77,8 @@ export type ProductVariant = {
   status?: string;
   warrantyMonths?: number;
   createdAt?: string;
+  /** Known on admin reads only: an ordered variant keeps its option values. */
+  hasOrders?: boolean;
   options: ProductOption[];
 };
 
