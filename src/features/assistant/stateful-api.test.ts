@@ -1,4 +1,5 @@
 import {afterEach, beforeEach, expect, it, vi} from "vitest";
+import {RUN_RESULT_MAX_TRANSPORT_FAILURES} from "./constants";
 import {streamChat} from "./stateful-api";
 
 afterEach(() => {
@@ -97,6 +98,50 @@ it("reports a stopped failed run instead of admitting the message again", async 
     })));
   vi.stubGlobal("fetch", fetch);
   await expect(streamChat("Tư vấn laptop")).rejects.toMatchObject({message: "AI_RUN_FAILED"});
+  expect(fetch).toHaveBeenCalledTimes(4);
+});
+
+it("survives a network change during result delivery without submitting the turn twice", async () => {
+  vi.useFakeTimers();
+  const fetch = vi.fn()
+    .mockResolvedValueOnce(Response.json(envelope({schema_version: 2, conversation_id: cid, revision: 0})))
+    .mockResolvedValueOnce(Response.json(envelope(run)))
+    .mockRejectedValueOnce(new TypeError("ERR_NETWORK_CHANGED"))
+    .mockRejectedValueOnce(new TypeError("ERR_NETWORK_CHANGED"))
+    .mockResolvedValueOnce(Response.json(envelope(null), {status: 202}))
+    .mockResolvedValueOnce(Response.json(envelope({
+      conversation_id: cid, run_id: rid, sequence: 3, event: "COMPLETED", result: completedResult,
+    })));
+  vi.stubGlobal("fetch", fetch);
+  const response = streamChat("Build PC");
+  const assertion = expect(response).resolves.toMatchObject({answer: completedResult.answer});
+  await vi.runAllTimersAsync();
+  await assertion;
+  expect(fetch.mock.calls.filter((call) => call[1].method === "POST")).toHaveLength(2);
+  expect(fetch.mock.calls.filter((call) => String(call[0]).endsWith("/events"))).toHaveLength(1);
+});
+
+it("bounds result-delivery retries when the network remains unavailable", async () => {
+  vi.useFakeTimers();
+  const fetch = vi.fn()
+    .mockResolvedValueOnce(Response.json(envelope({schema_version: 2, conversation_id: cid, revision: 0})))
+    .mockResolvedValueOnce(Response.json(envelope(run)))
+    .mockRejectedValue(new TypeError("offline"));
+  vi.stubGlobal("fetch", fetch);
+  const assertion = expect(streamChat("Build PC")).rejects.toMatchObject({messageKey: "AI_BACKEND_UNAVAILABLE"});
+  await vi.runAllTimersAsync();
+  await assertion;
+  expect(fetch).toHaveBeenCalledTimes(3 + RUN_RESULT_MAX_TRANSPORT_FAILURES);
+});
+
+it.each([401, 403, 404, 410])("does not retry terminal result HTTP %s", async (status) => {
+  const fetch = vi.fn()
+    .mockResolvedValueOnce(Response.json(envelope({schema_version: 2, conversation_id: cid, revision: 0})))
+    .mockResolvedValueOnce(Response.json(envelope(run)))
+    .mockRejectedValueOnce(new TypeError("lost SSE"))
+    .mockResolvedValueOnce(Response.json({data:null,message:"AI_NOT_FOUND",errors:[]}, {status}));
+  vi.stubGlobal("fetch", fetch);
+  await expect(streamChat("Build PC")).rejects.toMatchObject({status});
   expect(fetch).toHaveBeenCalledTimes(4);
 });
 
