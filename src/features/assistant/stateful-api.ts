@@ -5,7 +5,7 @@ import type {AiSchema} from "@/lib/api/generated/types";
 import {parseSse} from "@/lib/api/sse";
 import {parseRequest} from "@/lib/api/parse-request";
 import {ChatStreamEventType} from "@/lib/domain/assistant-enums";
-import {RUN_RESULT_POLL_INTERVAL_MS, STATEFUL_SCHEMA_VERSION} from "./constants";
+import {RUN_RESULT_MAX_TRANSPORT_FAILURES, RUN_RESULT_POLL_INTERVAL_MS, RUN_RESULT_TRANSIENT_HTTP_STATUSES, STATEFUL_SCHEMA_VERSION} from "./constants";
 import type {ChatData} from "./models";
 import {mapStatefulTurn} from "./mappers";
 import type {ChatStreamHandlers} from "./api";
@@ -98,9 +98,19 @@ async function readStream(
 }
 
 async function readSavedResult(path: string, runId: string, conversationId: string, signal?: AbortSignal): Promise<StatefulTurnResult> {
+  let transportFailures = 0;
   while (true) {
     signal?.throwIfAborted();
-    const data = await aiFetch<unknown>(`${path}/result`, {signal, cache: "no-store"});
+    let data: unknown = null;
+    try {
+      data = await aiFetch<unknown>(`${path}/result`, {signal, cache: "no-store"});
+      transportFailures = 0;
+    } catch (error) {
+      if (signal?.aborted || !(error instanceof ApiClientError) ||
+        !RUN_RESULT_TRANSIENT_HTTP_STATUSES.some((status) => status === error.status) ||
+        ++transportFailures >= RUN_RESULT_MAX_TRANSPORT_FAILURES) throw error;
+      // Retry delivery of the admitted run only. Never resubmit or reopen SSE.
+    }
     if (data !== null) {
       const event = statefulEventSchema.parse(data);
       if (event.conversation_id !== conversationId || event.run_id !== runId) throw invalidStream();
