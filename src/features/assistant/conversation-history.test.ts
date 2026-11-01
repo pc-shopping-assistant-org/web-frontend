@@ -50,3 +50,16 @@ it("keeps a missing or foreign conversation rejected instead of starting a repla
   await expect(loadConversationHistory(cid)).rejects.toMatchObject({status: 404});
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+it("preserves attached product identities on historical user messages", async () => {
+  const productId = "00000000-0000-4000-8000-000000000006";
+  const fetch = vi.fn()
+    .mockResolvedValueOnce(Response.json(envelope({items: [
+      {run_id: rid, role: "user", content: "Giải thích sản phẩm", selected_product_ids: [productId]},
+      {run_id: rid, role: "assistant", content: "Thông tin từ catalog"},
+    ], next_cursor: null})))
+    .mockResolvedValueOnce(Response.json(envelope(final)));
+  vi.stubGlobal("fetch", fetch);
+  const history = await loadConversationHistory(cid);
+  expect(history.turns[0]).toMatchObject({prompt: "Giải thích sản phẩm", selectedProductIds: [productId]});
+});

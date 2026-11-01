@@ -3,16 +3,29 @@ import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import styles from "./assistant-markdown.module.css";
+import {AssistantProductCard} from "./components/assistant-product-card";
+import type {AssistantProduct} from "./models";
+import {productMentions} from "./product-mentions";
 
 /** Display model text only; product/build cards remain separate typed UI. */
-export function AssistantMarkdown({children}: {children: string}) {
+export function AssistantMarkdown({children, products = [], onAskAboutProduct}: {children: string; products?: AssistantProduct[]; onAskAboutProduct?: (id: string) => void}) {
   const t = useTranslations("assistant");
   return (
     <div className={styles.content}>
       <Markdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, productMentions(products)]}
         skipHtml
         components={{
+          p: ({node, children}) => {
+            const indexes = node?.properties["data-products"];
+            const selected = typeof indexes === "string" ? indexes.split(",").map((index) => products[Number(index)]).filter(Boolean) : [];
+            return <>
+              {children ? <p>{children}</p> : null}
+              {selected.length ? <div className="my-3 grid min-w-0 gap-3 sm:grid-cols-2" data-product-cards>
+                {selected.map((product) => <AssistantProductCard key={product.id ?? product.product_id ?? product.name} product={product} onAskAboutProduct={onAskAboutProduct} />)}
+              </div> : null}
+            </>;
+          },
           a: ({href, children}) => {
             if (!href) return <>{children}</>;
             const external = /^https?:\/\//i.test(href) || href.startsWith("//");

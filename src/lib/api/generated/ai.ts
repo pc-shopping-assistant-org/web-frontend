@@ -4,40 +4,6 @@
  */
 
 export type paths = {
-    "/api/v1/chat": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Chat */
-        post: operations["chat_api_v1_chat_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/chat/stream": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Stream Chat */
-        post: operations["stream_chat_api_v1_chat_stream_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/compare": {
         parameters: {
             query?: never;
@@ -209,6 +175,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/embeddings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Embeddings */
+        post: operations["create_embeddings_api_v1_embeddings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/evaluate": {
         parameters: {
             query?: never;
@@ -238,6 +221,41 @@ export type paths = {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/memories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Memories */
+        get: operations["list_memories_api_v1_memories_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/memories/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Save Memory */
+        put: operations["save_memory_api_v1_memories__key__put"];
+        post?: never;
+        /** Forget Memory */
+        delete: operations["forget_memory_api_v1_memories__key__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -287,18 +305,6 @@ export type components = {
         AccessoryType: "MONITOR" | "MOUSE" | "KEYBOARD" | "HEADSET";
         /** @enum {string} */
         AnswerReason: "NO_RESULTS" | "SOURCE_UNAVAILABLE" | "DEPENDENCY_UNAVAILABLE" | "SCOPED_EXHAUSTION" | "INCOMPLETE_SEARCH" | "FACT_UNKNOWN" | "FACT_CONFLICT";
-        /** ApiResponse[ChatData] */
-        ApiResponse_ChatData_: {
-            data?: components["schemas"]["ChatData"] | null;
-            /** Errors */
-            errors?: components["schemas"]["ErrorDetail"][];
-            /**
-             * @description Static frontend mapping key; request-specific details belong in errors
-             * @default SUCCESS
-             * @example SUCCESS
-             */
-            message: components["schemas"]["ResponseMessage"];
-        };
         /** ApiResponse[ConsultData] */
         ApiResponse_ConsultData_: {
             data?: components["schemas"]["ConsultData"] | null;
@@ -323,9 +329,46 @@ export type components = {
              */
             message: components["schemas"]["ResponseMessage"];
         };
+        /** ApiResponse[EmbeddingResponseData] */
+        ApiResponse_EmbeddingResponseData_: {
+            data?: components["schemas"]["EmbeddingResponseData"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
         /** ApiResponse[HealthData] */
         ApiResponse_HealthData_: {
             data?: components["schemas"]["HealthData"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
+        /** ApiResponse[list[MemoryEntry]] */
+        ApiResponse_list_MemoryEntry__: {
+            /** Data */
+            data?: components["schemas"]["MemoryEntry"][] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
+        /** ApiResponse[MemoryEntry] */
+        ApiResponse_MemoryEntry_: {
+            data?: components["schemas"]["MemoryEntry"] | null;
             /** Errors */
             errors?: components["schemas"]["ErrorDetail"][];
             /**
@@ -434,12 +477,6 @@ export type components = {
             message: components["schemas"]["ResponseMessage"];
         };
         /**
-         * AssistantIntent
-         * @description Validated capability branch selected by the planning graph.
-         * @enum {string}
-         */
-        AssistantIntent: "SEARCH" | "CONSULT" | "COMPARE" | "EVALUATE";
-        /**
          * BudgetScope
          * @enum {string}
          */
@@ -450,26 +487,6 @@ export type components = {
          * @enum {string}
          */
         BuildObjective: "PERFORMANCE" | "BALANCED" | "UPGRADE_FRIENDLY";
-        /** ChatData */
-        ChatData: {
-            /** Answer */
-            answer: string;
-            /**
-             * Conversation Id
-             * Format: uuid
-             */
-            conversation_id: string;
-            intent: components["schemas"]["AssistantIntent"];
-            /** Products */
-            products?: components["schemas"]["ProductCard"][];
-        };
-        /** ChatRequest */
-        ChatRequest: {
-            /** Conversation Id */
-            conversation_id?: string | null;
-            /** Message */
-            message: string;
-        };
         /** ClarificationItemV1 */
         ClarificationItemV1: {
             /** Item Index */
@@ -611,6 +628,36 @@ export type components = {
              */
             target: "CLARIFICATION" | "REQUIREMENTS" | "TASKS";
         };
+        /** EmbeddingItem */
+        EmbeddingItem: {
+            /** Embedding */
+            embedding: number[];
+            /** Index */
+            index: number;
+        };
+        /** EmbeddingRequest */
+        EmbeddingRequest: {
+            /** Input */
+            input: string | string[];
+            /**
+             * Model
+             * @default BAAI/bge-m3
+             */
+            model: string;
+        };
+        /** EmbeddingResponseData */
+        EmbeddingResponseData: {
+            /** Data */
+            data: components["schemas"]["EmbeddingItem"][];
+            /** Device */
+            device?: string | null;
+            /** Embedding */
+            embedding: number[];
+            /** Latency Ms */
+            latency_ms?: number | null;
+            /** Model */
+            model: string;
+        };
         /** ErrorDetail */
         ErrorDetail: {
             /** Code */
@@ -664,6 +711,35 @@ export type components = {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** MemoryEntry */
+        MemoryEntry: {
+            /** Content */
+            content: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Key */
+            key: string;
+            kind: components["schemas"]["MemoryKind"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** MemoryInput */
+        MemoryInput: {
+            /** Content */
+            content: string;
+            kind: components["schemas"]["MemoryKind"];
+        };
+        /**
+         * MemoryKind
+         * @enum {string}
+         */
+        MemoryKind: "PREFERENCE" | "OWNED_CONTEXT";
         /** MessageViewV1 */
         MessageViewV1: {
             /** Content */
@@ -678,6 +754,8 @@ export type components = {
              * Format: uuid
              */
             message_id: string;
+            /** Products */
+            products?: components["schemas"]["ProductCard"][];
             /**
              * Role
              * @enum {string}
@@ -688,6 +766,8 @@ export type components = {
              * Format: uuid
              */
             run_id: string;
+            /** Selected Product Ids */
+            selected_product_ids?: string[];
             /** Sequence */
             sequence: number;
         };
@@ -940,7 +1020,7 @@ export type components = {
             /** Strength */
             strength?: ("HARD" | "SOFT") | null;
             /** Subject */
-            subject?: ("SETUP" | "WORKLOAD") | components["schemas"]["ComponentCategory"] | null;
+            subject?: ("SETUP" | "WORKLOAD") | components["schemas"]["ComponentCategory"] | components["schemas"]["AccessoryType"] | null;
             /**
              * Target
              * @enum {string}
@@ -1037,7 +1117,7 @@ export type components = {
          * @description Stable top-level keys that the frontend maps to localized messages.
          * @enum {string}
          */
-        ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_CHAT_STREAM_STARTED" | "AI_CHAT_STREAM_DELTA" | "AI_CHAT_STREAM_COMPLETED" | "AI_CHAT_STREAM_FAILED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND" | "AI_CONVERSATION_CREATED" | "AI_CONVERSATION_RETRIEVED" | "AI_CONVERSATIONS_LISTED" | "AI_CONVERSATION_DELETED" | "AI_MESSAGES_LISTED" | "AI_RUN_ACCEPTED" | "AI_RUN_RETRIEVED" | "AI_RUN_CANCEL_REQUESTED" | "AI_RUN_FAILED" | "AI_STREAM_INTERRUPTED" | "AI_UNAUTHENTICATED" | "AI_CONVERSATION_NOT_FOUND" | "AI_REVISION_CONFLICT" | "AI_REQUEST_CONFLICT" | "AI_REQUEST_VERSION_UNSUPPORTED" | "AI_CONVERSATION_BUSY" | "AI_CONVERSATION_NOT_READY" | "AI_INPUT_REQUIRED";
+        ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_CHAT_STREAM_STARTED" | "AI_CHAT_STREAM_DELTA" | "AI_CHAT_STREAM_COMPLETED" | "AI_CHAT_STREAM_FAILED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND" | "AI_CONVERSATION_CREATED" | "AI_CONVERSATION_RETRIEVED" | "AI_CONVERSATIONS_LISTED" | "AI_CONVERSATION_DELETED" | "AI_MESSAGES_LISTED" | "AI_RUN_ACCEPTED" | "AI_RUN_RETRIEVED" | "AI_RUN_CANCEL_REQUESTED" | "AI_RUN_FAILED" | "AI_STREAM_INTERRUPTED" | "AI_UNAUTHENTICATED" | "AI_CONVERSATION_NOT_FOUND" | "AI_REVISION_CONFLICT" | "AI_REQUEST_CONFLICT" | "AI_REQUEST_VERSION_UNSUPPORTED" | "AI_CONVERSATION_BUSY" | "AI_CONVERSATION_NOT_READY" | "AI_INPUT_REQUIRED" | "AI_MEMORIES_LISTED" | "AI_MEMORY_SAVED" | "AI_MEMORY_DELETED" | "AI_MEMORY_LIMIT_REACHED";
         /** RunCompletedV2 */
         RunCompletedV2: {
             /**
@@ -1072,6 +1152,7 @@ export type components = {
              * @constant
              */
             event: "ERROR";
+            reason?: components["schemas"]["RunFailureReason"] | null;
             /**
              * Run Id
              * Format: uuid
@@ -1080,6 +1161,11 @@ export type components = {
             /** Sequence */
             sequence: number;
         };
+        /**
+         * RunFailureReason
+         * @enum {string}
+         */
+        RunFailureReason: "MODEL_TIMEOUT" | "MODEL_UNAVAILABLE" | "PROCESSING_FAILED";
         /**
          * RunStatus
          * @enum {string}
@@ -1105,6 +1191,8 @@ export type components = {
              */
             run_id: string;
             status: components["schemas"]["RunStatus"];
+            /** Trace Id */
+            trace_id?: string;
         };
         /** SearchData */
         SearchData: {
@@ -1286,72 +1374,6 @@ export type components = {
 };
 export type $defs = Record<string, never>;
 export interface operations {
-    chat_api_v1_chat_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChatRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ApiResponse_ChatData_"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    stream_chat_api_v1_chat_stream_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ChatRequest"];
-            };
-        };
-        responses: {
-            /** @description Server-sent chat events. Every data frame is a canonical API envelope. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/event-stream": string;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     compare_api_v1_compare_post: {
         parameters: {
             query?: never;
@@ -1999,6 +2021,39 @@ export interface operations {
             };
         };
     };
+    create_embeddings_api_v1_embeddings_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbeddingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_EmbeddingResponseData_"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     evaluate_api_v1_evaluate_post: {
         parameters: {
             query?: never;
@@ -2048,6 +2103,155 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiResponse_HealthData_"];
+                };
+            };
+        };
+    };
+    list_memories_api_v1_memories_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_list_MemoryEntry__"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    save_memory_api_v1_memories__key__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemoryInput"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_MemoryEntry_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    forget_memory_api_v1_memories__key__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_NoneType_"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

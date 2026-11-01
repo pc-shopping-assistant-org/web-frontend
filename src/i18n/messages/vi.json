@@ -499,6 +499,14 @@
     "alreadyReviewed": "Dòng hàng này đã được đánh giá."
   },
   "assistant": {
+    "recoveringDescription": "Câu hỏi đã được gửi. Máy chủ vẫn có thể đang xử lý; chúng tôi đang lấy lại kết quả, không gửi lại câu hỏi hoặc tải lại trang.",
+    "checkResult": "Kiểm tra kết quả ngay",
+    "responseFailed": "Chưa thể hoàn tất câu trả lời",
+    "modelTimeout": "Model phản hồi quá lâu. Câu hỏi và sản phẩm đính kèm vẫn được giữ lại; bạn có thể thử lại.",
+    "modelUnavailable": "Dịch vụ model đang bận hoặc tạm thời không phản hồi. Vui lòng thử lại sau ít phút.",
+    "processingFailed": "Có lỗi khi xử lý câu trả lời. Nội dung hội thoại trước đó vẫn được giữ nguyên. Bạn có thể thử lại câu hỏi này.",
+    "networkFailed": "Không kết nối được tới dịch vụ. Kiểm tra mạng rồi thử lại; câu hỏi và sản phẩm đính kèm vẫn được giữ lại.",
+    "addToChat": "Thêm vào cuộc trò chuyện",
     "invalidBuild": "Cấu hình gửi từ Build PC không hợp lệ. Hãy quay lại chọn linh kiện và thử lại.",
     "chatTitle": "Trò chuyện với gearPC AI",
     "unifiedDescription": "Hỏi tự nhiên để tìm sản phẩm, nhận tư vấn, so sánh hoặc hiểu rõ lựa chọn của bạn.",

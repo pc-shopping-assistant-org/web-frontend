@@ -52,5 +52,6 @@ export type EvaluateData = {
 export type ChatTurn = {
   runId?: string;
   prompt: string;
+  selectedProductIds?: string[];
   response?: ChatData | SearchData | ConsultData | CompareData | EvaluateData;
 };

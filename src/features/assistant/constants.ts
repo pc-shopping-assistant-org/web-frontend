@@ -11,3 +11,4 @@ export const MAX_SELECTED_PRODUCTS = 5;
 // Search-service caps a page at 50; the picker uses the same size for its
 // initial catalog list and keyword searches.
 export const PRODUCT_PICKER_PAGE_SIZE = 50;
+export const CHAT_FOLLOW_BOTTOM_DISTANCE_PX = 96;

@@ -1,13 +1,13 @@
 "use client";
 
-import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, MessageCircle, PackageSearch, RotateCcw, Search, Sparkles, WifiOff, X} from "lucide-react";
+import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, PackageSearch, Plus, RotateCcw, Search, Sparkles, WifiOff, X} from "lucide-react";
+import {Popover} from "@base-ui/react/popover";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import {useEffect, useRef, useState, type FormEvent} from "react";
 
 import {Badge} from "@/components/ui/badge";
-import {Button} from "@/components/ui/button";
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Button, buttonVariants} from "@/components/ui/button";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Dialog} from "@/components/ui/dialog";
@@ -21,16 +21,19 @@ import {CatalogCategoryIcon} from "@/features/catalog/components/catalog-categor
 import {useProfile} from "@/features/auth/queries";
 import {LoginForm} from "@/features/auth/login-form";
 import {ApiClientError} from "@/lib/api/envelope";
+import {STATIC_MESSAGE_KEYS} from "@/lib/api/contracts/common";
+import {AssistantFailureReason} from "@/lib/domain/assistant-enums";
 import {streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
 import type {Confirmation} from "./contracts/stateful";
-import {MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
+import {CHAT_FOLLOW_BOTTOM_DISTANCE_PX, MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
 import {AssistantMarkdown} from "./assistant-markdown";
 import {loadConversationHistory, setConversationUrl} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import type {ChatTurn} from "./models";
-import {AssistantProductCard} from "./components/assistant-product-card";
 import {PcBuildSummary} from "./components/pc-build-summary";
 import {formatSpecLabel, formatSpecValue} from "./mappers";
+import {MessageAttachments} from "./components/message-attachments";
+import styles from "./assistant-page.module.css";
 
 type Result = ChatData | SearchData | ConsultData | CompareData | EvaluateData;
 
@@ -50,30 +53,40 @@ export function AssistantPage({
   const locale = useLocale();
   const profile = useProfile();
   const [signInOpen, setSignInOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [productIds, setProductIds] = useState<string[]>(initialProductIds);
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(initialConversationId);
   const [streamingPrompt, setStreamingPrompt] = useState("");
   const [streamingAnswer, setStreamingAnswer] = useState("");
+  const [streamingProductIds, setStreamingProductIds] = useState<string[]>([]);
   const [streamState, setStreamState] = useState<"streaming" | "reconnecting">("streaming");
   const [streamError, setStreamError] = useState<unknown>(null);
+  const [pendingDelivery, setPendingDelivery] = useState<{conversationId: string; runId: string} | null>(null);
   const lastConfirmationRef = useRef<Confirmation | undefined>(undefined);
   const [loading, setLoading] = useState(Boolean(initialConversationId));
   const [error, setError] = useState<unknown>(null);
   const streamController = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const followBottom = useRef(true);
   const lastResponse = chatTurns.findLast((turn) => turn.response)?.response;
   const proposal = lastResponse && "stateful" in lastResponse ? lastResponse.stateful?.proposal : null;
   const proposalChanges = proposal?.changes ?? [];
   const clarificationOptions = lastResponse && "stateful" in lastResponse ? (lastResponse.stateful?.clarificationOptions ?? []) : [];
 
   function handleAskAboutProduct(id: string) {
-    setProductIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    setProductIds((prev) => (prev.includes(id) || prev.length >= MAX_SELECTED_PRODUCTS ? prev : [...prev, id]));
     textareaRef.current?.focus();
   }
 
   useEffect(() => () => streamController.current?.abort(), []);
+
+  useEffect(() => {
+    if (followBottom.current && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [chatTurns, streamingPrompt, streamingAnswer, error]);
 
   useEffect(() => {
     if (!initialConversationId) return;
@@ -109,49 +122,61 @@ export function AssistantPage({
     await send(submittedPrompt);
   }
 
-  async function send(submittedPrompt: string, confirmation?: Confirmation) {
+  function completeTurn(message: string, attachments: string[], data: ChatData) {
+    setConversationId(data.conversation_id);
+    setChatTurns((current) => [...current, {prompt: message, response: data, selectedProductIds: attachments}]);
+    setStreamingPrompt("");
+    setStreamingAnswer("");
+    setPrompt("");
+    setProductIds([]);
+    setPendingDelivery(null);
+  }
+
+  async function send(submittedPrompt: string, confirmation?: Confirmation, attachments = productIds) {
     if (streamController.current) return;
     if (profile.error instanceof ApiClientError && profile.error.status === 401) {
       setSignInOpen(true);
       return;
     }
     const controller = new AbortController();
+    const submittedProductIds = confirmation ? [] : [...attachments];
+    followBottom.current = true;
     streamController.current = controller;
     setLoading(true);
     setError(null);
     setStreamingPrompt(submittedPrompt);
     setStreamingAnswer("");
+    setStreamingProductIds(submittedProductIds);
     setStreamState("streaming");
     setStreamError(null);
+    setPendingDelivery(null);
     lastConfirmationRef.current = confirmation;
     try {
       const data = await streamChat(
         submittedPrompt,
         conversationId,
         {
+          onRunAdmitted: (id, runId) => {
+            if (!controller.signal.aborted) setPendingDelivery({conversationId: id, runId});
+          },
           onStart: (id) => {
             if (!controller.signal.aborted) {
               setConversationId(id);
               setConversationUrl(id);
             }
           },
-          onDelta: (delta) => {
-            if (!controller.signal.aborted) setStreamingAnswer((current) => current + delta);
+          onDelta: (delta, replace) => {
+            if (!controller.signal.aborted) setStreamingAnswer((current) => replace ? delta : current + delta);
           },
           onReconnecting: () => {
             if (!controller.signal.aborted) setStreamState("reconnecting");
           },
         },
         controller.signal,
-        confirmation ? {confirmation} : {selectedProductIds: productIds},
+        confirmation ? {confirmation} : {selectedProductIds: submittedProductIds},
       );
-      if (!controller.signal.aborted) setConversationId(data.conversation_id);
       if (controller.signal.aborted) return;
-      setChatTurns((current) => [...current, {prompt: submittedPrompt, response: data}]);
-      setStreamingPrompt("");
-      setStreamingAnswer("");
-      setPrompt("");
-      setProductIds([]);
+      completeTurn(submittedPrompt, submittedProductIds, data);
     } catch (cause) {
       if (!controller.signal.aborted) {
         if (cause instanceof ApiClientError && cause.status === 401) {
@@ -162,6 +187,10 @@ export function AssistantPage({
           // Keep the streaming bubble visible with the error shown inline so the
           // user can retry without losing the conversation context.
           setStreamError(cause);
+          if (cause instanceof ApiClientError && cause.messageKey === STATIC_MESSAGE_KEYS.AI_RUN_FAILED) {
+            setPendingDelivery(null);
+            setStreamingAnswer("");
+          }
           setError(null);
         }
       }
@@ -173,7 +202,34 @@ export function AssistantPage({
 
   async function retryLastSend() {
     if (!streamingPrompt || streamController.current) return;
-    await send(streamingPrompt, lastConfirmationRef.current);
+    if (pendingDelivery) { await resumeDelivery(); return; }
+    await send(streamingPrompt, lastConfirmationRef.current, streamingProductIds);
+  }
+
+  async function resumeDelivery() {
+    if (!pendingDelivery) return;
+    const delivery = pendingDelivery;
+    streamController.current?.abort();
+    const controller = new AbortController();
+    streamController.current = controller;
+    setLoading(true);
+    setStreamError(null);
+    setStreamState("reconnecting");
+    try {
+      const result = await waitForRunResult(delivery.conversationId, delivery.runId, controller.signal);
+      if (!controller.signal.aborted) completeTurn(streamingPrompt, streamingProductIds, result);
+    } catch (cause) {
+      if (!controller.signal.aborted) {
+        setStreamError(cause);
+        if (cause instanceof ApiClientError && cause.messageKey === STATIC_MESSAGE_KEYS.AI_RUN_FAILED) {
+          setPendingDelivery(null);
+          setStreamingAnswer("");
+        }
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+      if (streamController.current === controller) streamController.current = null;
+    }
   }
 
   function dismissStreamError() {
@@ -181,6 +237,7 @@ export function AssistantPage({
     setStreamingAnswer("");
     setStreamError(null);
     lastConfirmationRef.current = undefined;
+    setPendingDelivery(null);
   }
 
   function newConversation() {
@@ -194,7 +251,12 @@ export function AssistantPage({
   }
 
   return (
-    <section className="storefront-wrap py-7 sm:py-10">
+    <section className={styles.workspace}>
+      <Dialog open={pickerOpen} onClose={() => setPickerOpen(false)} title={t("attachProducts")} closeLabel={common("close")}
+        className={`${styles.palette} max-h-[85dvh] w-full max-w-2xl overflow-y-auto`}
+        footer={<Button onClick={() => setPickerOpen(false)}>{common("close")}</Button>}>
+        <ProductPicker value={productIds} onChange={setProductIds} locale={locale} />
+      </Dialog>
       <Dialog
         open={signInOpen}
         onClose={() => setSignInOpen(false)}
@@ -204,34 +266,34 @@ export function AssistantPage({
       >
         <LoginForm onSuccess={() => setSignInOpen(false)} />
       </Dialog>
-      <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Bot className="size-8" />
-          </span>
-          <div>
-            <h1 className="text-3xl font-semibold tracking-tight">{t("chatTitle")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t("unifiedDescription")}</p>
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4 py-3 sm:px-6">
+        <div className="flex min-w-0 items-center gap-3">
+          <Bot className="size-5 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <h1 className="truncate text-base font-semibold tracking-tight">{t("chatTitle")}</h1>
           </div>
         </div>
-        <div className="flex gap-3">
-          <Link href="/products" className="inline-flex items-center gap-1 text-sm font-medium text-primary">
+        <div className="flex shrink-0 items-center gap-2">
+          <Link href="/products" className="hidden items-center gap-1 text-sm text-muted-foreground hover:text-foreground sm:inline-flex">
             {t("browseCatalog")}
             <ArrowUpRight className="size-4" />
           </Link>
-          <Button variant="outline" onClick={newConversation} disabled={loading}>
-            {t("newConversation")}
+          <Button size="sm" variant="ghost" onClick={newConversation} disabled={loading} aria-label={t("newConversation")}>
+            <Plus className="size-4 sm:hidden" />
+            <span className="hidden sm:inline">{t("newConversation")}</span>
           </Button>
         </div>
       </header>
 
-      <div className="rounded-2xl border bg-background shadow-sm">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {invalidBuild && (
           <p role="alert" className="m-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
             {t("invalidBuild")}
           </p>
         )}
-        <div className="min-h-64 space-y-5 p-4 sm:p-6" aria-live="polite">
+        <div ref={scrollRef} className={styles.scroller} role="log" aria-label={t("conversation")}
+          onScroll={(event) => {const element = event.currentTarget; followBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < CHAT_FOLLOW_BOTTOM_DISTANCE_PX;}}>
+          <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
           {chatTurns.length ? (
             <ChatTranscript turns={chatTurns} locale={locale} onAskAboutProduct={handleAskAboutProduct} />
           ) : !streamingPrompt ? (
@@ -256,10 +318,12 @@ export function AssistantPage({
             <StreamingChatTurn
               prompt={streamingPrompt}
               answer={streamingAnswer}
+              selectedProductIds={streamingProductIds}
               state={streamState}
               error={streamError}
               onRetry={retryLastSend}
               onDismiss={dismissStreamError}
+              onResume={pendingDelivery ? resumeDelivery : undefined}
             />
           ) : null}
           {error ? <ErrorMessage error={error} /> : null}
@@ -293,36 +357,43 @@ export function AssistantPage({
               {t("confirmProposal")}
             </Button>
           ) : null}
+          </div>
         </div>
 
-        <form onSubmit={(event) => void submit(event)} className="border-t bg-muted/15 p-4 sm:p-6">
-          <fieldset disabled={loading}>
-            <details className="mb-4 rounded-xl border bg-background p-3" open={productIds.length > 0 || undefined}>
-              <summary className="cursor-pointer text-sm font-medium">
-                {t("attachProducts")}
-                {productIds.length ? ` (${productIds.length}/5)` : ""}
-              </summary>
-              <p className="mb-3 mt-2 text-xs leading-5 text-muted-foreground">{t("attachmentHint")}</p>
-              <ProductPicker value={productIds} onChange={setProductIds} locale={locale} />
-            </details>
+        <form onSubmit={(event) => void submit(event)} className="mx-auto w-full max-w-4xl shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-6">
+          <fieldset disabled={loading} className="min-w-0 rounded-2xl border border-border/70 bg-muted/25 p-3 shadow-sm">
+            {productIds.length ? <MessageAttachments productIds={productIds} onRemove={(id) => setProductIds((current) => current.filter((item) => item !== id))} /> : null}
+            <div className="flex min-w-0 items-end gap-2">
+              <Popover.Root open={toolsOpen} onOpenChange={setToolsOpen}>
+                <Popover.Trigger type="button" disabled={loading} aria-label={t("addToChat")} className={buttonVariants({variant: "ghost", size: "icon", className: "mb-1 rounded-full"})}>
+                  <Plus className="size-5" />
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Positioner side="top" align="start" sideOffset={8} className="z-50">
+                    <Popover.Popup className={`${styles.palette} min-w-56 rounded-xl border border-border/70 bg-background p-1.5 shadow-lg`}>
+                      <button type="button" onClick={() => {setToolsOpen(false); setPickerOpen(true);}} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-muted">
+                        <PackageSearch className="size-4" />{t("attachProducts")}
+                      </button>
+                    </Popover.Popup>
+                  </Popover.Positioner>
+                </Popover.Portal>
+              </Popover.Root>
             <Textarea
               ref={textareaRef}
               aria-label={t("promptLabel")}
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
               placeholder={t("unifiedPlaceholder")}
-              rows={3}
+              rows={2}
               maxLength={productIds.length ? MAX_PRODUCT_QUESTION_CHARS : MAX_TURN_MESSAGE_CHARS}
-              className="min-h-24 resize-y rounded-xl bg-background p-4 text-base"
+              className="max-h-40 min-h-16 min-w-0 flex-1 resize-none border-0 bg-transparent px-1 py-1 text-base shadow-none focus-visible:ring-0"
             />
-            <div className="mt-3 flex items-center justify-between gap-3">
-              <p className="text-xs leading-5 text-muted-foreground">{t("catalogGroundedHint")}</p>
-              <Button type="submit" className="h-11 min-w-28" disabled={loading || (!prompt.trim() && !productIds.length)}>
-                {loading ? common("loading") : t("send")}
-                <ArrowRight className="size-4" />
+              <Button type="submit" size="icon" aria-label={t("send")} className="mb-1 rounded-xl" disabled={loading || (!prompt.trim() && !productIds.length)}>
+                {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
               </Button>
             </div>
           </fieldset>
+          <p className="mt-2 text-center text-[11px] text-muted-foreground">{t("catalogGroundedHint")}</p>
         </form>
       </div>
     </section>
@@ -351,7 +422,7 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
   }
 
   return (
-    <div className="space-y-3 rounded-2xl border bg-muted/20 p-4">
+    <div className="min-w-0 space-y-3 pt-2">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold">
@@ -379,7 +450,7 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
       ) : visibleProducts.length === 0 ? (
         <p className="rounded-xl border border-dashed p-5 text-center text-sm text-muted-foreground">{t("noCatalogProducts")}</p>
       ) : (
-        <div className="grid max-h-64 gap-2 overflow-y-auto sm:grid-cols-2">
+        <div className="grid max-h-[45dvh] min-w-0 grid-cols-1 gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2">
           {visibleProducts.map((product, index) => {
             if (!product.id) return null;
             const selected = value.includes(product.id);
@@ -387,7 +458,7 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
             return (
               <div
                 key={product.id ?? index}
-                className={`flex items-center gap-2 rounded-xl border p-2 text-left transition ${
+                className={`flex min-w-0 items-center gap-2 rounded-xl border p-2 text-left transition ${
                   selected
                     ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                     : disabled
@@ -467,12 +538,10 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
 function AssistantResult({
   result,
   hideAnswer = false,
-  onAskAboutProduct,
 }: {
   result: Result;
   locale?: string;
   hideAnswer?: boolean;
-  onAskAboutProduct?: (productId: string) => void;
 }) {
   const t = useTranslations("assistant");
   const answer = "answer" in result ? result.answer : undefined;
@@ -483,11 +552,7 @@ function AssistantResult({
     ? Array.from(new Set(products.flatMap((product) => Object.keys(product.specifications ?? {})))).slice(0, 12)
     : [];
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{t("response")}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-5">
+    <div className="min-w-0 space-y-4">
         {!hideAnswer ? <AssistantMarkdown>{answer ?? t("noAnswer")}</AssistantMarkdown> : null}
         {build ? <PcBuildSummary build={build} /> : null}
         {isComparison && comparisonKeys.length > 0 ? (
@@ -519,22 +584,7 @@ function AssistantResult({
             </Table>
           </div>
         ) : null}
-        {products.length > 0 ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            {products.map((product, index) => {
-              const id = ("id" in product ? product.id : "product_id" in product ? product.product_id : undefined) ?? String(index);
-              return (
-                <AssistantProductCard
-                  key={id}
-                  product={product}
-                  onAskAboutProduct={onAskAboutProduct}
-                />
-              );
-            })}
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
@@ -549,22 +599,15 @@ function ChatTranscript({
 }) {
   const t = useTranslations("assistant");
   return (
-    <Card className="overflow-hidden border-primary/15">
-      <CardHeader className="border-b bg-muted/20">
-        <CardTitle className="flex items-center gap-2">
-          <MessageCircle className="size-5 text-primary" />
-          {t("conversation")}
-          <Badge variant="outline" className="ml-auto bg-background">{turns.length}</Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-8">
         {turns.map((turn, index) => (
           <div key={index} className="space-y-3">
-            <div className="ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground sm:max-w-[75%]">
-              <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">{t("you")}</p>
+            <div className="ml-auto w-fit max-w-[90%] rounded-2xl bg-muted/70 px-4 py-3 text-sm leading-6 sm:max-w-[80%]">
+              <p className="mb-1 text-[0.68rem] font-medium text-muted-foreground">{t("you")}</p>
               <p className="whitespace-pre-wrap">{turn.prompt}</p>
+              <MessageAttachments productIds={turn.selectedProductIds} />
             </div>
-            {turn.response ? <div className="min-w-0 max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
+            {turn.response ? <div className="min-w-0 text-sm leading-7">
               <div className="mb-1 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 <Bot className="size-3.5 text-primary" />
                 {t("assistantLabel")}
@@ -572,7 +615,9 @@ function ChatTranscript({
                   <Badge variant="outline" className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
                 ) : null}
               </div>
-              <AssistantMarkdown>{"answer" in turn.response ? turn.response.answer : t("noAnswer")}</AssistantMarkdown>
+              <AssistantMarkdown products={"products" in turn.response ? turn.response.products : "product" in turn.response ? [turn.response.product] : []} onAskAboutProduct={onAskAboutProduct}>
+                {"answer" in turn.response ? turn.response.answer : t("noAnswer")}
+              </AssistantMarkdown>
             </div> : null}
             {turn.response && (
               ("products" in turn.response && turn.response.products?.length) ||
@@ -584,42 +629,47 @@ function ChatTranscript({
                   result={turn.response}
                   locale={locale}
                   hideAnswer
-                  onAskAboutProduct={onAskAboutProduct}
                 />
               </div>
             ) : null}
           </div>
         ))}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 
 function StreamingChatTurn({
   prompt,
   answer,
+  selectedProductIds,
   state,
   error,
   onRetry,
   onDismiss,
+  onResume,
 }: {
   prompt: string;
   answer: string;
+  selectedProductIds: string[];
   state: "streaming" | "reconnecting";
   error: unknown;
   onRetry: () => void;
   onDismiss: () => void;
+  onResume?: () => void;
 }) {
   const t = useTranslations("assistant");
   const failed = Boolean(error);
+  const terminal = error instanceof ApiClientError && error.messageKey === STATIC_MESSAGE_KEYS.AI_RUN_FAILED;
+  const reason = error instanceof ApiClientError ? error.errors.find((entry) => Object.values(AssistantFailureReason).some((value) => value === entry.code))?.code : undefined;
+  const description = reason === AssistantFailureReason.ModelTimeout ? "modelTimeout" : reason === AssistantFailureReason.ModelUnavailable ? "modelUnavailable" : terminal ? "processingFailed" : "networkFailed";
   return (
-    <Card className="overflow-hidden border-primary/15">
-      <CardContent className="space-y-3 p-4 sm:p-6">
-        <div className="ml-auto max-w-[90%] rounded-2xl rounded-br-md bg-primary px-4 py-3 text-sm leading-6 text-primary-foreground sm:max-w-[75%]">
-          <p className="mb-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground/70">{t("you")}</p>
+    <div className="space-y-4">
+        <div className="ml-auto w-fit max-w-[90%] rounded-2xl bg-muted/70 px-4 py-3 text-sm leading-6 sm:max-w-[80%]">
+          <p className="mb-1 text-[0.68rem] font-medium text-muted-foreground">{t("you")}</p>
           <p className="whitespace-pre-wrap">{prompt}</p>
+          <MessageAttachments productIds={selectedProductIds} />
         </div>
-        <div className="min-w-0 max-w-[95%] rounded-2xl rounded-bl-md border bg-background px-4 py-3 text-sm leading-6 sm:max-w-[85%]">
+        <div className="min-w-0 text-sm leading-7">
           <div className="mb-1 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             <Bot className="size-3.5 text-primary" />
             {t("assistantLabel")}
@@ -627,22 +677,23 @@ function StreamingChatTurn({
           </div>
           {answer ? <AssistantMarkdown>{answer}</AssistantMarkdown> : !failed ? <AssistantMarkdown>{t("streaming")}</AssistantMarkdown> : null}
           {!failed && state === "reconnecting" ? (
-            <p role="status" className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="size-3.5 animate-spin" />
-              {t("reconnecting")}
-            </p>
+            <div role="status" className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
+              <p className="flex items-center gap-2 font-medium"><Loader2 className="size-3.5 animate-spin" />{t("reconnecting")}</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("recoveringDescription")}</p>
+              {onResume ? <Button type="button" size="sm" variant="outline" className="mt-2" onClick={onResume}>{t("checkResult")}</Button> : null}
+            </div>
           ) : null}
           {failed ? (
-            <div className="mt-3 space-y-2">
+            <div role="alert" className="mt-3 space-y-2">
               <div className="flex items-center gap-2 text-xs font-medium text-destructive">
-                <WifiOff className="size-3.5" />
-                {t("connectionFailed")}
+                {terminal ? <Bot className="size-4" /> : <WifiOff className="size-4" />}
+                {t(terminal ? "responseFailed" : "connectionFailed")}
               </div>
-              <ErrorMessage error={error} />
+              <p className="text-sm leading-6 text-muted-foreground">{t(description)}</p>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" onClick={onRetry} className="gap-1.5">
                   <RotateCcw className="size-3.5" />
-                  {t("retry")}
+                  {t(onResume ? "checkResult" : "retry")}
                 </Button>
                 <Button size="sm" variant="ghost" onClick={onDismiss}>
                   {t("dismiss")}
@@ -651,8 +702,7 @@ function StreamingChatTurn({
             </div>
           ) : null}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 

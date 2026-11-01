@@ -1,5 +1,4 @@
 import type {
-  ChatDataDto,
   CompareDataDto,
   ConsultDataDto,
   EvaluateDataDto,
@@ -91,15 +90,6 @@ export function mapProductComparison(dto: ProductComparisonDto): AssistantProduc
     list_price: dto.list_price ?? undefined,
     specifications: dto.specifications ?? {},
     status: text(dto.status),
-  };
-}
-
-export function mapChatData(dto: ChatDataDto): ChatData {
-  return {
-    answer: text(dto.answer),
-    conversation_id: text(dto.conversation_id),
-    intent: text(dto.intent),
-    products: (dto.products ?? []).map(mapProductCard),
   };
 }
 

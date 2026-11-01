@@ -70,10 +70,10 @@ export function AssistantProductCard({
 
   return (
     <>
-      <div className="flex flex-col justify-between overflow-hidden rounded-xl border bg-background transition hover:border-primary/40 hover:shadow-md">
+      <div data-product-card className="flex min-w-0 flex-col justify-between overflow-hidden rounded-xl border border-border/70 bg-background transition hover:border-foreground/30">
         {/* Top: Image + Info */}
         <div>
-          <div className="flex gap-3 border-b bg-muted/15 p-3.5">
+          <div className="flex gap-3 p-3.5">
             <div className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background border text-primary/50">
               {product.image_url ? (
                 <Image
@@ -103,7 +103,7 @@ export function AssistantProductCard({
           </div>
 
           {/* Middle: Price + Specs */}
-          <div className="space-y-2.5 p-3.5">
+          <div className="space-y-2.5 px-3.5 pb-3.5">
             <div className="text-base font-bold text-primary">
               {product.list_price != null ? formatMoney(product.list_price, locale) : "—"}
             </div>

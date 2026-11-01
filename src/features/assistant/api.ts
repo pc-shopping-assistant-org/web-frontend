@@ -14,8 +14,9 @@ export type {ChatData, CompareData, ConsultData, EvaluateData, SearchData} from 
 import {parseRequest} from "@/lib/api/parse-request";
 
 export type ChatStreamHandlers = {
+  onRunAdmitted?: (conversationId: string, runId: string) => void;
   onStart?: (conversationId: string) => void;
-  onDelta?: (delta: string) => void;
+  onDelta?: (delta: string, replace?: boolean) => void;
   /** Called when the SSE stream is interrupted and the client falls back to polling the saved result. */
   onReconnecting?: () => void;
   onComplete?: (data: ChatData) => void;

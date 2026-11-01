@@ -88,6 +88,7 @@ export async function streamChat(
   )
     throw invalidStream();
   const path = `/conversations/${conversation.conversation_id}/runs/${run.run_id}`;
+  handlers.onRunAdmitted?.(conversation.conversation_id, run.run_id);
   let completed: StatefulTurnResult;
   try {
     completed = await readStream(path, run.run_id, conversation.conversation_id, handlers, signal);
@@ -123,8 +124,10 @@ async function readStream(
       throw invalidStream();
     sequence = event.sequence;
     if (event.event === ChatStreamEventType.Error)
-      throw new ApiClientError(502, STATIC_MESSAGE_KEYS.AI_RUN_FAILED, envelope.errors);
-    if (event.event === ChatStreamEventType.Delta) handlers.onDelta?.(event.delta);
+      throw new ApiClientError(502, STATIC_MESSAGE_KEYS.AI_RUN_FAILED, [
+        ...envelope.errors, ...(event.reason ? [{code: event.reason}] : []),
+      ]);
+    if (event.event === ChatStreamEventType.Delta) handlers.onDelta?.(event.delta, event.replace);
     if (event.event === ChatStreamEventType.Completed) return event.result;
   }
   throw invalidStream();
@@ -138,7 +141,7 @@ async function readSavedResult(path: string, runId: string, conversationId: stri
       const event = statefulEventSchema.parse(data);
       if (event.conversation_id !== conversationId || event.run_id !== runId) throw invalidStream();
       if (event.event === ChatStreamEventType.Completed) return event.result;
-      if (event.event === ChatStreamEventType.Error) throw new ApiClientError(502, STATIC_MESSAGE_KEYS.AI_RUN_FAILED);
+      if (event.event === ChatStreamEventType.Error) throw new ApiClientError(502, STATIC_MESSAGE_KEYS.AI_RUN_FAILED, event.reason ? [{code: event.reason}] : []);
       throw invalidStream();
     }
     await waitForRetry(signal);

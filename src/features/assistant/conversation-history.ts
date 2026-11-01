@@ -5,9 +5,11 @@ import {CONVERSATION_HISTORY_PAGE_SIZE, CONVERSATION_ID_PARAM} from "./constants
 import {runSchema} from "./contracts/stateful";
 import {getChatResource, waitForRunResult} from "./stateful-api";
 import type {ChatTurn} from "./models";
+import {productCardStreamSchema} from "./contracts/stream";
+import {mapProductCard} from "./mappers";
 
 const messagePageSchema = z.object({
-  items: z.array(z.object({run_id: z.uuid(), role: z.enum(["user", "assistant"]), content: z.string()})),
+  items: z.array(z.object({run_id: z.uuid(), role: z.enum(["user", "assistant"]), content: z.string(), selected_product_ids: z.array(z.uuid()).default([]), products: z.array(productCardStreamSchema).default([])})),
   next_cursor: z.uuid().nullable(),
 });
 
@@ -29,8 +31,11 @@ export async function loadConversationHistory(conversationId: string, signal?: A
     const page = messagePageSchema.parse(await getChatResource(`/conversations/${id}/messages?${params}`, signal));
     for (const message of page.items) {
       const turn = turns.get(message.run_id) ?? {runId: message.run_id, prompt: ""};
-      if (message.role === "user") turn.prompt = message.content;
-      else turn.response = {conversation_id: id, intent: AiMode.Chat, answer: message.content, products: []};
+      if (message.role === "user") {
+        turn.prompt = message.content;
+        turn.selectedProductIds = message.selected_product_ids;
+      }
+      else turn.response = {conversation_id: id, intent: AiMode.Chat, answer: message.content, products: message.products.map(mapProductCard)};
       turns.set(message.run_id, turn);
     }
     cursor = page.next_cursor;

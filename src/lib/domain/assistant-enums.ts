@@ -15,6 +15,12 @@ export enum ChatStreamEventType {
   Error = "ERROR",
 }
 
+export enum AssistantFailureReason {
+  ModelTimeout = "MODEL_TIMEOUT",
+  ModelUnavailable = "MODEL_UNAVAILABLE",
+  ProcessingFailed = "PROCESSING_FAILED",
+}
+
 export enum AssistantRunStatus {
   Pending = "PENDING",
   Running = "RUNNING",

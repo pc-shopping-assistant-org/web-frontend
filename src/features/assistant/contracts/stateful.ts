@@ -118,9 +118,9 @@ export const turnResultSchema = conversationSchema.omit({conversation_id: true})
 const identity = z.object({conversation_id: z.uuid(), run_id: z.uuid(), sequence: z.number().int().positive()});
 export const statefulEventSchema = z.discriminatedUnion("event", [
   identity.extend({event: z.literal(ChatStreamEventType.Start), run: runSchema}),
-  identity.extend({event: z.literal(ChatStreamEventType.Delta), delta: z.string()}),
+  identity.extend({event: z.literal(ChatStreamEventType.Delta), delta: z.string(), replace: z.boolean().optional(), is_draft: z.boolean().optional()}),
   identity.extend({event: z.literal(ChatStreamEventType.Completed), result: turnResultSchema}),
-  identity.extend({event: z.literal(ChatStreamEventType.Error), code: z.string()}),
+  identity.extend({event: z.literal(ChatStreamEventType.Error), code: z.string(), reason: z.string().nullable().optional()}),
 ]);
 
 export type Confirmation = z.infer<typeof confirmationSchema>;

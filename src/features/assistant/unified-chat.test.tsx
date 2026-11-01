@@ -165,8 +165,103 @@ it("shows selected product details as a catalog link instead of exposing its UUI
   const productLinks = screen.getAllByRole("link", {name: /RTX 4070 Super/});
   expect(productLinks.some((link) => link.getAttribute("href") === "/products/rtx-4070-super")).toBe(true);
 
+  await user.click(screen.getByRole("button", {name: "addToChat"}));
+  await user.click(screen.getByRole("button", {name: /attachProducts/}));
   await user.type(screen.getByRole("textbox", {name: "searchCatalogProducts"}), "rtx");
   await waitFor(() => expect(productQueryFilters.some((filters) => filters.keyword === "rtx")).toBe(true));
+});
+
+it("keeps submitted product attachments visible after the composer selection clears", async () => {
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Giải thích sản phẩm đã chọn" initialProductIds={["p1"]} />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("chat answer")).toBeInTheDocument();
+  expect(screen.getByRole("link", {name: pickerProduct.name}))
+    .toHaveAttribute("href", "/products/rtx-4070-super");
+  expect(screen.queryByRole("button", {name: `removeProduct: ${pickerProduct.name}`})).not.toBeInTheDocument();
+});
+
+it("restores product attachments with their original user message from history", async () => {
+  const savedTurn = {
+    prompt: "Đánh giá sản phẩm tôi đính kèm",
+    selectedProductIds: ["p1"],
+    response: {conversation_id: "saved", intent: AiMode.Chat, answer: "Phản hồi đã lưu", products: []},
+  };
+  vi.mocked(loadConversationHistory).mockResolvedValueOnce({turns: [savedTurn], pendingRunId: undefined});
+  render(<AssistantPage initialConversationId="saved" />);
+  expect(await screen.findByText("Phản hồi đã lưu")).toBeInTheDocument();
+  expect(screen.getByRole("link", {name: pickerProduct.name}))
+    .toHaveAttribute("href", "/products/rtx-4070-super");
+  expect(streamChat).not.toHaveBeenCalled();
+});
+
+it("places a clickable catalog product between the surrounding answer paragraphs", async () => {
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "test", intent: AiMode.Chat,
+    answer: "Một lựa chọn phù hợp:\n\n**RTX 4070 Super**\n\nNếu cần di chuyển, hãy cân nhắc thêm trọng lượng.",
+    products: [{id: "p1", name: pickerProduct.name, seo_name: pickerProduct.seoName,
+      list_price: pickerProduct.minPrice, specifications: {}}],
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Gợi ý sản phẩm phù hợp" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  const before = await screen.findByText("Một lựa chọn phù hợp:");
+  const after = screen.getByText("Nếu cần di chuyển, hãy cân nhắc thêm trọng lượng.");
+  const productLink = screen.getByRole("link", {name: "viewProduct"});
+  expect(before.compareDocumentPosition(productLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(productLink.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
+it("shows successive text chunks immediately and replaces the draft with the final validated answer", async () => {
+  let handlers!: Parameters<typeof streamChat>[2];
+  let finish!: (value: Awaited<ReturnType<typeof streamChat>>) => void;
+  vi.mocked(streamChat).mockImplementationOnce(async (_message, _conversation, nextHandlers) => {
+    handlers = nextHandlers;
+    return new Promise((resolve) => {finish = resolve;});
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Tư vấn laptop" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  await act(async () => handlers?.onDelta?.("Đề xuất "));
+  expect(screen.getByText("Đề xuất")).toBeInTheDocument();
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeDisabled();
+  await act(async () => handlers?.onDelta?.("**RAM 32GB**."));
+  expect(screen.getByText("RAM 32GB").tagName).toBe("STRONG");
+  await act(async () => finish({conversation_id: "test", intent: AiMode.Chat,
+    answer: "## Kết quả xác thực\n\nThông tin từ catalog.", products: []}));
+  expect(await screen.findByRole("heading", {name: "Kết quả xác thực"})).toBeInTheDocument();
+  expect(screen.queryByText("RAM 32GB")).not.toBeInTheDocument();
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeEnabled();
+});
+
+it("retrieves an interrupted delivery from the same run without resending the question", async () => {
+  vi.mocked(streamChat).mockImplementationOnce(async (_message, _conversation, handlers) => {
+    handlers?.onRunAdmitted?.("saved", "same-run");
+    handlers?.onReconnecting?.();
+    return new Promise(() => {});
+  });
+  vi.mocked(waitForRunResult).mockResolvedValueOnce({conversation_id: "saved", intent: AiMode.Chat, answer: "Recovered result", products: []});
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Tư vấn GPU" initialProductIds={["p1"]} />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("recoveringDescription")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", {name: "checkResult"}));
+  expect(await screen.findByText("Recovered result")).toBeInTheDocument();
+  expect(waitForRunResult).toHaveBeenCalledWith("saved", "same-run", expect.any(AbortSignal));
+  expect(streamChat).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeEnabled();
+});
+
+it("distinguishes a model timeout and retries with the original attachment", async () => {
+  vi.mocked(streamChat).mockRejectedValueOnce(new ApiClientError(502, "AI_RUN_FAILED", [{code: "MODEL_TIMEOUT"}]));
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Giải thích GPU" initialProductIds={["p1"]} />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("modelTimeout")).toBeInTheDocument();
+  expect(screen.queryByText("connectionFailed")).not.toBeInTheDocument();
+  await user.click(screen.getByRole("button", {name: "retry"}));
+  expect(await screen.findByText("chat answer")).toBeInTheDocument();
+  expect(streamChat).toHaveBeenLastCalledWith("Giải thích GPU", undefined, expect.any(Object), expect.any(AbortSignal), {selectedProductIds: ["p1"]});
 });
 
 it("lets guests draft and select products, then prompts sign-in without calling AI or losing the draft", async () => {
@@ -220,7 +315,7 @@ it("keeps a failed stream inline with its partial answer and retries the same pr
   await user.click(screen.getByRole("button", {name: /send/}));
   expect(await screen.findByText("connectionFailed")).toBeInTheDocument();
   expect(screen.getByText("Phần trả lời dở dang")).toBeInTheDocument();
-  expect(screen.getByRole("alert")).toHaveTextContent("AI_CHAT_STREAM_FAILED");
+  expect(screen.getByRole("alert")).toHaveTextContent("networkFailed");
   expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeEnabled();
   await user.click(screen.getByRole("button", {name: "retry"}));
   expect(await screen.findByText("chat answer")).toBeInTheDocument();

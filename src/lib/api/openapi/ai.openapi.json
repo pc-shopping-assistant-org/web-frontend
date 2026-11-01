@@ -27,18 +27,18 @@
         }
       }
     },
-    "/api/v1/chat": {
+    "/api/v1/embeddings": {
       "post": {
         "tags": [
-          "assistant"
+          "embeddings"
         ],
-        "summary": "Chat",
-        "operationId": "chat_api_v1_chat_post",
+        "summary": "Create Embeddings",
+        "operationId": "create_embeddings_api_v1_embeddings_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ChatRequest"
+                "$ref": "#/components/schemas/EmbeddingRequest"
               }
             }
           },
@@ -50,48 +50,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponse_ChatData_"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/chat/stream": {
-      "post": {
-        "tags": [
-          "assistant"
-        ],
-        "summary": "Stream Chat",
-        "operationId": "stream_chat_api_v1_chat_stream_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChatRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Server-sent chat events. Every data frame is a canonical API envelope.",
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/ApiResponse_EmbeddingResponseData_"
                 }
               }
             }
@@ -316,22 +275,22 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          },
           "503": {
             "description": "Stateful resources unavailable",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -391,16 +350,6 @@
               }
             }
           },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Bad Request"
-          },
           "401": {
             "description": "Verified access token required",
             "content": {
@@ -411,22 +360,32 @@
               }
             }
           },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          },
           "503": {
             "description": "Stateful resources unavailable",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -479,6 +438,16 @@
               }
             }
           },
+          "503": {
+            "description": "Stateful resources unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Missing or non-owned conversation",
             "content": {
@@ -495,16 +464,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Stateful resources unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -576,16 +535,6 @@
               }
             }
           },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Bad Request"
-          },
           "401": {
             "description": "Verified access token required",
             "content": {
@@ -595,6 +544,26 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "Stateful resources unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
           },
           "404": {
             "content": {
@@ -612,16 +581,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Stateful resources unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -684,15 +643,15 @@
               }
             }
           },
-          "404": {
+          "503": {
+            "description": "Stateful resources unavailable",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
-            },
-            "description": "Not Found"
+            }
           },
           "409": {
             "content": {
@@ -704,22 +663,22 @@
             },
             "description": "Conflict"
           },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
           "422": {
             "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Stateful resources unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -782,6 +741,16 @@
               }
             }
           },
+          "503": {
+            "description": "Stateful resources unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "content": {
               "application/json": {
@@ -798,16 +767,6 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Stateful resources unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -870,96 +829,8 @@
               }
             }
           },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          },
           "503": {
             "description": "Stateful resources unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/conversations/{conversation_id}/runs/{run_id}/events": {
-      "get": {
-        "tags": [
-          "conversations"
-        ],
-        "summary": "Run Events",
-        "operationId": "run_events_api_v1_conversations__conversation_id__runs__run_id__events_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "conversation_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Conversation Id"
-            }
-          },
-          {
-            "name": "run_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Run Id"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "text/event-stream": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Bad Request"
-          },
-          "401": {
-            "description": "Verified access token required",
             "content": {
               "application/json": {
                 "schema": {
@@ -978,32 +849,12 @@
             },
             "description": "Not Found"
           },
-          "410": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Gone"
-          },
           "422": {
             "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Stateful resources unavailable",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1118,6 +969,314 @@
           }
         }
       }
+    },
+    "/api/v1/conversations/{conversation_id}/runs/{run_id}/events": {
+      "get": {
+        "tags": [
+          "conversations"
+        ],
+        "summary": "Run Events",
+        "operationId": "run_events_api_v1_conversations__conversation_id__runs__run_id__events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Conversation Id"
+            }
+          },
+          {
+            "name": "run_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Run Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Verified access token required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Stateful resources unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/memories": {
+      "get": {
+        "tags": [
+          "memory"
+        ],
+        "summary": "List Memories",
+        "operationId": "list_memories_api_v1_memories_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_MemoryEntry__"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/memories/{key}": {
+      "put": {
+        "tags": [
+          "memory"
+        ],
+        "summary": "Save Memory",
+        "operationId": "save_memory_api_v1_memories__key__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "title": "Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoryInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_MemoryEntry_"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "memory"
+        ],
+        "summary": "Forget Memory",
+        "operationId": "forget_memory_api_v1_memories__key__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+              "title": "Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_NoneType_"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1181,37 +1340,6 @@
           "FACT_CONFLICT"
         ]
       },
-      "ApiResponse_ChatData_": {
-        "properties": {
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ChatData"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "message": {
-            "$ref": "#/components/schemas/ResponseMessage",
-            "description": "Static frontend mapping key; request-specific details belong in errors",
-            "default": "SUCCESS",
-            "examples": [
-              "SUCCESS"
-            ]
-          },
-          "errors": {
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetail"
-            },
-            "type": "array",
-            "title": "Errors"
-          }
-        },
-        "type": "object",
-        "title": "ApiResponse[ChatData]"
-      },
       "ApiResponse_ConsultData_": {
         "properties": {
           "data": {
@@ -1274,6 +1402,37 @@
         "type": "object",
         "title": "ApiResponse[ConversationViewV2]"
       },
+      "ApiResponse_EmbeddingResponseData_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EmbeddingResponseData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[EmbeddingResponseData]"
+      },
       "ApiResponse_HealthData_": {
         "properties": {
           "data": {
@@ -1304,6 +1463,62 @@
         },
         "type": "object",
         "title": "ApiResponse[HealthData]"
+      },
+      "ApiResponse_MemoryEntry_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[MemoryEntry]"
+      },
+      "ApiResponse_NoneType_": {
+        "properties": {
+          "data": {
+            "type": "null",
+            "title": "Data"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[NoneType]"
       },
       "ApiResponse_PageV1_ConversationViewV2__": {
         "properties": {
@@ -1491,16 +1706,75 @@
         "type": "object",
         "title": "ApiResponse[Union[EvaluateData, NoneType]]"
       },
-      "AssistantIntent": {
-        "type": "string",
-        "enum": [
-          "SEARCH",
-          "CONSULT",
-          "COMPARE",
-          "EVALUATE"
-        ],
-        "title": "AssistantIntent",
-        "description": "Validated capability branch selected by the planning graph."
+      "ApiResponse_Union_RunCompletedV2__RunErrorV1__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunCompletedV2"
+              },
+              {
+                "$ref": "#/components/schemas/RunErrorV1"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[Union[RunCompletedV2, RunErrorV1]]"
+      },
+      "ApiResponse_list_MemoryEntry__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/MemoryEntry"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[list[MemoryEntry]]"
       },
       "BudgetScope": {
         "type": "string",
@@ -1520,68 +1794,11 @@
         "title": "BuildObjective",
         "description": "Specific optimization objectives yielding distinct build variations."
       },
-      "ChatData": {
-        "properties": {
-          "conversation_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Conversation Id"
-          },
-          "intent": {
-            "$ref": "#/components/schemas/AssistantIntent"
-          },
-          "answer": {
-            "type": "string",
-            "title": "Answer"
-          },
-          "products": {
-            "items": {
-              "$ref": "#/components/schemas/ProductCard"
-            },
-            "type": "array",
-            "title": "Products"
-          }
-        },
-        "type": "object",
-        "required": [
-          "conversation_id",
-          "intent",
-          "answer"
-        ],
-        "title": "ChatData"
-      },
-      "ChatRequest": {
-        "properties": {
-          "message": {
-            "type": "string",
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Message"
-          },
-          "conversation_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conversation Id"
-          }
-        },
-        "type": "object",
-        "required": [
-          "message"
-        ],
-        "title": "ChatRequest"
-      },
       "ClarificationItemV1": {
         "properties": {
           "item_index": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Item Index"
           },
           "reason": {
@@ -1601,7 +1818,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0.0
               },
               {
                 "type": "null"
@@ -1691,7 +1908,7 @@
         "properties": {
           "item_index": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Item Index"
           },
           "variant_id": {
@@ -1808,8 +2025,8 @@
           },
           "limit": {
             "type": "integer",
-            "maximum": 20,
-            "minimum": 1,
+            "maximum": 20.0,
+            "minimum": 1.0,
             "title": "Limit",
             "default": 5
           }
@@ -1857,7 +2074,7 @@
           },
           "revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Revision"
           },
           "title": {
@@ -1965,7 +2182,7 @@
           },
           "constraints_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Constraints Revision"
           }
         },
@@ -1978,6 +2195,108 @@
           "constraints_revision"
         ],
         "title": "DraftPendingCommandV2"
+      },
+      "EmbeddingItem": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index"
+          },
+          "embedding": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Embedding"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "embedding"
+        ],
+        "title": "EmbeddingItem"
+      },
+      "EmbeddingRequest": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Model",
+            "default": "BAAI/bge-m3"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ],
+            "title": "Input"
+          }
+        },
+        "type": "object",
+        "required": [
+          "input"
+        ],
+        "title": "EmbeddingRequest"
+      },
+      "EmbeddingResponseData": {
+        "properties": {
+          "model": {
+            "type": "string",
+            "title": "Model"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/EmbeddingItem"
+            },
+            "type": "array",
+            "title": "Data"
+          },
+          "embedding": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Embedding"
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Device"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "model",
+          "data",
+          "embedding"
+        ],
+        "title": "EmbeddingResponseData"
       },
       "ErrorDetail": {
         "properties": {
@@ -2114,6 +2433,72 @@
         ],
         "title": "HealthData"
       },
+      "MemoryEntry": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MemoryKind"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Content"
+          },
+          "key": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]{0,63}$",
+            "title": "Key"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "content",
+          "key",
+          "updated_at",
+          "expires_at"
+        ],
+        "title": "MemoryEntry"
+      },
+      "MemoryInput": {
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/MemoryKind"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Content"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "content"
+        ],
+        "title": "MemoryInput"
+      },
+      "MemoryKind": {
+        "type": "string",
+        "enum": [
+          "PREFERENCE",
+          "OWNED_CONTEXT"
+        ],
+        "title": "MemoryKind"
+      },
       "MessageViewV1": {
         "properties": {
           "message_id": {
@@ -2128,7 +2513,7 @@
           },
           "sequence": {
             "type": "integer",
-            "minimum": 1,
+            "minimum": 1.0,
             "title": "Sequence"
           },
           "role": {
@@ -2148,6 +2533,22 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "selected_product_ids": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 5,
+            "title": "Selected Product Ids"
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductCard"
+            },
+            "type": "array",
+            "title": "Products"
           }
         },
         "additionalProperties": false,
@@ -2438,8 +2839,8 @@
         "properties": {
           "schema_version": {
             "type": "integer",
-            "maximum": 2,
-            "minimum": 2,
+            "maximum": 2.0,
+            "minimum": 2.0,
             "title": "Schema Version",
             "default": 2
           },
@@ -2455,7 +2856,7 @@
           },
           "target_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Target Revision"
           },
           "base_requirements_hash": {
@@ -2478,8 +2879,8 @@
         "properties": {
           "schema_version": {
             "type": "integer",
-            "maximum": 2,
-            "minimum": 2,
+            "maximum": 2.0,
+            "minimum": 2.0,
             "title": "Schema Version",
             "default": 2
           },
@@ -2495,7 +2896,7 @@
           },
           "target_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Target Revision"
           },
           "base_requirements_hash": {
@@ -2576,7 +2977,7 @@
           },
           "spending_vnd": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Spending Vnd"
           },
           "is_owned": {
@@ -2653,7 +3054,7 @@
           },
           "constraints_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Constraints Revision"
           },
           "items": {
@@ -2691,7 +3092,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0.0
               },
               {
                 "type": "null"
@@ -2703,7 +3104,7 @@
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0.0
               },
               {
                 "type": "null"
@@ -2856,7 +3257,7 @@
           },
           "constraints_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Constraints Revision"
           },
           "answer": {
@@ -2959,6 +3360,9 @@
               },
               {
                 "$ref": "#/components/schemas/ComponentCategory"
+              },
+              {
+                "$ref": "#/components/schemas/AccessoryType"
               },
               {
                 "type": "null"
@@ -3074,7 +3478,7 @@
           },
           "target_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Target Revision"
           },
           "base_requirements_hash": {
@@ -3112,7 +3516,7 @@
           },
           "constraints_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Constraints Revision"
           },
           "items": {
@@ -3193,7 +3597,7 @@
           },
           "amount": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Amount"
           },
           "unit": {
@@ -3217,6 +3621,14 @@
           "unit"
         ],
         "title": "QuantityValue"
+      },
+      "RankingStatus": {
+        "type": "string",
+        "enum": [
+          "RANKED",
+          "UNRANKED"
+        ],
+        "title": "RankingStatus"
       },
       "ReferenceValue": {
         "properties": {
@@ -3288,10 +3700,107 @@
           "AI_REQUEST_VERSION_UNSUPPORTED",
           "AI_CONVERSATION_BUSY",
           "AI_CONVERSATION_NOT_READY",
-          "AI_INPUT_REQUIRED"
+          "AI_INPUT_REQUIRED",
+          "AI_MEMORIES_LISTED",
+          "AI_MEMORY_SAVED",
+          "AI_MEMORY_DELETED",
+          "AI_MEMORY_LIMIT_REACHED"
         ],
         "title": "ResponseMessage",
         "description": "Stable top-level keys that the frontend maps to localized messages."
+      },
+      "RunCompletedV2": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence"
+          },
+          "event": {
+            "type": "string",
+            "const": "COMPLETED",
+            "title": "Event"
+          },
+          "result": {
+            "$ref": "#/components/schemas/TurnResultV2"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "run_id",
+          "sequence",
+          "event",
+          "result"
+        ],
+        "title": "RunCompletedV2"
+      },
+      "RunErrorV1": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id"
+          },
+          "run_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Run Id"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Sequence"
+          },
+          "event": {
+            "type": "string",
+            "const": "ERROR",
+            "title": "Event"
+          },
+          "code": {
+            "$ref": "#/components/schemas/StatefulErrorCode"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunFailureReason"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "run_id",
+          "sequence",
+          "event",
+          "code"
+        ],
+        "title": "RunErrorV1"
+      },
+      "RunFailureReason": {
+        "type": "string",
+        "enum": [
+          "MODEL_TIMEOUT",
+          "MODEL_UNAVAILABLE",
+          "PROCESSING_FAILED"
+        ],
+        "title": "RunFailureReason"
       },
       "RunStatus": {
         "type": "string",
@@ -3314,6 +3823,11 @@
             "format": "uuid",
             "title": "Run Id"
           },
+          "trace_id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Trace Id"
+          },
           "conversation_id": {
             "type": "string",
             "format": "uuid",
@@ -3329,7 +3843,7 @@
           },
           "base_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Base Revision"
           }
         },
@@ -3374,8 +3888,8 @@
           },
           "limit": {
             "type": "integer",
-            "maximum": 50,
-            "minimum": 1,
+            "maximum": 50.0,
+            "minimum": 1.0,
             "title": "Limit",
             "default": 10
           }
@@ -3386,18 +3900,33 @@
         ],
         "title": "SearchRequest"
       },
+      "StatefulErrorCode": {
+        "type": "string",
+        "enum": [
+          "AI_UNAUTHENTICATED",
+          "AI_CONVERSATION_NOT_FOUND",
+          "AI_REVISION_CONFLICT",
+          "AI_REQUEST_CONFLICT",
+          "AI_CONVERSATION_BUSY",
+          "AI_INPUT_REQUIRED",
+          "AI_RUN_FAILED",
+          "AI_STREAM_INTERRUPTED",
+          "AI_RUN_CANCELLED"
+        ],
+        "title": "StatefulErrorCode"
+      },
       "TaskClarificationItemV1": {
         "properties": {
           "task_index": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Task Index"
           },
           "subject_index": {
             "anyOf": [
               {
                 "type": "integer",
-                "minimum": 0
+                "minimum": 0.0
               },
               {
                 "type": "null"
@@ -3442,7 +3971,7 @@
           },
           "constraints_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Constraints Revision"
           },
           "selections": {
@@ -3489,12 +4018,12 @@
         "properties": {
           "task_index": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Task Index"
           },
           "subject_index": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Subject Index"
           },
           "product_id": {
@@ -3537,8 +4066,8 @@
         "properties": {
           "schema_version": {
             "type": "integer",
-            "maximum": 2,
-            "minimum": 2,
+            "maximum": 2.0,
+            "minimum": 2.0,
             "title": "Schema Version"
           },
           "conversation_id": {
@@ -3553,7 +4082,7 @@
           },
           "expected_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Expected Revision"
           },
           "message": {
@@ -3633,6 +4162,69 @@
         ],
         "title": "TurnRequestV2Body"
       },
+      "TurnResultV2": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunViewV1"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Revision"
+          },
+          "state": {
+            "$ref": "#/components/schemas/PublicConsultationV1"
+          },
+          "answer": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Answer"
+          },
+          "build": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicBuildV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "type": "integer",
+            "const": 2,
+            "title": "Schema Version",
+            "default": 2
+          },
+          "flexible": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicFlexibleStateV2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "products": {
+            "items": {
+              "$ref": "#/components/schemas/ProductCard"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Products"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run",
+          "revision",
+          "state",
+          "answer"
+        ],
+        "title": "TurnResultV2"
+      },
       "UnitClarificationReplyV1": {
         "properties": {
           "pending_message_id": {
@@ -3642,7 +4234,7 @@
           },
           "constraints_revision": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Constraints Revision"
           },
           "selections": {
@@ -3668,7 +4260,7 @@
         "properties": {
           "item_index": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Item Index"
           },
           "unit": {
@@ -3686,12 +4278,12 @@
           },
           "start": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Start"
           },
           "end": {
             "type": "integer",
-            "exclusiveMinimum": 0,
+            "exclusiveMinimum": 0.0,
             "title": "End"
           },
           "quote": {
@@ -3764,226 +4356,6 @@
           "type"
         ],
         "title": "ValidationError"
-      },
-      "ApiResponse_Union_RunCompletedV2__RunErrorV1__": {
-        "properties": {
-          "data": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/RunCompletedV2"
-              },
-              {
-                "$ref": "#/components/schemas/RunErrorV1"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Data"
-          },
-          "message": {
-            "$ref": "#/components/schemas/ResponseMessage",
-            "description": "Static frontend mapping key; request-specific details belong in errors",
-            "default": "SUCCESS",
-            "examples": [
-              "SUCCESS"
-            ]
-          },
-          "errors": {
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetail"
-            },
-            "type": "array",
-            "title": "Errors"
-          }
-        },
-        "type": "object",
-        "title": "ApiResponse[Union[RunCompletedV2, RunErrorV1]]"
-      },
-      "RunCompletedV2": {
-        "properties": {
-          "conversation_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Conversation Id"
-          },
-          "run_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Run Id"
-          },
-          "sequence": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Sequence"
-          },
-          "event": {
-            "type": "string",
-            "const": "COMPLETED",
-            "title": "Event"
-          },
-          "result": {
-            "$ref": "#/components/schemas/TurnResultV2"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "conversation_id",
-          "run_id",
-          "sequence",
-          "event",
-          "result"
-        ],
-        "title": "RunCompletedV2"
-      },
-      "TurnResultV2": {
-        "properties": {
-          "run": {
-            "$ref": "#/components/schemas/RunViewV1"
-          },
-          "revision": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Revision"
-          },
-          "state": {
-            "$ref": "#/components/schemas/PublicConsultationV1"
-          },
-          "answer": {
-            "type": "string",
-            "minLength": 1,
-            "title": "Answer"
-          },
-          "build": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PublicBuildV1"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "schema_version": {
-            "type": "integer",
-            "const": 2,
-            "title": "Schema Version",
-            "default": 2
-          },
-          "flexible": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/PublicFlexibleStateV2"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "products": {
-            "items": {
-              "$ref": "#/components/schemas/ProductCard"
-            },
-            "type": "array",
-            "maxItems": 20,
-            "title": "Products"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "run",
-          "revision",
-          "state",
-          "answer"
-        ],
-        "title": "TurnResultV2"
-      },
-      "RunErrorV1": {
-        "properties": {
-          "conversation_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Conversation Id"
-          },
-          "run_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Run Id"
-          },
-          "sequence": {
-            "type": "integer",
-            "minimum": 1.0,
-            "title": "Sequence"
-          },
-          "event": {
-            "type": "string",
-            "const": "ERROR",
-            "title": "Event"
-          },
-          "code": {
-            "$ref": "#/components/schemas/StatefulErrorCode"
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "required": [
-          "conversation_id",
-          "run_id",
-          "sequence",
-          "event",
-          "code"
-        ],
-        "title": "RunErrorV1"
-      },
-      "StatefulErrorCode": {
-        "type": "string",
-        "enum": [
-          "AI_UNAUTHENTICATED",
-          "AI_CONVERSATION_NOT_FOUND",
-          "AI_REVISION_CONFLICT",
-          "AI_REQUEST_CONFLICT",
-          "AI_CONVERSATION_BUSY",
-          "AI_INPUT_REQUIRED",
-          "AI_RUN_FAILED",
-          "AI_STREAM_INTERRUPTED",
-          "AI_RUN_CANCELLED"
-        ],
-        "title": "StatefulErrorCode"
-      },
-      "ApiResponse_NoneType_": {
-        "properties": {
-          "data": {
-            "type": "null",
-            "title": "Data"
-          },
-          "message": {
-            "$ref": "#/components/schemas/ResponseMessage",
-            "description": "Static frontend mapping key; request-specific details belong in errors",
-            "default": "SUCCESS",
-            "examples": [
-              "SUCCESS"
-            ]
-          },
-          "errors": {
-            "items": {
-              "$ref": "#/components/schemas/ErrorDetail"
-            },
-            "type": "array",
-            "title": "Errors"
-          }
-        },
-        "type": "object",
-        "title": "ApiResponse[NoneType]"
-      },
-      "RankingStatus": {
-        "type": "string",
-        "enum": [
-          "RANKED",
-          "UNRANKED"
-        ],
-        "title": "RankingStatus"
       }
     },
     "securitySchemes": {

@@ -499,6 +499,14 @@
     "alreadyReviewed": "This item has been reviewed."
   },
   "assistant": {
+    "recoveringDescription": "Your question was sent. The server may still be processing it; we are retrieving the result without resending your question or reloading the page.",
+    "checkResult": "Check result now",
+    "responseFailed": "Could not complete the response",
+    "modelTimeout": "The model took too long to respond. Your question and attachments are kept; you can try again.",
+    "modelUnavailable": "The model service is busy or temporarily unavailable. Please try again in a moment.",
+    "processingFailed": "Something went wrong while processing the response. Your previous conversation is preserved. You can retry this question.",
+    "networkFailed": "We could not reach the service. Check your connection and try again; your question and attachments are kept.",
+    "addToChat": "Add to conversation",
     "invalidBuild": "The build context is invalid. Return to Build PC, select parts and try again.",
     "chatTitle": "Chat with gearPC AI",
     "unifiedDescription": "Ask naturally to find products, get advice, compare options or understand your next purchase.",
