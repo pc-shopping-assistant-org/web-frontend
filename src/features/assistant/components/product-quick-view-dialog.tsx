@@ -9,6 +9,7 @@ import {useQuery} from "@tanstack/react-query";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Dialog} from "@/components/ui/dialog";
+import {ErrorMessage} from "@/components/ui/error-message";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {Link} from "@/i18n/navigation";
 import {getProductById, getProductBySlug} from "@/features/catalog/api";
@@ -135,6 +136,9 @@ export function ProductQuickViewDialog({
         </div>
       }
     >
+      {productQuery.error || addToCart.error ? (
+        <ErrorMessage error={productQuery.error ?? addToCart.error} />
+      ) : null}
       {loading ? (
         <div className="flex h-56 items-center justify-center">
           <IconLoader2 className="size-8 animate-spin text-primary/60" />

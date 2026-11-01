@@ -12,7 +12,6 @@ import Image from "next/image";
 import {useLocale, useTranslations} from "next-intl";
 import {useState} from "react";
 
-import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Link} from "@/i18n/navigation";
 import {getProductById, getProductBySlug} from "@/features/catalog/api";
@@ -96,9 +95,6 @@ export function AssistantProductCard({
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <p className="line-clamp-2 text-sm font-semibold leading-snug">{product.name}</p>
-                <Badge variant="outline" className="text-[10px] shrink-0 text-emerald-600 border-emerald-300">
-                  {catalogT("inStock")}
-                </Badge>
               </div>
               <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
                 {product.description ?? "—"}
@@ -162,7 +158,7 @@ export function AssistantProductCard({
             className="h-8 px-2.5 text-xs gap-1"
           >
             <IconEye className="size-3.5" />
-            <span className="hidden sm:inline">{commonT("preview")}</span>
+            <span className="hidden sm:inline">{catalogT("productDetails")}</span>
           </Button>
 
           {/* External Detail Page Link (New tab) */}

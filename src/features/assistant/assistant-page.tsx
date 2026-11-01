@@ -478,7 +478,7 @@ function AssistantResult({
   const answer = "answer" in result ? result.answer : undefined;
   const products = "products" in result ? (result.products ?? []) : "product" in result && result.product ? [result.product] : [];
   const build = "stateful" in result ? result.stateful?.build : null;
-  const isComparison = products.some((product) => "product_id" in product);
+  const isComparison = products.length > 1;
   const comparisonKeys = isComparison
     ? Array.from(new Set(products.flatMap((product) => Object.keys(product.specifications ?? {})))).slice(0, 12)
     : [];

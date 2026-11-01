@@ -68,7 +68,6 @@ export function mapStatefulTurn(dto: StatefulTurnResult): ChatData {
 }
 
 const text = (value?: string | null) => value?.trim() ?? "";
-const number = (value?: number | null) => value ?? 0;
 
 export function mapProductCard(dto: ProductCardDto): AssistantProduct {
   return {
@@ -77,7 +76,7 @@ export function mapProductCard(dto: ProductCardDto): AssistantProduct {
     seo_name: text(dto.seo_name),
     image_url: text(dto.image_url),
     description: text(dto.description),
-    list_price: number(dto.list_price),
+    list_price: dto.list_price ?? undefined,
     specifications: dto.specifications ?? {},
     status: text(dto.status),
   };
@@ -89,7 +88,7 @@ export function mapProductComparison(dto: ProductComparisonDto): AssistantProduc
     name: text(dto.name),
     image_url: text(dto.image_url),
     description: text(dto.description),
-    list_price: number(dto.list_price),
+    list_price: dto.list_price ?? undefined,
     specifications: dto.specifications ?? {},
     status: text(dto.status),
   };

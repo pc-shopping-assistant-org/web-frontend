@@ -1,5 +1,7 @@
 {
   "common": {
+    "close": "Đóng",
+    "saved": "Đã lưu",
     "showPassword": "Hiện mật khẩu",
     "hidePassword": "Ẩn mật khẩu",
     "appName": "gearPC",

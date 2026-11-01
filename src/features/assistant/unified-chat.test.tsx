@@ -7,6 +7,7 @@ import {ApiClientError} from "@/lib/api/envelope";
 import {AiMode} from "@/lib/domain/assistant-enums";
 import {loadConversationHistory} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
+import {getProductById} from "@/features/catalog/api";
 
 function render(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -52,6 +53,7 @@ vi.mock("@/features/catalog/queries", () => ({
 vi.mock("@/features/cart/queries", () => ({
   useAddToCart: () => ({mutateAsync: vi.fn(), isPending: false}),
 }));
+vi.mock("@/features/catalog/api", () => ({getProductById: vi.fn(), getProductBySlug: vi.fn()}));
 vi.mock("./api", () => ({
   streamChat: vi.fn(async () => ({conversation_id: "test", answer: "chat answer", products: []})),
   compare: vi.fn(async () => ({answer: "comparison answer", products: []})),
@@ -93,6 +95,35 @@ it("restores URL conversation history on reload and continues using its original
   await user.type(screen.getByRole("textbox", {name: "promptLabel"}), "25 triệu");
   await user.click(screen.getByRole("button", {name: /send/}));
   expect(streamChat).toHaveBeenCalledWith("25 triệu", "saved", expect.any(Object), expect.any(AbortSignal), {selectedProductIds: []});
+});
+
+it("compares V2 product cards without inventing availability", async () => {
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "test", intent: AiMode.Chat, answer: "So sánh từ catalog",
+    products: [
+      {id: "p1", name: "GPU A", specifications: {memory_gb: 8}},
+      {id: "p2", name: "GPU B", specifications: {memory_gb: 12}},
+    ],
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="So sánh hai GPU" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByRole("table", {name: "comparisonTable"})).toBeInTheDocument();
+  expect(screen.queryByText("inStock")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("button", {name: "productDetails"})).toHaveLength(2);
+});
+
+it("shows a readable error when product quick view cannot load catalog details", async () => {
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "test", intent: AiMode.Chat, answer: "Catalog product",
+    products: [{id: "p1", name: "GPU", specifications: {}}],
+  });
+  vi.mocked(getProductById).mockRejectedValueOnce(new ApiClientError(503, "SERVICE_UNAVAILABLE"));
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Giải thích GPU" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  await user.click(await screen.findByRole("button", {name: "productDetails"}));
+  expect(await screen.findByRole("alert")).toHaveTextContent("SERVICE_UNAVAILABLE");
 });
 
 it("waits for an already admitted run after reload instead of unlocking or resubmitting", async () => {

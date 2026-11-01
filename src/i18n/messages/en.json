@@ -1,5 +1,7 @@
 {
   "common": {
+    "close": "Close",
+    "saved": "Saved",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "appName": "gearPC",
