@@ -1,5 +1,4 @@
 import {afterEach, beforeEach, expect, it, vi} from "vitest";
-import {RUN_RESULT_MAX_TRANSPORT_FAILURES} from "./constants";
 import {streamChat} from "./stateful-api";
 
 afterEach(() => {
@@ -18,6 +17,22 @@ const completedResult = {
   answer: "Bạn cần ưu tiên tính di động hay hiệu năng?", build: null, flexible: null,
   products: [],
 };
+
+it("accepts a verified unranked build with a null objective", async () => {
+  const result = {...completedResult, answer: "Cấu hình tương thích; chưa đủ dữ liệu xếp hạng.", build: {
+    objective: null, ranking_status: "UNRANKED", total_spending_vnd: 2500000, stale: false,
+    parts: [{slot: "CPU", name: "Canonical CPU", variant_id: cid, spending_vnd: 2500000, is_owned: false, is_pinned: false}],
+  }};
+  const frames = [{event: "START", sequence: 1, run}, {event: "COMPLETED", sequence: 2, result}]
+    .map((event) => `data: ${JSON.stringify(envelope({...event, conversation_id: cid, run_id: rid}))}\n\n`).join("");
+  vi.stubGlobal("fetch", vi.fn()
+    .mockResolvedValueOnce(Response.json(envelope({schema_version: 2, conversation_id: cid, revision: 0})))
+    .mockResolvedValueOnce(Response.json(envelope(run)))
+    .mockResolvedValueOnce(new Response(frames, {headers: {"content-type": "text/event-stream"}})));
+  const response = await streamChat("Build PC");
+  expect(response.answer).toContain("chưa đủ dữ liệu");
+  expect(response.stateful?.build).toMatchObject({totalSpending: 2500000, parts: [{name: "Canonical CPU"}]});
+});
 
 it("creates a V2 run and consumes one SSE connection without reconnect", async () => {
   const result = {
@@ -121,17 +136,46 @@ it("survives a network change during result delivery without submitting the turn
   expect(fetch.mock.calls.filter((call) => String(call[0]).endsWith("/events"))).toHaveLength(1);
 });
 
-it("bounds result-delivery retries when the network remains unavailable", async () => {
+it("keeps an admitted run pending while offline until delivery resumes or the user aborts", async () => {
   vi.useFakeTimers();
   const fetch = vi.fn()
     .mockResolvedValueOnce(Response.json(envelope({schema_version: 2, conversation_id: cid, revision: 0})))
     .mockResolvedValueOnce(Response.json(envelope(run)))
     .mockRejectedValue(new TypeError("offline"));
   vi.stubGlobal("fetch", fetch);
-  const assertion = expect(streamChat("Build PC")).rejects.toMatchObject({messageKey: "AI_BACKEND_UNAVAILABLE"});
+  const controller = new AbortController();
+  let settled = false;
+  const response = streamChat("Build PC", undefined, {}, controller.signal).finally(() => {settled = true;});
+  const assertion = expect(response).rejects.toMatchObject({name: "AbortError"});
+  await vi.advanceTimersByTimeAsync(10000);
+  expect(settled).toBe(false);
+  expect(fetch.mock.calls.filter((call) => String(call[0]).endsWith("/events"))).toHaveLength(1);
+  controller.abort();
+  await assertion;
+});
+
+it.each(["headers", "body"])("retries admission interrupted at %s with the same request_id and payload", async (interruption) => {
+  vi.useFakeTimers();
+  const frames = [{event:"START",sequence:1,run},{event:"COMPLETED",sequence:2,result:completedResult}]
+    .map((event) => `data: ${JSON.stringify(envelope({...event,conversation_id:cid,run_id:rid}))}\n\n`).join("");
+  const fetch = vi.fn()
+    .mockResolvedValueOnce(Response.json(envelope({schema_version:2,conversation_id:cid,revision:0})));
+  if (interruption === "headers") fetch.mockRejectedValueOnce(new TypeError("NET_CHANGED after commit"));
+  else fetch.mockResolvedValueOnce(new Response(new ReadableStream({
+    start(controller) {controller.error(new TypeError("NET_CHANGED reading admission body"));},
+  }), {status: 202}));
+  fetch
+    .mockResolvedValueOnce(Response.json(envelope(run)))
+    .mockResolvedValueOnce(new Response(frames,{headers:{"content-type":"text/event-stream"}}));
+  vi.stubGlobal("fetch",fetch);
+  const response = streamChat("Explain product");
+  const assertion = expect(response).resolves.toMatchObject({answer:completedResult.answer});
   await vi.runAllTimersAsync();
   await assertion;
-  expect(fetch).toHaveBeenCalledTimes(3 + RUN_RESULT_MAX_TRANSPORT_FAILURES);
+  expect(fetch.mock.calls[1][1].body).toBe(fetch.mock.calls[2][1].body);
+  expect(JSON.parse(fetch.mock.calls[1][1].body).request_id).toBe(requestId);
+  expect(crypto.randomUUID).toHaveBeenCalledTimes(1);
+  expect(fetch.mock.calls.filter((call) => String(call[0]).endsWith("/events"))).toHaveLength(1);
 });
 
 it.each([401, 403, 404, 410])("does not retry terminal result HTTP %s", async (status) => {

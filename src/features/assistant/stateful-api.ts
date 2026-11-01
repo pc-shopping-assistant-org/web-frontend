@@ -5,7 +5,7 @@ import type {AiSchema} from "@/lib/api/generated/types";
 import {parseSse} from "@/lib/api/sse";
 import {parseRequest} from "@/lib/api/parse-request";
 import {ChatStreamEventType} from "@/lib/domain/assistant-enums";
-import {RUN_RESULT_MAX_TRANSPORT_FAILURES, RUN_RESULT_POLL_INTERVAL_MS, RUN_RESULT_TRANSIENT_HTTP_STATUSES, STATEFUL_SCHEMA_VERSION} from "./constants";
+import {RUN_RESULT_POLL_INTERVAL_MS, RUN_RESULT_TRANSIENT_HTTP_STATUSES, STATEFUL_SCHEMA_VERSION} from "./constants";
 import type {ChatData} from "./models";
 import {mapStatefulTurn} from "./mappers";
 import type {ChatStreamHandlers} from "./api";
@@ -27,10 +27,8 @@ export async function streamChat(
   options: ChatTurnOptions = {},
 ): Promise<ChatData> {
   const conversation = conversationSchema.parse(
-    await aiFetch<AiSchema["ConversationViewV2"]>(
-      conversationId ? `/conversations/${conversationId}` : "/conversations",
-      conversationId ? {signal, cache: "no-store"} : {method: "POST", body: "{}", signal},
-    ),
+    conversationId ? await getChatResource<AiSchema["ConversationViewV2"]>(`/conversations/${conversationId}`, signal)
+      : await aiFetch<AiSchema["ConversationViewV2"]>("/conversations", {method: "POST", body: "{}", signal}),
   );
   handlers.onStart?.(conversation.conversation_id);
   const payload = parseRequest(turnRequestSchema, {
@@ -43,11 +41,11 @@ export async function streamChat(
     ...(options.confirmation ? {confirmation: options.confirmation} : {}),
   }) satisfies AiSchema["TurnRequestV2Body"];
   const run = runSchema.parse(
-    await aiFetch<AiSchema["RunViewV1"]>(`/conversations/${conversation.conversation_id}/runs`, {
+    await retryTransport(() => aiFetch<AiSchema["RunViewV1"]>(`/conversations/${conversation.conversation_id}/runs`, {
       method: "POST",
       body: JSON.stringify(payload),
       signal,
-    }),
+    }), signal),
   );
   if (
     run.conversation_id !== conversation.conversation_id ||
@@ -98,19 +96,9 @@ async function readStream(
 }
 
 async function readSavedResult(path: string, runId: string, conversationId: string, signal?: AbortSignal): Promise<StatefulTurnResult> {
-  let transportFailures = 0;
   while (true) {
     signal?.throwIfAborted();
-    let data: unknown = null;
-    try {
-      data = await aiFetch<unknown>(`${path}/result`, {signal, cache: "no-store"});
-      transportFailures = 0;
-    } catch (error) {
-      if (signal?.aborted || !(error instanceof ApiClientError) ||
-        !RUN_RESULT_TRANSIENT_HTTP_STATUSES.some((status) => status === error.status) ||
-        ++transportFailures >= RUN_RESULT_MAX_TRANSPORT_FAILURES) throw error;
-      // Retry delivery of the admitted run only. Never resubmit or reopen SSE.
-    }
+    const data = await retryTransport(() => aiFetch<unknown>(`${path}/result`, {signal, cache: "no-store"}), signal);
     if (data !== null) {
       const event = statefulEventSchema.parse(data);
       if (event.conversation_id !== conversationId || event.run_id !== runId) throw invalidStream();
@@ -118,12 +106,34 @@ async function readSavedResult(path: string, runId: string, conversationId: stri
       if (event.event === ChatStreamEventType.Error) throw new ApiClientError(502, STATIC_MESSAGE_KEYS.AI_RUN_FAILED);
       throw invalidStream();
     }
-    await new Promise<void>((resolve, reject) => {
+    await waitForRetry(signal);
+  }
+}
+
+function waitForRetry(signal?: AbortSignal) {
+  signal?.throwIfAborted();
+  return new Promise<void>((resolve, reject) => {
       const abort = () => {clearTimeout(timer); reject(signal?.reason);};
       const timer = setTimeout(() => {signal?.removeEventListener("abort", abort); resolve();}, RUN_RESULT_POLL_INTERVAL_MS);
       signal?.addEventListener("abort", abort, {once: true});
-    });
+  });
+}
+
+/** POST callers must reuse the exact idempotent request body; GETs only resume delivery. */
+async function retryTransport<T>(operation: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  while (true) {
+    signal?.throwIfAborted();
+    try { return await operation(); }
+    catch (error) {
+      if (signal?.aborted || !(error instanceof ApiClientError) ||
+        !RUN_RESULT_TRANSIENT_HTTP_STATUSES.some((status) => status === error.status)) throw error;
+    }
+    await waitForRetry(signal);
   }
+}
+
+export function getChatResource<T>(path: string, signal?: AbortSignal): Promise<T> {
+  return retryTransport(() => aiFetch<T>(path, {signal, cache: "no-store"}), signal);
 }
 
 /** Resume delivery only; never submit a new turn or open another SSE. */
