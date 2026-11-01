@@ -16,6 +16,8 @@ import {parseRequest} from "@/lib/api/parse-request";
 export type ChatStreamHandlers = {
   onStart?: (conversationId: string) => void;
   onDelta?: (delta: string) => void;
+  /** Called when the SSE stream is interrupted and the client falls back to polling the saved result. */
+  onReconnecting?: () => void;
   onComplete?: (data: ChatData) => void;
 };
 

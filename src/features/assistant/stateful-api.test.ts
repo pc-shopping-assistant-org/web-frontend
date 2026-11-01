@@ -61,7 +61,9 @@ it("creates a V2 run and consumes one SSE connection without reconnect", async (
     .mockResolvedValueOnce(new Response(frames, {headers: {"content-type": "text/event-stream"}}));
   vi.stubGlobal("fetch", fetch);
   const deltas: string[] = [];
-  const answer = await streamChat("Build PC", undefined, {onDelta: (text) => deltas.push(text)}, undefined, {selectedProductIds: [cid]});
+  const onReconnecting = vi.fn();
+  const answer = await streamChat("Build PC", undefined, {onDelta: (text) => deltas.push(text), onReconnecting}, undefined, {selectedProductIds: [cid]});
+  expect(onReconnecting).not.toHaveBeenCalled();
   expect(answer.answer).toBe(result.answer);
   expect(answer.products[0]).toMatchObject({id: cid, name: "Canonical GPU", list_price: 8000000});
   expect(deltas).toEqual([result.answer]);
@@ -90,9 +92,11 @@ it("keeps an interrupted admitted run pending and reads its saved result without
     })));
   vi.stubGlobal("fetch", fetch);
   let settled = false;
-  const response = streamChat("Tư vấn laptop").finally(() => {settled = true;});
+  const onReconnecting = vi.fn();
+  const response = streamChat("Tư vấn laptop", undefined, {onReconnecting}).finally(() => {settled = true;});
   await vi.advanceTimersByTimeAsync(0);
   expect(settled).toBe(false);
+  expect(onReconnecting).toHaveBeenCalledTimes(1);
   await vi.runAllTimersAsync();
   expect(await response).toMatchObject({answer: completedResult.answer});
   expect(fetch.mock.calls.map((call) => call[0])).toEqual([
@@ -201,4 +205,48 @@ it("does not turn an aborted subscription into background polling or cancellatio
   vi.stubGlobal("fetch", fetch);
   await expect(streamChat("Tư vấn laptop", undefined, {}, controller.signal)).rejects.toMatchObject({name: "AbortError"});
   expect(fetch).toHaveBeenCalledTimes(3);
+});
+
+it("recovers from AI_CONVERSATION_BUSY by waiting for the prior run and resubmitting", async () => {
+  const priorRunId = "00000000-0000-4000-8000-000000000099";
+  const priorCompleted = {
+    schema_version: 2,
+    run: {...run, run_id: priorRunId, base_revision: 0, status: "COMPLETED"},
+    revision: 1,
+    answer: "Done prior",
+    products: [],
+  };
+  const secondRunId = "00000000-0000-4000-8000-000000000088";
+  const secondRun = {...run, run_id: secondRunId, base_revision: 1};
+  const secondCompleted = {
+    schema_version: 2,
+    run: {...secondRun, status: "COMPLETED"},
+    revision: 2,
+    answer: "Done second",
+    products: [],
+  };
+  const frames = [
+    {event: "START", sequence: 1, run: secondRun},
+    {event: "COMPLETED", sequence: 2, result: secondCompleted},
+  ].map((event) => `data: ${JSON.stringify(envelope({...event, conversation_id: cid, run_id: secondRunId}))}\n\n`).join("");
+
+  const fetch = vi.fn()
+    // 1. Initial read conversation (rev 0)
+    .mockResolvedValueOnce(Response.json(envelope({schema_version: 2, conversation_id: cid, revision: 0})))
+    // 2. Submit run fails with 409 AI_CONVERSATION_BUSY
+    .mockResolvedValueOnce(Response.json({data: null, message: "AI_CONVERSATION_BUSY", errors: [{code: "AI_CONVERSATION_BUSY"}]}, {status: 409}))
+    // 3. Recovery: fetch messages to get last run
+    .mockResolvedValueOnce(Response.json(envelope({items: [{run_id: priorRunId}]})))
+    // 4. Wait for prior run result: poll GET run result
+    .mockResolvedValueOnce(Response.json(envelope(priorCompleted)))
+    // 5. Recovery: get updated conversation (rev 1)
+    .mockResolvedValueOnce(Response.json(envelope({schema_version: 2, conversation_id: cid, revision: 1})))
+    // 6. Resubmit run with rev 1 succeeds!
+    .mockResolvedValueOnce(Response.json(envelope(secondRun)))
+    // 7. Consume SSE stream for second run
+    .mockResolvedValueOnce(new Response(frames, {headers: {"content-type": "text/event-stream"}}));
+
+  vi.stubGlobal("fetch", fetch);
+  const result = await streamChat("Lượt thứ 2", cid);
+  expect(result.answer).toBe("Done second");
 });

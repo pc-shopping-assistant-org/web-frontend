@@ -40,13 +40,47 @@ export async function streamChat(
     ...(options.selectedProductIds?.length ? {selected_product_ids: options.selectedProductIds} : {}),
     ...(options.confirmation ? {confirmation: options.confirmation} : {}),
   }) satisfies AiSchema["TurnRequestV2Body"];
-  const run = runSchema.parse(
-    await retryTransport(() => aiFetch<AiSchema["RunViewV1"]>(`/conversations/${conversation.conversation_id}/runs`, {
+  let rawRun: unknown;
+  try {
+    rawRun = await retryTransport(() => aiFetch<AiSchema["RunViewV1"]>(`/conversations/${conversation.conversation_id}/runs`, {
       method: "POST",
       body: JSON.stringify(payload),
       signal,
-    }), signal),
-  );
+    }), signal);
+  } catch (error) {
+    if (
+      error instanceof ApiClientError &&
+      (error.status === 409 ||
+        error.messageKey === STATIC_MESSAGE_KEYS.AI_CONVERSATION_BUSY ||
+        error.errors.some((e) => e.code === "AI_CONVERSATION_BUSY"))
+    ) {
+      const messagesPage = await getChatResource<{items: Array<{run_id: string}>}>(
+        `/conversations/${conversation.conversation_id}/messages?limit=1`,
+        signal,
+      ).catch(() => null);
+      const lastRunId = messagesPage?.items?.[0]?.run_id;
+      if (lastRunId) {
+        await waitForRunResult(conversation.conversation_id, lastRunId, signal).catch(() => null);
+      }
+      const updatedConv = conversationSchema.parse(
+        await getChatResource<AiSchema["ConversationViewV2"]>(`/conversations/${conversation.conversation_id}`, signal),
+      );
+      const retryPayload = parseRequest(turnRequestSchema, {
+        ...payload,
+        expected_revision: updatedConv.revision,
+      }) satisfies AiSchema["TurnRequestV2Body"];
+      rawRun = await retryTransport(() => aiFetch<AiSchema["RunViewV1"]>(`/conversations/${conversation.conversation_id}/runs`, {
+        method: "POST",
+        body: JSON.stringify(retryPayload),
+        signal,
+      }), signal);
+      conversation.revision = updatedConv.revision;
+      payload.expected_revision = updatedConv.revision;
+    } else {
+      throw error;
+    }
+  }
+  const run = runSchema.parse(rawRun);
   if (
     run.conversation_id !== conversation.conversation_id ||
     run.request_id !== payload.request_id ||
@@ -61,6 +95,7 @@ export async function streamChat(
     if (signal?.aborted) throw error;
     // A terminal ERROR is execution failure, not a transport interruption.
     if (error instanceof ApiClientError && error.messageKey === STATIC_MESSAGE_KEYS.AI_RUN_FAILED) throw error;
+    handlers.onReconnecting?.();
     completed = await readSavedResult(path, run.run_id, conversation.conversation_id, signal);
   }
   if (
@@ -142,4 +177,11 @@ export async function waitForRunResult(conversationId: string, runId: string, si
   if (result.run.run_id !== runId || result.run.conversation_id !== conversationId || result.revision !== result.run.base_revision + 1)
     throw invalidStream();
   return mapStatefulTurn(result);
+}
+
+export async function cancelRun(conversationId: string, runId: string, signal?: AbortSignal): Promise<void> {
+  await aiFetch(`/conversations/${conversationId}/runs/${runId}/cancel`, {
+    method: "POST",
+    signal,
+  });
 }

@@ -71,8 +71,10 @@ export function proxy(request: NextRequest) {
   }
 
   // Employees and admins work in the admin area only; the storefront is for customers.
+  // The AI assistant is accessible to both staff and customers.
   const isAdminRoute = /^\/(?:vi|en)\/admin(?:\/|$)/.test(pathname);
-  const isStorefrontPage = locale !== undefined && !isAdminRoute;
+  const isAssistantRoute = /^\/(?:vi|en)\/assistant(?:\/|$)/.test(pathname);
+  const isStorefrontPage = locale !== undefined && !isAdminRoute && !isAssistantRoute;
   if (isStorefrontPage && isStaffRole(roleOf(request.cookies.get(ACCESS_TOKEN_COOKIE)?.value))) {
     const adminUrl = request.nextUrl.clone();
     adminUrl.pathname = `/${locale}/admin`;

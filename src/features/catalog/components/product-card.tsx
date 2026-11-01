@@ -417,15 +417,15 @@ function ProductVisual({
         <ProductFallbackArt product={product} name={name} interactive={interactive} compact={compact} />
       )}
       <div className="absolute inset-x-4 top-4 flex items-center justify-between gap-2">
-        <Badge className="max-w-[65%] truncate border-white/80 bg-white/80 text-xs text-foreground/70 backdrop-blur">
+        <Badge variant="outline" className="max-w-[65%] truncate border-white/80 bg-white/80 text-xs text-foreground/70 backdrop-blur">
           {product.categoryName ?? t("category")}
         </Badge>
         {product.totalQuantity === 0 ? (
-          <Badge className="border-rose-200 bg-rose-50 text-rose-700">{t("outOfStock")}</Badge>
+          <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">{t("outOfStock")}</Badge>
         ) : product.status === ResourceStatus.Active ? (
-          <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">{t("activeCatalog")}</Badge>
+          <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">{t("activeCatalog")}</Badge>
         ) : product.status ? (
-          <Badge className="border-slate-200 bg-slate-100 text-slate-600">{t("inactiveCatalog")}</Badge>
+          <Badge variant="outline" className="border-slate-200 bg-slate-100 text-slate-600">{t("inactiveCatalog")}</Badge>
         ) : null}
       </div>
     </div>

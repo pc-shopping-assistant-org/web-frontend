@@ -60,7 +60,7 @@ export function HomeStorefront() {
       <div className="storefront-wrap py-8 sm:py-12">
         <div className="mb-6 flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl space-y-3">
-            <Badge className="gap-2 border-primary/20 bg-primary/5 px-3 py-1.5 text-primary">
+            <Badge variant="outline" className="h-auto gap-2 border-primary/20 bg-primary/5 px-3 py-1.5 text-primary">
               <IconSparkles className="size-3.5" aria-hidden="true" />
               {t("eyebrow")}
             </Badge>
@@ -332,9 +332,9 @@ function FeaturedSpotlight({product, pending, unavailable}: {product?: ProductSu
       <CardContent className="relative grid min-h-[clamp(18rem,20vw,24rem)] grid-cols-[minmax(0,1.1fr)_minmax(8rem,.9fr)] items-center gap-4 p-5 sm:gap-6 sm:p-7 lg:p-8 2xl:p-9">
         <div className="flex min-h-full flex-col justify-between gap-8 py-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="border-white/20 bg-white/10 text-white">{t("featuredBadge")}</Badge>
+            <Badge variant="outline" className="border-white/20 bg-white/10 text-white">{t("featuredBadge")}</Badge>
             {product.status === ResourceStatus.Active ? (
-              <Badge className="border-emerald-300/40 bg-emerald-300/15 text-emerald-100">{t("activeCatalog")}</Badge>
+              <Badge variant="outline" className="border-emerald-300/40 bg-emerald-300/15 text-emerald-100">{t("activeCatalog")}</Badge>
             ) : null}
           </div>
           <div className="space-y-3">

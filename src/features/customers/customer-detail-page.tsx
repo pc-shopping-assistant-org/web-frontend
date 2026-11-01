@@ -147,7 +147,7 @@ function CustomerCard({customer}: {customer: CustomerDetail}) {
                   <div key={address.id} className="rounded-xl border p-3 text-sm">
                     <div className="flex flex-wrap items-center gap-2 font-medium">
                       {address.recipientName}
-                      {address.isDefault ? <Badge>{t("defaultAddress")}</Badge> : null}
+                      {address.isDefault ? <Badge variant="outline">{t("defaultAddress")}</Badge> : null}
                     </div>
                     <p className="mt-1 text-muted-foreground">{address.phone}</p>
                     <p className="text-muted-foreground">{address.addressLine}</p>

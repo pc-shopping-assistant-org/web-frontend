@@ -1,6 +1,6 @@
 "use client";
 
-import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, MessageCircle, PackageSearch, Search, Sparkles, X} from "lucide-react";
+import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, MessageCircle, PackageSearch, RotateCcw, Search, Sparkles, WifiOff, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import {useEffect, useRef, useState, type FormEvent} from "react";
@@ -8,6 +8,7 @@ import {useEffect, useRef, useState, type FormEvent} from "react";
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Dialog} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
@@ -27,6 +28,9 @@ import {AssistantMarkdown} from "./assistant-markdown";
 import {loadConversationHistory, setConversationUrl} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import type {ChatTurn} from "./models";
+import {AssistantProductCard} from "./components/assistant-product-card";
+import {PcBuildSummary} from "./components/pc-build-summary";
+import {formatSpecLabel, formatSpecValue} from "./mappers";
 
 type Result = ChatData | SearchData | ConsultData | CompareData | EvaluateData;
 
@@ -52,13 +56,22 @@ export function AssistantPage({
   const [conversationId, setConversationId] = useState<string | undefined>(initialConversationId);
   const [streamingPrompt, setStreamingPrompt] = useState("");
   const [streamingAnswer, setStreamingAnswer] = useState("");
+  const [streamState, setStreamState] = useState<"streaming" | "reconnecting">("streaming");
+  const [streamError, setStreamError] = useState<unknown>(null);
+  const lastConfirmationRef = useRef<Confirmation | undefined>(undefined);
   const [loading, setLoading] = useState(Boolean(initialConversationId));
   const [error, setError] = useState<unknown>(null);
   const streamController = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const lastResponse = chatTurns.findLast((turn) => turn.response)?.response;
   const proposal = lastResponse && "stateful" in lastResponse ? lastResponse.stateful?.proposal : null;
   const proposalChanges = proposal?.changes ?? [];
   const clarificationOptions = lastResponse && "stateful" in lastResponse ? (lastResponse.stateful?.clarificationOptions ?? []) : [];
+
+  function handleAskAboutProduct(id: string) {
+    setProductIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    textareaRef.current?.focus();
+  }
 
   useEffect(() => () => streamController.current?.abort(), []);
 
@@ -108,6 +121,9 @@ export function AssistantPage({
     setError(null);
     setStreamingPrompt(submittedPrompt);
     setStreamingAnswer("");
+    setStreamState("streaming");
+    setStreamError(null);
+    lastConfirmationRef.current = confirmation;
     try {
       const data = await streamChat(
         submittedPrompt,
@@ -121,6 +137,9 @@ export function AssistantPage({
           },
           onDelta: (delta) => {
             if (!controller.signal.aborted) setStreamingAnswer((current) => current + delta);
+          },
+          onReconnecting: () => {
+            if (!controller.signal.aborted) setStreamState("reconnecting");
           },
         },
         controller.signal,
@@ -137,16 +156,31 @@ export function AssistantPage({
       if (!controller.signal.aborted) {
         if (cause instanceof ApiClientError && cause.status === 401) {
           setSignInOpen(true);
+          setStreamingPrompt("");
+          setStreamingAnswer("");
         } else {
-          setError(cause);
+          // Keep the streaming bubble visible with the error shown inline so the
+          // user can retry without losing the conversation context.
+          setStreamError(cause);
+          setError(null);
         }
-        setStreamingPrompt("");
-        setStreamingAnswer("");
       }
     } finally {
       if (!controller.signal.aborted) setLoading(false);
       if (streamController.current === controller) streamController.current = null;
     }
+  }
+
+  async function retryLastSend() {
+    if (!streamingPrompt || streamController.current) return;
+    await send(streamingPrompt, lastConfirmationRef.current);
+  }
+
+  function dismissStreamError() {
+    setStreamingPrompt("");
+    setStreamingAnswer("");
+    setStreamError(null);
+    lastConfirmationRef.current = undefined;
   }
 
   function newConversation() {
@@ -156,6 +190,7 @@ export function AssistantPage({
     setProductIds([]);
     setError(null);
     setPrompt("");
+    dismissStreamError();
   }
 
   return (
@@ -198,7 +233,7 @@ export function AssistantPage({
         )}
         <div className="min-h-64 space-y-5 p-4 sm:p-6" aria-live="polite">
           {chatTurns.length ? (
-            <ChatTranscript turns={chatTurns} locale={locale} />
+            <ChatTranscript turns={chatTurns} locale={locale} onAskAboutProduct={handleAskAboutProduct} />
           ) : !streamingPrompt ? (
             <div className="flex min-h-60 flex-col items-center justify-center gap-4 text-center">
               <Sparkles className="size-9 text-primary" />
@@ -217,7 +252,16 @@ export function AssistantPage({
               </div>
             </div>
           ) : null}
-          {streamingPrompt ? <StreamingChatTurn prompt={streamingPrompt} answer={streamingAnswer} /> : null}
+          {streamingPrompt ? (
+            <StreamingChatTurn
+              prompt={streamingPrompt}
+              answer={streamingAnswer}
+              state={streamState}
+              error={streamError}
+              onRetry={retryLastSend}
+              onDismiss={dismissStreamError}
+            />
+          ) : null}
           {error ? <ErrorMessage error={error} /> : null}
           {proposalChanges.length ? (
             <ul className="space-y-1 rounded-lg border p-3 text-sm">
@@ -262,6 +306,7 @@ export function AssistantPage({
               <ProductPicker value={productIds} onChange={setProductIds} locale={locale} />
             </details>
             <Textarea
+              ref={textareaRef}
               aria-label={t("promptLabel")}
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
@@ -315,7 +360,7 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
           </p>
           <p className="mt-1 text-xs text-muted-foreground">{t("attachmentHint")}</p>
         </div>
-        <Badge className="bg-background">{t("selectedCount", {count: value.length, max})}</Badge>
+        <Badge variant="outline" className="bg-background">{t("selectedCount", {count: value.length, max})}</Badge>
       </div>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -419,11 +464,21 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
   );
 }
 
-function AssistantResult({result, locale, hideAnswer = false}: {result: Result; locale: string; hideAnswer?: boolean}) {
+function AssistantResult({
+  result,
+  hideAnswer = false,
+  onAskAboutProduct,
+}: {
+  result: Result;
+  locale?: string;
+  hideAnswer?: boolean;
+  onAskAboutProduct?: (productId: string) => void;
+}) {
   const t = useTranslations("assistant");
   const answer = "answer" in result ? result.answer : undefined;
   const products = "products" in result ? (result.products ?? []) : "product" in result && result.product ? [result.product] : [];
-  const isComparison = products.some((product) => "product_id" in product);
+  const build = "stateful" in result ? result.stateful?.build : null;
+  const isComparison = products.length > 1;
   const comparisonKeys = isComparison
     ? Array.from(new Set(products.flatMap((product) => Object.keys(product.specifications ?? {})))).slice(0, 12)
     : [];
@@ -434,102 +489,46 @@ function AssistantResult({result, locale, hideAnswer = false}: {result: Result; 
       </CardHeader>
       <CardContent className="space-y-5">
         {!hideAnswer ? <AssistantMarkdown>{answer ?? t("noAnswer")}</AssistantMarkdown> : null}
+        {build ? <PcBuildSummary build={build} /> : null}
         {isComparison && comparisonKeys.length > 0 ? (
-          <div className="overflow-x-auto rounded-xl border">
-            <table className="min-w-full text-left text-sm">
+          <div className="overflow-hidden rounded-xl border">
+            <Table>
               <caption className="sr-only">{t("comparisonTable")}</caption>
-              <thead className="bg-muted/50">
-                <tr>
-                  <th className="whitespace-nowrap px-4 py-3 font-semibold">{t("specification")}</th>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="whitespace-nowrap px-4 py-3">{t("specification")}</TableHead>
                   {products.map((product, index) => (
-                    <th key={"product_id" in product ? (product.product_id ?? index) : index} className="min-w-44 px-4 py-3 font-semibold">
+                    <TableHead key={"product_id" in product ? (product.product_id ?? index) : index} className="min-w-44 px-4 py-3">
                       {product.name}
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {comparisonKeys.map((key) => (
-                  <tr key={key}>
-                    <th className="whitespace-nowrap bg-muted/20 px-4 py-3 font-medium text-muted-foreground">{formatSpecLabel(key)}</th>
+                  <TableRow key={key}>
+                    <TableHead className="whitespace-nowrap bg-muted/20 px-4 py-3 font-medium text-muted-foreground">{formatSpecLabel(key)}</TableHead>
                     {products.map((product, index) => (
-                      <td key={`${key}-${index}`} className="px-4 py-3 align-top">
+                      <TableCell key={`${key}-${index}`} className="px-4 py-3 align-top whitespace-normal">
                         {formatSpecValue(product.specifications?.[key])}
-                      </td>
+                      </TableCell>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         ) : null}
         {products.length > 0 ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {products.map((product, index) => {
-              const id = "id" in product ? product.id : "product_id" in product ? product.product_id : undefined;
-              const slug = "seo_name" in product ? product.seo_name : undefined;
-              const specs = Object.entries(product.specifications ?? {}).slice(0, 3);
+              const id = ("id" in product ? product.id : "product_id" in product ? product.product_id : undefined) ?? String(index);
               return (
-                <div
-                  key={id ?? index}
-                  className="overflow-hidden rounded-xl border bg-background transition hover:border-primary/30 hover:shadow-md"
-                >
-                  <div className="flex gap-4 border-b bg-muted/20 p-4">
-                    <div className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-background text-primary/50">
-                      {product.image_url ? (
-                        <Image src={product.image_url} alt="" fill sizes="64px" unoptimized className="object-contain p-2" />
-                      ) : (
-                        <CatalogCategoryIcon categoryName={product.name} className="size-7 text-primary/65" strokeWidth={1.45} />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="line-clamp-2 font-medium">{product.name}</p>
-                        <Check className="size-4 shrink-0 text-emerald-600" />
-                      </div>
-                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{product.description ?? "—"}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3 p-4">
-                    <p className="mt-3 font-semibold">{formatMoney(product.list_price, locale)}</p>
-                    {specs.length > 0 ? (
-                      <dl className="space-y-1.5 text-xs text-muted-foreground">
-                        {specs.map(([key, value]) => (
-                          <div key={key} className="flex justify-between gap-3">
-                            <dt>{formatSpecLabel(key)}</dt>
-                            <dd className="max-w-[60%] truncate text-right font-medium text-foreground">{formatSpecValue(value)}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    ) : null}
-                    {id && slug ? (
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Link
-                          href={`/products/${slug}`}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary/85"
-                        >
-                          {t("viewProduct")}
-                          <ArrowUpRight className="size-3.5" />
-                        </Link>
-                        <Link
-                          href={`/assistant?productId=${encodeURIComponent(id)}`}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
-                        >
-                          <Sparkles className="size-3.5" />
-                          {t("askAboutProduct")}
-                        </Link>
-                      </div>
-                    ) : id ? (
-                      <Link
-                        href={`/assistant?productId=${encodeURIComponent(id)}`}
-                        className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/5 px-2.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
-                      >
-                        <Sparkles className="size-3.5" />
-                        {t("askAboutProduct")}
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
+                <AssistantProductCard
+                  key={id}
+                  product={product}
+                  onAskAboutProduct={onAskAboutProduct}
+                />
               );
             })}
           </div>
@@ -539,7 +538,15 @@ function AssistantResult({result, locale, hideAnswer = false}: {result: Result; 
   );
 }
 
-function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
+function ChatTranscript({
+  turns,
+  locale,
+  onAskAboutProduct,
+}: {
+  turns: ChatTurn[];
+  locale: string;
+  onAskAboutProduct?: (productId: string) => void;
+}) {
   const t = useTranslations("assistant");
   return (
     <Card className="overflow-hidden border-primary/15">
@@ -547,7 +554,7 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
         <CardTitle className="flex items-center gap-2">
           <MessageCircle className="size-5 text-primary" />
           {t("conversation")}
-          <Badge className="ml-auto bg-background">{turns.length}</Badge>
+          <Badge variant="outline" className="ml-auto bg-background">{turns.length}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-4 sm:p-6">
@@ -562,14 +569,23 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
                 <Bot className="size-3.5 text-primary" />
                 {t("assistantLabel")}
                 {"intent" in turn.response && turn.response.intent ? (
-                  <Badge className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
+                  <Badge variant="outline" className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
                 ) : null}
               </div>
               <AssistantMarkdown>{"answer" in turn.response ? turn.response.answer : t("noAnswer")}</AssistantMarkdown>
             </div> : null}
-            {turn.response && (("products" in turn.response && turn.response.products?.length) || ("product" in turn.response && turn.response.product)) ? (
+            {turn.response && (
+              ("products" in turn.response && turn.response.products?.length) ||
+              ("product" in turn.response && turn.response.product) ||
+              ("stateful" in turn.response && turn.response.stateful?.build)
+            ) ? (
               <div className="ml-0 sm:ml-4">
-                <AssistantResult result={turn.response} locale={locale} hideAnswer />
+                <AssistantResult
+                  result={turn.response}
+                  locale={locale}
+                  hideAnswer
+                  onAskAboutProduct={onAskAboutProduct}
+                />
               </div>
             ) : null}
           </div>
@@ -579,8 +595,23 @@ function ChatTranscript({turns, locale}: {turns: ChatTurn[]; locale: string}) {
   );
 }
 
-function StreamingChatTurn({prompt, answer}: {prompt: string; answer: string}) {
+function StreamingChatTurn({
+  prompt,
+  answer,
+  state,
+  error,
+  onRetry,
+  onDismiss,
+}: {
+  prompt: string;
+  answer: string;
+  state: "streaming" | "reconnecting";
+  error: unknown;
+  onRetry: () => void;
+  onDismiss: () => void;
+}) {
   const t = useTranslations("assistant");
+  const failed = Boolean(error);
   return (
     <Card className="overflow-hidden border-primary/15">
       <CardContent className="space-y-3 p-4 sm:p-6">
@@ -592,22 +623,37 @@ function StreamingChatTurn({prompt, answer}: {prompt: string; answer: string}) {
           <div className="mb-1 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             <Bot className="size-3.5 text-primary" />
             {t("assistantLabel")}
-            <span className="size-1.5 animate-pulse rounded-full bg-primary" />
+            {!failed ? <span className="size-1.5 animate-pulse rounded-full bg-primary" /> : null}
           </div>
-          <AssistantMarkdown>{answer || t("streaming")}</AssistantMarkdown>
+          {answer ? <AssistantMarkdown>{answer}</AssistantMarkdown> : !failed ? <AssistantMarkdown>{t("streaming")}</AssistantMarkdown> : null}
+          {!failed && state === "reconnecting" ? (
+            <p role="status" className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" />
+              {t("reconnecting")}
+            </p>
+          ) : null}
+          {failed ? (
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-destructive">
+                <WifiOff className="size-3.5" />
+                {t("connectionFailed")}
+              </div>
+              <ErrorMessage error={error} />
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" onClick={onRetry} className="gap-1.5">
+                  <RotateCcw className="size-3.5" />
+                  {t("retry")}
+                </Button>
+                <Button size="sm" variant="ghost" onClick={onDismiss}>
+                  {t("dismiss")}
+                </Button>
+              </div>
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>
   );
 }
 
-function formatSpecLabel(value: string) {
-  return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
-function formatSpecValue(value: unknown): string {
-  if (Array.isArray(value)) return value.map(formatSpecValue).join(" · ");
-  if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "object") return JSON.stringify(value) ?? "—";
-  return String(value);
-}

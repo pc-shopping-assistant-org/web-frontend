@@ -42,5 +42,5 @@ export function StatusBadge({status, label}: {status?: string | null; label?: st
         ? "border-rose-200 bg-rose-50 text-rose-700"
         : "";
   const translated = !label && status && t.has(`statusValues.${value}`) ? t(`statusValues.${value}`) : (label ?? value);
-  return <Badge className={className}>{translated}</Badge>;
+  return <Badge variant="outline" className={className}>{translated}</Badge>;
 }

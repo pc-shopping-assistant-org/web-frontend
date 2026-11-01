@@ -136,10 +136,10 @@ describe("storefront text search", () => {
   it("narrows the search by category, brand and price like the catalog list", async () => {
     const fetchMock = stubFetch({content: [], items: [], page: 0, size: 0, last: true, hasNext: false});
 
-    await listProducts({keyword: " card ", categoryId: "c1", brandId: "b1", minPrice: 10, maxPrice: 20});
+    await listProducts({keyword: " card ", categoryId: "c1", brandId: "b1", minPrice: 10, maxPrice: 20, inStockOnly: true});
 
     expect(fetchMock.mock.calls[0][0]).toBe(
-      "/api/backend/search-service/products/search?q=card&page=0&size=12&categoryId=c1&brandId=b1&minPrice=10&maxPrice=20",
+      "/api/backend/search-service/products/search?q=card&page=0&size=12&categoryId=c1&brandId=b1&minPrice=10&maxPrice=20&inStockOnly=true",
     );
   });
 

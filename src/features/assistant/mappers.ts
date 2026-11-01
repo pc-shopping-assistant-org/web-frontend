@@ -68,7 +68,6 @@ export function mapStatefulTurn(dto: StatefulTurnResult): ChatData {
 }
 
 const text = (value?: string | null) => value?.trim() ?? "";
-const number = (value?: number | null) => value ?? 0;
 
 export function mapProductCard(dto: ProductCardDto): AssistantProduct {
   return {
@@ -77,7 +76,7 @@ export function mapProductCard(dto: ProductCardDto): AssistantProduct {
     seo_name: text(dto.seo_name),
     image_url: text(dto.image_url),
     description: text(dto.description),
-    list_price: number(dto.list_price),
+    list_price: dto.list_price ?? undefined,
     specifications: dto.specifications ?? {},
     status: text(dto.status),
   };
@@ -89,7 +88,7 @@ export function mapProductComparison(dto: ProductComparisonDto): AssistantProduc
     name: text(dto.name),
     image_url: text(dto.image_url),
     description: text(dto.description),
-    list_price: number(dto.list_price),
+    list_price: dto.list_price ?? undefined,
     specifications: dto.specifications ?? {},
     status: text(dto.status),
   };
@@ -125,4 +124,15 @@ export function mapCompareData(dto: CompareDataDto): CompareData {
 
 export function mapEvaluateData(dto: EvaluateDataDto): EvaluateData {
   return {answer: text(dto.answer), product: mapProductCard(dto.product)};
+}
+
+export function formatSpecLabel(value: string): string {
+  return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function formatSpecValue(value: unknown): string {
+  if (Array.isArray(value)) return value.map(formatSpecValue).join(" · ");
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "object") return JSON.stringify(value) ?? "—";
+  return String(value);
 }

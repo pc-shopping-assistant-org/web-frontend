@@ -39,6 +39,8 @@ export type ProductFilters = {
   brandId?: string;
   minPrice?: number;
   maxPrice?: number;
+  inStockOnly?: boolean;
+  semanticQuery?: string;
   keyword?: string;
 };
 
@@ -87,7 +89,7 @@ export async function searchProducts(keyword: string, filters: Omit<ProductFilte
     page: String(Number.isNaN(page) ? 0 : page),
     size: String(filters.limit ?? DEFAULT_SEARCH_SIZE),
   });
-  for (const key of ["categoryId", "brandId", "minPrice", "maxPrice"] as const) {
+  for (const key of ["categoryId", "brandId", "minPrice", "maxPrice", "inStockOnly", "semanticQuery"] as const) {
     const value = filters[key];
     if (value !== undefined && value !== "") params.set(key, String(value));
   }
