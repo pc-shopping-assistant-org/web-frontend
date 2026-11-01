@@ -28,6 +28,7 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
   delete init.service;
   const isFormDataBody = typeof FormData !== "undefined" && init.body instanceof FormData;
   let response: Response;
+  let payload: unknown;
   try {
     response = await fetch(resolveUrl(path, service), {
       ...init,
@@ -38,6 +39,7 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
         ...init.headers,
       },
     });
+    payload = await readJson(response);
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
     throw new ApiClientError(503, service === "ai" ? STATIC_MESSAGE_KEYS.AI_BACKEND_UNAVAILABLE : STATIC_MESSAGE_KEYS.SERVICE_UNAVAILABLE, [
@@ -47,8 +49,6 @@ export async function apiFetch<T>(path: string, options: FetchOptions = {}): Pro
       },
     ]);
   }
-  const payload = await readJson(response);
-
   if (!payload) {
     throw new ApiClientError(response.status || 502, STATIC_MESSAGE_KEYS.SERVICE_UNAVAILABLE);
   }

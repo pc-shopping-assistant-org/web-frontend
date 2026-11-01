@@ -841,9 +841,11 @@ export type components = {
         };
         /** PublicBuildV1 */
         PublicBuildV1: {
-            objective: components["schemas"]["BuildObjective"];
+            objective: components["schemas"]["BuildObjective"] | null;
             /** Parts */
             parts: components["schemas"]["PublicBuildPartV1"][];
+            /** @default RANKED */
+            ranking_status: components["schemas"]["RankingStatus"];
             /** Stale */
             stale: boolean;
             /** Total Spending Vnd */
@@ -1007,6 +1009,11 @@ export type components = {
              */
             unit: "VND" | "GB" | "TB" | "GiB" | "TiB" | "W" | "FPS";
         };
+        /**
+         * RankingStatus
+         * @enum {string}
+         */
+        RankingStatus: "RANKED" | "UNRANKED";
         /** ReferenceValue */
         ReferenceValue: {
             /**

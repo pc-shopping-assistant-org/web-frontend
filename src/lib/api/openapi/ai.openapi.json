@@ -2603,7 +2603,18 @@
       "PublicBuildV1": {
         "properties": {
           "objective": {
-            "$ref": "#/components/schemas/BuildObjective"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuildObjective"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ranking_status": {
+            "$ref": "#/components/schemas/RankingStatus",
+            "default": "RANKED"
           },
           "parts": {
             "items": {
@@ -2615,7 +2626,7 @@
           },
           "total_spending_vnd": {
             "type": "integer",
-            "minimum": 0,
+            "minimum": 0.0,
             "title": "Total Spending Vnd"
           },
           "stale": {
@@ -3965,6 +3976,14 @@
         },
         "type": "object",
         "title": "ApiResponse[NoneType]"
+      },
+      "RankingStatus": {
+        "type": "string",
+        "enum": [
+          "RANKED",
+          "UNRANKED"
+        ],
+        "title": "RankingStatus"
       }
     },
     "securitySchemes": {

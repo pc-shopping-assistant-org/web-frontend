@@ -1,10 +1,9 @@
 import {z} from "zod";
-import {aiFetch} from "@/lib/api/client";
 import {parseRequest} from "@/lib/api/parse-request";
 import {AiMode, AssistantRunStatus} from "@/lib/domain/assistant-enums";
 import {CONVERSATION_HISTORY_PAGE_SIZE, CONVERSATION_ID_PARAM} from "./constants";
 import {runSchema} from "./contracts/stateful";
-import {waitForRunResult} from "./stateful-api";
+import {getChatResource, waitForRunResult} from "./stateful-api";
 import type {ChatTurn} from "./models";
 
 const messagePageSchema = z.object({
@@ -27,7 +26,7 @@ export async function loadConversationHistory(conversationId: string, signal?: A
   do {
     const params = new URLSearchParams({limit: String(CONVERSATION_HISTORY_PAGE_SIZE)});
     if (cursor) params.set("cursor", cursor);
-    const page = messagePageSchema.parse(await aiFetch(`/conversations/${id}/messages?${params}`, {signal, cache: "no-store"}));
+    const page = messagePageSchema.parse(await getChatResource(`/conversations/${id}/messages?${params}`, signal));
     for (const message of page.items) {
       const turn = turns.get(message.run_id) ?? {runId: message.run_id, prompt: ""};
       if (message.role === "user") turn.prompt = message.content;
@@ -43,7 +42,7 @@ export async function loadConversationHistory(conversationId: string, signal?: A
   const last = history.at(-1);
   let pendingRunId: string | undefined;
   if (last?.runId && !last.response) {
-    const run = runSchema.parse(await aiFetch(`/conversations/${id}/runs/${last.runId}`, {signal, cache: "no-store"}));
+    const run = runSchema.parse(await getChatResource(`/conversations/${id}/runs/${last.runId}`, signal));
     const terminal = [AssistantRunStatus.Completed, AssistantRunStatus.WaitingInput, AssistantRunStatus.FailedTerminal, AssistantRunStatus.Cancelled];
     if (run.status === AssistantRunStatus.Completed || run.status === AssistantRunStatus.WaitingInput)
       last.response = await waitForRunResult(id, last.runId, signal);
