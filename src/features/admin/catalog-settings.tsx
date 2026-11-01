@@ -178,7 +178,7 @@ function AttributesPanel() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <Badge className={TYPE_TONE[attribute.dataType ?? ""] ?? TYPE_TONE[AttributeDataType.String]}>
+                        <Badge variant="outline" className={TYPE_TONE[attribute.dataType ?? ""] ?? TYPE_TONE[AttributeDataType.String]}>
                           {attribute.dataType ? tc(`dataTypes.${attribute.dataType}`) : "—"}
                         </Badge>
                         {attribute.unit ? <span className="text-xs text-muted-foreground">{attribute.unit}</span> : null}
@@ -190,10 +190,10 @@ function AttributesPanel() {
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1.5">
                         {attribute.filterable ? (
-                          <Badge className="border-primary/30 bg-primary/5 text-primary">{tc("filterable")}</Badge>
+                          <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">{tc("filterable")}</Badge>
                         ) : null}
                         {attribute.comparable ? (
-                          <Badge className="border-primary/30 bg-primary/5 text-primary">{tc("comparable")}</Badge>
+                          <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">{tc("comparable")}</Badge>
                         ) : null}
                         {!attribute.filterable && !attribute.comparable ? <span className="text-muted-foreground">—</span> : null}
                       </div>
@@ -660,12 +660,12 @@ function TemplateForm({
                 </span>
                 <span className="flex w-28 items-center gap-1.5 text-xs text-muted-foreground">
                   {attribute.dataType ? (
-                    <Badge className={cn("px-2 py-0", TYPE_TONE[attribute.dataType])}>{tc(`dataTypes.${attribute.dataType}`)}</Badge>
+                    <Badge variant="outline" className={cn("px-2 py-0", TYPE_TONE[attribute.dataType])}>{tc(`dataTypes.${attribute.dataType}`)}</Badge>
                   ) : null}
                   {attribute.unit}
                 </span>
                 {attribute.required ? <span className="text-xs text-muted-foreground">{tc("required")}</span> : null}
-                <Badge className="px-2 py-0 text-xs">{tc("inheritedFrom", {name: attribute.sourceCategoryName ?? ""})}</Badge>
+                <Badge variant="outline" className="px-2 py-0 text-xs">{tc("inheritedFrom", {name: attribute.sourceCategoryName ?? ""})}</Badge>
               </li>
             ))}
           </ul>
@@ -723,7 +723,7 @@ function TemplateForm({
                   </Select>
                   <span className="flex w-28 items-center gap-1.5 text-xs text-muted-foreground">
                     {definition?.dataType ? (
-                      <Badge className={cn("px-2 py-0", TYPE_TONE[definition.dataType])}>{tc(`dataTypes.${definition.dataType}`)}</Badge>
+                      <Badge variant="outline" className={cn("px-2 py-0", TYPE_TONE[definition.dataType])}>{tc(`dataTypes.${definition.dataType}`)}</Badge>
                     ) : null}
                     {definition?.unit}
                   </span>

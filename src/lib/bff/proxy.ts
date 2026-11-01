@@ -195,7 +195,7 @@ export async function handleBffRequest(request: Request, service: BffService, pa
   const pathWithoutQuery = pathSegments.join("/");
   const upstreamPath = parsePath(pathSegments, new URL(request.url).search);
   const bodyBuffer = ["GET", "HEAD"].includes(request.method) ? undefined : new Uint8Array(await request.arrayBuffer());
-  const canRefresh = service === "backend" && !AUTH_TOKEN_PATHS.has(pathWithoutQuery) && pathWithoutQuery !== "auth/logout";
+  const canRefresh = (service === "backend" || service === "ai") && !AUTH_TOKEN_PATHS.has(pathWithoutQuery) && pathWithoutQuery !== "auth/logout";
 
   let refreshedTokens: {accessToken?: string; refreshToken?: string} | undefined;
   let refreshFailed = false;
@@ -261,7 +261,7 @@ export async function handleBffRequest(request: Request, service: BffService, pa
 
   let parsed = toEnvelope(result, service);
 
-  if (service === "backend" && result.status === 401 && refreshToken && canRefresh && !refreshFailed) {
+  if ((service === "backend" || service === "ai") && result.status === 401 && refreshToken && canRefresh && !refreshFailed) {
     try {
       const {tokens, payload} = await refreshAccessToken(request, refreshToken);
       if (tokens?.accessToken) {
@@ -270,7 +270,7 @@ export async function handleBffRequest(request: Request, service: BffService, pa
         result = await requestUpstream(request, service, upstreamPath, requestBody, accessToken);
         parsed = toEnvelope(result, service);
       } else {
-        parsed = toEnvelope({status: 401, payload}, "backend");
+        parsed = toEnvelope({status: 401, payload}, service);
       }
     } catch {
       parsed = envelope(null, STATIC_MESSAGE_KEYS.SERVICE_UNAVAILABLE, [{code: "TOKEN_REFRESH_FAILED"}]);

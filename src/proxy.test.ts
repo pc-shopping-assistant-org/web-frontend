@@ -44,3 +44,18 @@ describe("sign-in pages for someone already signed in", () => {
     expect(visit("/vi/login", expired).headers.get("location")).toBeNull();
   });
 });
+
+describe("staff routing boundaries", () => {
+  const token = (claims: Record<string, unknown>) => `h.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.s`;
+  const admin = token({role: "ROLE_ADMIN", exp: Math.floor(Date.now() / 1000) + 600});
+  const visit = (path: string, cookie?: string) =>
+    proxy(new NextRequest(`http://localhost${path}`, cookie ? {headers: {cookie: `ecm_access_token=${cookie}`}} : undefined));
+
+  it("redirects staff from storefront catalog to admin area", () => {
+    expect(visit("/vi/products", admin).headers.get("location")).toBe("http://localhost/vi/admin");
+  });
+
+  it("permits staff to access the AI assistant without redirection", () => {
+    expect(visit("/vi/assistant", admin).headers.get("location")).toBeNull();
+  });
+});

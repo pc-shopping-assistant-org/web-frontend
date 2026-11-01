@@ -160,7 +160,7 @@ function ReviewRow({
             ) : (
               <p className="font-medium">{product}</p>
             )}
-            {review.isVerifiedPurchase ? <Badge>{t("verifiedPurchase")}</Badge> : null}
+            {review.isVerifiedPurchase ? <Badge variant="outline">{t("verifiedPurchase")}</Badge> : null}
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">
             {review.customerName ?? "—"}

@@ -84,7 +84,7 @@ export function ProductReviews({productId, enabled = true}: {productId: string; 
                     <span className="flex items-center gap-2 font-medium">
                       {t("yourReview")}
                       {review.editedAt ? (
-                        <Badge className="border-border bg-muted/70 font-normal text-muted-foreground">{t("editedBadge")}</Badge>
+                        <Badge variant="outline" className="border-border bg-muted/70 font-normal text-muted-foreground">{t("editedBadge")}</Badge>
                       ) : null}
                     </span>
                     <Stars rating={review.rating} />

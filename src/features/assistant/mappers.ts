@@ -126,3 +126,14 @@ export function mapCompareData(dto: CompareDataDto): CompareData {
 export function mapEvaluateData(dto: EvaluateDataDto): EvaluateData {
   return {answer: text(dto.answer), product: mapProductCard(dto.product)};
 }
+
+export function formatSpecLabel(value: string): string {
+  return value.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+export function formatSpecValue(value: unknown): string {
+  if (Array.isArray(value)) return value.map(formatSpecValue).join(" · ");
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "object") return JSON.stringify(value) ?? "—";
+  return String(value);
+}
