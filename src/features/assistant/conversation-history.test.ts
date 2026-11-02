@@ -1,5 +1,5 @@
 import {afterEach, expect, it, vi} from "vitest";
-import {loadConversationHistory, setConversationUrl} from "./conversation-history";
+import {getStoredConversationId, loadConversationHistory, setConversationUrl} from "./conversation-history";
 
 const cid = "00000000-0000-4000-8000-000000000001";
 const rid = "00000000-0000-4000-8000-000000000002";
@@ -12,17 +12,19 @@ const final = {conversation_id: cid, run_id: rid, sequence: 3, event: "COMPLETED
   schema_version: 2, run, revision: 1, answer: "**Ưu tiên di động**", products: [], flexible: null, build: null,
 }};
 
-afterEach(() => {vi.unstubAllGlobals(); window.history.replaceState(null, "", "/");});
+afterEach(() => {vi.unstubAllGlobals(); window.sessionStorage.clear(); window.history.replaceState(null, "", "/");});
 
 it("stores conversation identity without dropping locale or hash and clears it for a new chat", () => {
   window.history.replaceState(null, "", "/vi/assistant?productId=old#chat");
   setConversationUrl(cid);
   expect(window.location.pathname).toBe("/vi/assistant");
   expect(new URL(window.location.href).searchParams.get("conversationId")).toBe(cid);
+  expect(getStoredConversationId()).toBe(cid);
   expect(new URL(window.location.href).searchParams.has("productId")).toBe(false);
   expect(window.location.hash).toBe("#chat");
   setConversationUrl();
   expect(window.location.search).toBe("");
+  expect(getStoredConversationId()).toBeUndefined();
 });
 
 it("loads paged messages and the exact latest typed result without admitting another run", async () => {

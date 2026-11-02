@@ -12,7 +12,7 @@ import {Dialog} from "@/components/ui/dialog";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {Link} from "@/i18n/navigation";
-import {getProductById, getProductBySlug} from "@/features/catalog/api";
+import {getProductById, getProductBySlug, getProductByVariantId} from "@/features/catalog/api";
 import {useAddToCart} from "@/features/cart/queries";
 import {formatMoney} from "@/lib/format";
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
@@ -21,11 +21,13 @@ import {formatSpecLabel, formatSpecValue} from "../mappers";
 export function ProductQuickViewDialog({
   productId,
   seoName,
+  variantId,
   open,
   onClose,
 }: {
   productId?: string;
   seoName?: string;
+  variantId?: string;
   open: boolean;
   onClose: () => void;
 }) {
@@ -35,10 +37,10 @@ export function ProductQuickViewDialog({
   const locale = useLocale();
   const addToCart = useAddToCart();
 
-  const productKey = seoName || productId;
+  const productKey = seoName || productId || variantId;
   const productQuery = useQuery({
-    queryKey: ["catalog", "quick-view", seoName, productId],
-    queryFn: () => (seoName ? getProductBySlug(seoName) : getProductById(productId!)),
+    queryKey: ["catalog", "quick-view", seoName, productId, variantId],
+    queryFn: () => (seoName ? getProductBySlug(seoName) : productId ? getProductById(productId) : getProductByVariantId(variantId!)),
     enabled: open && Boolean(productKey),
     staleTime: 60_000,
   });
@@ -61,7 +63,7 @@ export function ProductQuickViewDialog({
     (v) => !v.status || v.status === ResourceStatus.Active
   );
   const defaultVar = activeVariants.find((v) => v.quantity > 0) ?? activeVariants[0];
-  const currentVariant = activeVariants.find((v) => v.id === selectedVariantId) ?? defaultVar;
+  const currentVariant = activeVariants.find((v) => v.id === (selectedVariantId ?? variantId)) ?? defaultVar;
   const targetVariantId = currentVariant?.id ?? defaultVar?.id ?? null;
   const isOutOfStock = !currentVariant || currentVariant.quantity <= 0;
   const price = currentVariant ? currentVariant.price : detail?.variants?.[0]?.price;

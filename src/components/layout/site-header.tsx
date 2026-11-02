@@ -115,7 +115,7 @@ export function SiteHeader({locale}: {locale: Locale}) {
           {open ? <IconX className="size-5" /> : <IconMenu2 className="size-5" />}
         </button>
 
-        <nav className="hidden items-center gap-0 lg:flex" aria-label="Primary navigation">
+        <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary navigation">
           {links.map(({href, label, icon: Icon}) => (
             <Link
               key={href}
@@ -123,12 +123,12 @@ export function SiteHeader({locale}: {locale: Locale}) {
               aria-label={label}
               title={label}
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground",
-                isActive(href) && "bg-muted text-foreground",
+                "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
+                isActive(href) && "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary",
               )}
             >
               {Icon ? <Icon className="size-4" /> : null}
-              <span className="hidden xl:inline">{label}</span>
+              <span>{label}</span>
               {href === "/cart" && cart.data?.totalItems ? (
                 <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
                   {cart.data.totalItems > 99 ? "99+" : cart.data.totalItems}
@@ -175,6 +175,31 @@ export function SiteHeader({locale}: {locale: Locale}) {
           </Link>
         </nav>
       </div>
+
+      <nav
+        aria-label="Mobile quick navigation"
+        className="flex items-center gap-1 overflow-x-auto border-t border-border/50 px-3 py-1.5 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {links.map(({href, label, icon: Icon}) => (
+          <Link
+            key={href}
+            href={href}
+            onClick={() => setOpen(false)}
+            className={cn(
+              "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
+              isActive(href) && "bg-primary/10 font-semibold text-primary",
+            )}
+          >
+            {Icon ? <Icon className="size-3.5" /> : null}
+            <span>{label}</span>
+            {href === "/cart" && cart.data?.totalItems ? (
+              <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 py-0.5 text-[10px] font-semibold leading-none text-primary-foreground">
+                {cart.data.totalItems > 99 ? "99+" : cart.data.totalItems}
+              </span>
+            ) : null}
+          </Link>
+        ))}
+      </nav>
 
       <MobileMenu
         open={open}

@@ -525,6 +525,7 @@
     "assistantAvailable": "shopping modes",
     "groundingLabel": "catalog grounded",
     "browseCatalog": "Browse catalog",
+    "buildPc": "PC Builder",
     "workspaceTitle": "Start with the right workflow",
     "workspaceDescription": "Choose the kind of help you need. Every answer stays connected to products that are actually in the catalog.",
     "chooseWorkflow": "Choose a workflow",
@@ -589,6 +590,7 @@
       "addAll": "Add the whole build to cart",
       "adding": "Adding ({done}/{total})...",
       "added": "Added {count} parts to cart!",
+      "openBuilder": "Customize in PC Builder",
       "slots": {
         "CPU": "Processor (CPU)",
         "MAINBOARD": "Motherboard",

@@ -525,6 +525,7 @@
     "assistantAvailable": "chế độ mua sắm",
     "groundingLabel": "bám sản phẩm thật",
     "browseCatalog": "Xem sản phẩm",
+    "buildPc": "Tự Build PC",
     "workspaceTitle": "Bắt đầu đúng cách bạn cần",
     "workspaceDescription": "Chọn kiểu hỗ trợ phù hợp. Mọi câu trả lời đều gắn với sản phẩm thực sự đang bán.",
     "chooseWorkflow": "Chọn luồng cần dùng",
@@ -589,6 +590,7 @@
       "addAll": "Thêm toàn bộ cấu hình vào giỏ",
       "adding": "Đang thêm ({done}/{total})...",
       "added": "Đã thêm {count} linh kiện vào giỏ!",
+      "openBuilder": "Tự tùy chỉnh thêm",
       "slots": {
         "CPU": "Bộ vi xử lý (CPU)",
         "MAINBOARD": "Bo mạch chủ (Mainboard)",
