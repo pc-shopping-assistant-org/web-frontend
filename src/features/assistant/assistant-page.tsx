@@ -280,10 +280,14 @@ export function AssistantPage({
               </Badge>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Link href="/products" className="hidden items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground sm:inline-flex">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Link href="/products" className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
               {t("browseCatalog")}
-              <ArrowUpRight className="size-3.5" />
+              <ArrowUpRight className="size-3.5 text-muted-foreground" />
+            </Link>
+            <Link href="/build-pc" className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
+              {t("buildPc")}
+              <ArrowUpRight className="size-3.5 text-muted-foreground" />
             </Link>
             <Button size="sm" variant="outline" onClick={newConversation} disabled={loading} aria-label={t("newConversation")} className="h-8 gap-1.5 rounded-lg px-2.5 text-xs">
               <Plus className="size-3.5" />
@@ -328,6 +332,22 @@ export function AssistantPage({
                     <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary" />
                   </button>
                 ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                <Link
+                  href="/products"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                >
+                  <Search className="size-3.5" />
+                  {t("browseCatalog")}
+                </Link>
+                <Link
+                  href="/build-pc"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                >
+                  <Sparkles className="size-3.5" />
+                  {t("buildPc")}
+                </Link>
               </div>
             </div>
           ) : null}

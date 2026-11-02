@@ -525,6 +525,7 @@
     "assistantAvailable": "shopping modes",
     "groundingLabel": "catalog grounded",
     "browseCatalog": "Browse catalog",
+    "buildPc": "PC Builder",
     "workspaceTitle": "Start with the right workflow",
     "workspaceDescription": "Choose the kind of help you need. Every answer stays connected to products that are actually in the catalog.",
     "chooseWorkflow": "Choose a workflow",
