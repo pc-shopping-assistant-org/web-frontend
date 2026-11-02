@@ -33,7 +33,7 @@ export default async function LocaleLayout({children, params}: {children: ReactN
 
   return (
     <html lang={locale}>
-      <body className="min-h-screen bg-background text-foreground antialiased">
+      <body className="min-h-dvh bg-background text-foreground antialiased">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <QueryProvider>
             <LocaleChrome locale={locale as Locale}>{children}</LocaleChrome>

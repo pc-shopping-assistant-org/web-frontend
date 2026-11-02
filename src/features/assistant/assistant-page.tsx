@@ -391,7 +391,7 @@ export function AssistantPage({
           </div>
         </div>
 
-        <form onSubmit={(event) => void submit(event)} className="mx-auto w-full max-w-4xl shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 sm:px-6">
+        <form onSubmit={(event) => void submit(event)} className="mx-auto w-full max-w-4xl shrink-0 px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 sm:px-6 sm:pb-2 sm:pt-1.5">
           <fieldset disabled={loading} className="min-w-0 rounded-2xl border border-border/80 bg-card px-2.5 py-2 shadow-sm transition focus-within:border-primary/50 focus-within:ring-3 focus-within:ring-primary/10">
             {productIds.length ? <MessageAttachments productIds={productIds} onRemove={(id) => setProductIds((current) => current.filter((item) => item !== id))} /> : null}
             <div className="flex min-w-0 items-end gap-1.5">
@@ -431,7 +431,7 @@ export function AssistantPage({
               </Button>
             </div>
           </fieldset>
-          <p className="mt-1 text-center text-[11px] text-muted-foreground/80">{t("catalogGroundedHint")}</p>
+          <p className="mt-1 hidden text-center text-[11px] text-muted-foreground/80 sm:block">{t("catalogGroundedHint")}</p>
         </form>
       </div>
     </section>

@@ -13,7 +13,7 @@ export function LocaleChrome({locale, children}: {locale: Locale; children: Reac
   const isAssistant = pathname === "/assistant";
 
   return (
-    <div className={isAssistant ? "flex h-dvh min-h-0 flex-col overflow-hidden" : "flex min-h-screen flex-col"}>
+    <div className={isAssistant ? "flex h-dvh min-h-0 flex-col overflow-hidden" : "flex min-h-dvh flex-col"}>
       {!isAdmin ? <SiteHeader locale={locale} /> : null}
       <main className={isAssistant ? "flex min-h-0 flex-1 overflow-hidden" : "flex-1"}>{children}</main>
       {!isAdmin && !isAssistant ? <SiteFooter /> : null}
