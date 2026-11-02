@@ -19,9 +19,10 @@ export function AssistantMarkdown({children, products = [], onAskAboutProduct}: 
           p: ({node, children}) => {
             const indexes = node?.properties["data-products"];
             const selected = typeof indexes === "string" ? indexes.split(",").map((index) => products[Number(index)]).filter(Boolean) : [];
+            const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
             return <>
-              {children ? <p>{children}</p> : null}
-              {selected.length ? <div className="my-3 grid min-w-0 gap-3 sm:grid-cols-2" data-product-cards>
+              {hasChildren ? <p>{children}</p> : null}
+              {selected.length ? <div className="my-2.5 grid min-w-0 gap-3 sm:grid-cols-2" data-product-cards>
                 {selected.map((product) => <AssistantProductCard key={product.id ?? product.product_id ?? product.name} product={product} onAskAboutProduct={onAskAboutProduct} />)}
               </div> : null}
             </>;

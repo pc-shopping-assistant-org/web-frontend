@@ -266,49 +266,66 @@ export function AssistantPage({
       >
         <LoginForm onSuccess={() => setSignInOpen(false)} />
       </Dialog>
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-4 py-3 sm:px-6">
-        <div className="flex min-w-0 items-center gap-3">
-          <Bot className="size-5 shrink-0 text-muted-foreground" />
-          <div className="min-w-0">
-            <h1 className="truncate text-base font-semibold tracking-tight">{t("chatTitle")}</h1>
+      <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-sm">
+        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
+              <Bot className="size-4.5" />
+            </span>
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-sm font-semibold tracking-tight sm:text-base">{t("chatTitle")}</h1>
+              <Badge variant="outline" className="hidden border-primary/25 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary sm:inline-flex">
+                <Sparkles className="mr-1 size-3" />
+                {t("catalogGrounded")}
+              </Badge>
+            </div>
           </div>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link href="/products" className="hidden items-center gap-1 text-sm text-muted-foreground hover:text-foreground sm:inline-flex">
-            {t("browseCatalog")}
-            <ArrowUpRight className="size-4" />
-          </Link>
-          <Button size="sm" variant="ghost" onClick={newConversation} disabled={loading} aria-label={t("newConversation")}>
-            <Plus className="size-4 sm:hidden" />
-            <span className="hidden sm:inline">{t("newConversation")}</span>
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link href="/products" className="hidden items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground sm:inline-flex">
+              {t("browseCatalog")}
+              <ArrowUpRight className="size-3.5" />
+            </Link>
+            <Button size="sm" variant="outline" onClick={newConversation} disabled={loading} aria-label={t("newConversation")} className="h-8 gap-1.5 rounded-lg px-2.5 text-xs">
+              <Plus className="size-3.5" />
+              <span className="hidden sm:inline">{t("newConversation")}</span>
+            </Button>
+          </div>
         </div>
       </header>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {invalidBuild && (
-          <p role="alert" className="m-4 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+          <p role="alert" className="mx-auto mt-3 w-full max-w-4xl rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
             {t("invalidBuild")}
           </p>
         )}
         <div ref={scrollRef} className={styles.scroller} role="log" aria-label={t("conversation")}
           onScroll={(event) => {const element = event.currentTarget; followBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < CHAT_FOLLOW_BOTTOM_DISTANCE_PX;}}>
-          <div className="mx-auto w-full max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+          <div className={`mx-auto w-full max-w-4xl px-4 sm:px-6 ${!chatTurns.length && !streamingPrompt ? "my-auto py-6" : "space-y-5 py-4"}`}>
           {chatTurns.length ? (
             <ChatTranscript turns={chatTurns} locale={locale} onAskAboutProduct={handleAskAboutProduct} />
           ) : !streamingPrompt ? (
-            <div className="flex min-h-60 flex-col items-center justify-center gap-4 text-center">
-              <Sparkles className="size-9 text-primary" />
-              <h2 className="text-xl font-semibold">{t("chatWelcome")}</h2>
-              <p className="max-w-xl text-sm leading-6 text-muted-foreground">{t("unifiedDescription")}</p>
-              <div className="flex flex-wrap justify-center gap-2">
+            <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-4 text-center">
+              <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs ring-1 ring-primary/20">
+                <Sparkles className="size-6" />
+              </div>
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-bold tracking-tight [text-wrap:balance] sm:text-2xl">{t("chatWelcome")}</h2>
+                <p className="max-w-xl text-sm leading-6 text-muted-foreground [text-wrap:pretty]">{t("unifiedDescription")}</p>
+              </div>
+              <div className="mt-1 grid w-full gap-2 sm:grid-cols-3">
                 {["suggestionLaptop", "suggestionBuild", "suggestionCompare"].map((key) => (
                   <button
                     key={key}
-                    className="rounded-xl border bg-muted/30 px-4 py-3 text-sm hover:border-primary/40"
-                    onClick={() => setPrompt(t(key))}
+                    type="button"
+                    className="group flex items-center justify-between gap-2 rounded-xl border border-border/80 bg-card/80 px-3.5 py-3 text-left text-xs font-medium leading-snug text-foreground shadow-2xs transition hover:border-primary/40 hover:bg-primary/[0.04] sm:text-sm"
+                    onClick={() => {
+                      setPrompt(t(key));
+                      textareaRef.current?.focus();
+                    }}
                   >
-                    {t(key)}
+                    <span className="line-clamp-2">{t(key)}</span>
+                    <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-primary" />
                   </button>
                 ))}
               </div>
@@ -328,16 +345,30 @@ export function AssistantPage({
           ) : null}
           {error ? <ErrorMessage error={error} /> : null}
           {proposalChanges.length ? (
-            <ul className="space-y-1 rounded-lg border p-3 text-sm">
+            <ul className="space-y-1.5 rounded-xl border border-primary/25 bg-primary/5 p-3.5 text-sm">
               {proposalChanges.map((change, index) => (
-                <li key={index}>{change}</li>
+                <li key={index} className="flex items-start gap-2">
+                  <Check className="mt-1 size-3.5 shrink-0 text-primary" />
+                  <span>{change}</span>
+                </li>
               ))}
             </ul>
           ) : null}
           {clarificationOptions.length ? (
-            <ul className="space-y-1 rounded-lg border p-3 text-sm">
+            <ul className="flex flex-wrap gap-2">
               {clarificationOptions.map((option, index) => (
-                <li key={index}>{option}</li>
+                <li key={index}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPrompt(option);
+                      textareaRef.current?.focus();
+                    }}
+                    className="rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/50 hover:bg-primary/10"
+                  >
+                    {option}
+                  </button>
+                </li>
               ))}
             </ul>
           ) : null}
@@ -360,19 +391,19 @@ export function AssistantPage({
           </div>
         </div>
 
-        <form onSubmit={(event) => void submit(event)} className="mx-auto w-full max-w-4xl shrink-0 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:px-6">
-          <fieldset disabled={loading} className="min-w-0 rounded-2xl border border-border/70 bg-muted/25 p-3 shadow-sm">
+        <form onSubmit={(event) => void submit(event)} className="mx-auto w-full max-w-4xl shrink-0 px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1.5 sm:px-6">
+          <fieldset disabled={loading} className="min-w-0 rounded-2xl border border-border/80 bg-card px-2.5 py-2 shadow-sm transition focus-within:border-primary/50 focus-within:ring-3 focus-within:ring-primary/10">
             {productIds.length ? <MessageAttachments productIds={productIds} onRemove={(id) => setProductIds((current) => current.filter((item) => item !== id))} /> : null}
-            <div className="flex min-w-0 items-end gap-2">
+            <div className="flex min-w-0 items-end gap-1.5">
               <Popover.Root open={toolsOpen} onOpenChange={setToolsOpen}>
-                <Popover.Trigger type="button" disabled={loading} aria-label={t("addToChat")} className={buttonVariants({variant: "ghost", size: "icon", className: "mb-1 rounded-full"})}>
-                  <Plus className="size-5" />
+                <Popover.Trigger type="button" disabled={loading} aria-label={t("addToChat")} className={buttonVariants({variant: "ghost", size: "icon", className: "size-9 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"})}>
+                  <Plus className="size-4.5" />
                 </Popover.Trigger>
                 <Popover.Portal>
                   <Popover.Positioner side="top" align="start" sideOffset={8} className="z-50">
-                    <Popover.Popup className={`${styles.palette} min-w-56 rounded-xl border border-border/70 bg-background p-1.5 shadow-lg`}>
-                      <button type="button" onClick={() => {setToolsOpen(false); setPickerOpen(true);}} className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm hover:bg-muted">
-                        <PackageSearch className="size-4" />{t("attachProducts")}
+                    <Popover.Popup className={`${styles.palette} min-w-56 rounded-xl border border-border/80 bg-popover p-1.5 shadow-lg`}>
+                      <button type="button" onClick={() => {setToolsOpen(false); setPickerOpen(true);}} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-muted">
+                        <PackageSearch className="size-4 text-primary" />{t("attachProducts")}
                       </button>
                     </Popover.Popup>
                   </Popover.Positioner>
@@ -383,17 +414,24 @@ export function AssistantPage({
               aria-label={t("promptLabel")}
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  if (event.nativeEvent.isComposing || event.keyCode === 229) return;
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
               placeholder={t("unifiedPlaceholder")}
-              rows={2}
+              rows={1}
               maxLength={productIds.length ? MAX_PRODUCT_QUESTION_CHARS : MAX_TURN_MESSAGE_CHARS}
-              className="max-h-40 min-h-16 min-w-0 flex-1 resize-none border-0 bg-transparent px-1 py-1 text-base shadow-none focus-visible:ring-0"
+              className="max-h-36 min-h-9 min-w-0 flex-1 resize-none border-0 bg-transparent px-1.5 py-1.5 text-sm leading-6 shadow-none focus-visible:ring-0 [field-sizing:content]"
             />
-              <Button type="submit" size="icon" aria-label={t("send")} className="mb-1 rounded-xl" disabled={loading || (!prompt.trim() && !productIds.length)}>
+              <Button type="submit" size="icon" aria-label={t("send")} className="size-9 shrink-0 rounded-xl shadow-xs" disabled={loading || (!prompt.trim() && !productIds.length)}>
                 {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
               </Button>
             </div>
           </fieldset>
-          <p className="mt-2 text-center text-[11px] text-muted-foreground">{t("catalogGroundedHint")}</p>
+          <p className="mt-1 text-center text-[11px] text-muted-foreground/80">{t("catalogGroundedHint")}</p>
         </form>
       </div>
     </section>
@@ -551,19 +589,21 @@ function AssistantResult({
   const comparisonKeys = isComparison
     ? Array.from(new Set(products.flatMap((product) => Object.keys(product.specifications ?? {})))).slice(0, 12)
     : [];
+  const hasComparisonTable = isComparison && comparisonKeys.length > 0;
+  if (hideAnswer && !build && !hasComparisonTable) return null;
   return (
     <div className="min-w-0 space-y-4">
         {!hideAnswer ? <AssistantMarkdown>{answer ?? t("noAnswer")}</AssistantMarkdown> : null}
         {build ? <PcBuildSummary build={build} /> : null}
-        {isComparison && comparisonKeys.length > 0 ? (
-          <div className="overflow-hidden rounded-xl border">
+        {hasComparisonTable ? (
+          <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-xs">
             <Table>
               <caption className="sr-only">{t("comparisonTable")}</caption>
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead className="whitespace-nowrap px-4 py-3">{t("specification")}</TableHead>
                   {products.map((product, index) => (
-                    <TableHead key={"product_id" in product ? (product.product_id ?? index) : index} className="min-w-44 px-4 py-3">
+                    <TableHead key={"product_id" in product ? (product.product_id ?? index) : index} className="min-w-44 px-4 py-3 font-semibold text-foreground">
                       {product.name}
                     </TableHead>
                   ))}
@@ -599,41 +639,52 @@ function ChatTranscript({
 }) {
   const t = useTranslations("assistant");
   return (
-    <div className="space-y-8">
-        {turns.map((turn, index) => (
-          <div key={index} className="space-y-3">
-            <div className="ml-auto w-fit max-w-[90%] rounded-2xl bg-muted/70 px-4 py-3 text-sm leading-6 sm:max-w-[80%]">
-              <p className="mb-1 text-[0.68rem] font-medium text-muted-foreground">{t("you")}</p>
-              <p className="whitespace-pre-wrap">{turn.prompt}</p>
-              <MessageAttachments productIds={turn.selectedProductIds} />
+    <div className="space-y-6">
+        {turns.map((turn, index) => {
+          const products = turn.response
+            ? "products" in turn.response
+              ? (turn.response.products ?? [])
+              : "product" in turn.response && turn.response.product
+                ? [turn.response.product]
+                : []
+            : [];
+          const hasBuild = Boolean(turn.response && "stateful" in turn.response && turn.response.stateful?.build);
+          const hasComparison = products.length > 1 && products.some((product) => Object.keys(product.specifications ?? {}).length > 0);
+          return (
+            <div key={index} className="space-y-3">
+              <div className="ml-auto w-fit max-w-[90%] rounded-2xl rounded-tr-sm border border-primary/15 bg-primary/[0.07] px-4 py-2.5 text-sm leading-6 text-foreground shadow-2xs sm:max-w-[78%]">
+                <p className="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-primary/80">{t("you")}</p>
+                <p className="whitespace-pre-wrap">{turn.prompt}</p>
+                <MessageAttachments productIds={turn.selectedProductIds} />
+              </div>
+              {turn.response ? (
+                <div className="min-w-0 rounded-2xl border border-border/60 bg-card/85 px-4 py-3.5 text-sm leading-7 shadow-2xs">
+                  <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <Bot className="size-3.5" />
+                    </span>
+                    {t("assistantLabel")}
+                    {"intent" in turn.response && turn.response.intent ? (
+                      <Badge variant="outline" className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
+                    ) : null}
+                  </div>
+                  <AssistantMarkdown products={products} onAskAboutProduct={onAskAboutProduct}>
+                    {"answer" in turn.response ? turn.response.answer : t("noAnswer")}
+                  </AssistantMarkdown>
+                </div>
+              ) : null}
+              {turn.response && (hasBuild || hasComparison) ? (
+                <div className="ml-0 sm:ml-2">
+                  <AssistantResult
+                    result={turn.response}
+                    locale={locale}
+                    hideAnswer
+                  />
+                </div>
+              ) : null}
             </div>
-            {turn.response ? <div className="min-w-0 text-sm leading-7">
-              <div className="mb-1 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                <Bot className="size-3.5 text-primary" />
-                {t("assistantLabel")}
-                {"intent" in turn.response && turn.response.intent ? (
-                  <Badge variant="outline" className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
-                ) : null}
-              </div>
-              <AssistantMarkdown products={"products" in turn.response ? turn.response.products : "product" in turn.response ? [turn.response.product] : []} onAskAboutProduct={onAskAboutProduct}>
-                {"answer" in turn.response ? turn.response.answer : t("noAnswer")}
-              </AssistantMarkdown>
-            </div> : null}
-            {turn.response && (
-              ("products" in turn.response && turn.response.products?.length) ||
-              ("product" in turn.response && turn.response.product) ||
-              ("stateful" in turn.response && turn.response.stateful?.build)
-            ) ? (
-              <div className="ml-0 sm:ml-4">
-                <AssistantResult
-                  result={turn.response}
-                  locale={locale}
-                  hideAnswer
-                />
-              </div>
-            ) : null}
-          </div>
-        ))}
+          );
+        })}
     </div>
   );
 }
@@ -663,28 +714,30 @@ function StreamingChatTurn({
   const reason = error instanceof ApiClientError ? error.errors.find((entry) => Object.values(AssistantFailureReason).some((value) => value === entry.code))?.code : undefined;
   const description = reason === AssistantFailureReason.ModelTimeout ? "modelTimeout" : reason === AssistantFailureReason.ModelUnavailable ? "modelUnavailable" : terminal ? "processingFailed" : "networkFailed";
   return (
-    <div className="space-y-4">
-        <div className="ml-auto w-fit max-w-[90%] rounded-2xl bg-muted/70 px-4 py-3 text-sm leading-6 sm:max-w-[80%]">
-          <p className="mb-1 text-[0.68rem] font-medium text-muted-foreground">{t("you")}</p>
+    <div className="space-y-3">
+        <div className="ml-auto w-fit max-w-[90%] rounded-2xl rounded-tr-sm border border-primary/15 bg-primary/[0.07] px-4 py-2.5 text-sm leading-6 text-foreground shadow-2xs sm:max-w-[78%]">
+          <p className="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-primary/80">{t("you")}</p>
           <p className="whitespace-pre-wrap">{prompt}</p>
           <MessageAttachments productIds={selectedProductIds} />
         </div>
-        <div className="min-w-0 text-sm leading-7">
-          <div className="mb-1 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            <Bot className="size-3.5 text-primary" />
+        <div className="min-w-0 rounded-2xl border border-border/60 bg-card/85 px-4 py-3.5 text-sm leading-7 shadow-2xs">
+          <div className="mb-2 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <span className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary">
+              <Bot className="size-3.5" />
+            </span>
             {t("assistantLabel")}
             {!failed ? <span className="size-1.5 animate-pulse rounded-full bg-primary" /> : null}
           </div>
           {answer ? <AssistantMarkdown>{answer}</AssistantMarkdown> : !failed ? <AssistantMarkdown>{t("streaming")}</AssistantMarkdown> : null}
           {!failed && state === "reconnecting" ? (
-            <div role="status" className="mt-3 rounded-xl bg-muted/60 p-3 text-sm">
-              <p className="flex items-center gap-2 font-medium"><Loader2 className="size-3.5 animate-spin" />{t("reconnecting")}</p>
+            <div role="status" className="mt-3 rounded-xl border border-border/60 bg-muted/40 p-3 text-sm">
+              <p className="flex items-center gap-2 font-medium"><Loader2 className="size-3.5 animate-spin text-primary" />{t("reconnecting")}</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("recoveringDescription")}</p>
               {onResume ? <Button type="button" size="sm" variant="outline" className="mt-2" onClick={onResume}>{t("checkResult")}</Button> : null}
             </div>
           ) : null}
           {failed ? (
-            <div role="alert" className="mt-3 space-y-2">
+            <div role="alert" className="mt-3 space-y-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3">
               <div className="flex items-center gap-2 text-xs font-medium text-destructive">
                 {terminal ? <Bot className="size-4" /> : <WifiOff className="size-4" />}
                 {t(terminal ? "responseFailed" : "connectionFailed")}

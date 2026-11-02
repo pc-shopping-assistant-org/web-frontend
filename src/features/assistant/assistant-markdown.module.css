@@ -2,78 +2,86 @@
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
-.content :is(p, ul, ol, blockquote, pre, hr) {
-  margin-block: 0.75rem;
+.content :is(p, ul, ol, blockquote, pre, hr):not([data-product-card] *) {
+  margin-block: 0.625rem;
 }
 
-.content p {
+.content p:not([data-product-card] *) {
   white-space: pre-wrap;
+  text-wrap: pretty;
 }
 
-.content :is(h1, h2, h3, h4, h5, h6) {
-  margin-block: 1rem 0.5rem;
+.content :is(h1, h2, h3, h4, h5, h6):not([data-product-card] *) {
+  margin-block: 1rem 0.4rem;
   font-size: 1rem;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.45;
+  text-wrap: balance;
 }
 
-.content h1 {
-  font-size: 1.125rem;
+.content h1:not([data-product-card] *) {
+  font-size: 1.15rem;
 }
 
-.content :is(ul, ol) {
-  padding-inline-start: 1.5rem;
+.content h2:not([data-product-card] *) {
+  font-size: 1.0625rem;
 }
 
-.content ul {
+.content :is(ul, ol):not([data-product-card] *) {
+  padding-inline-start: 1.375rem;
+}
+
+.content ul:not([data-product-card] *) {
   list-style-type: disc;
 }
 
-.content ol {
+.content ol:not([data-product-card] *) {
   list-style-type: decimal;
 }
 
-.content li {
+.content li:not([data-product-card] *) {
+  margin-block: 0.25rem;
+  text-wrap: pretty;
+}
+
+.content li > :is(p, ul, ol):not([data-product-card] *) {
   margin-block: 0.25rem;
 }
 
-.content li > :is(p, ul, ol) {
-  margin-block: 0.25rem;
-}
-
-.content a {
+.content a:not([data-product-card] *) {
   color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 0.2em;
 }
 
-.content blockquote {
-  border-inline-start: 3px solid var(--border);
-  padding-inline-start: 1rem;
+.content blockquote:not([data-product-card] *) {
+  border-inline-start: 3px solid var(--primary);
+  padding-inline-start: 0.875rem;
   color: var(--muted-foreground);
+  text-wrap: pretty;
 }
 
-.content code {
-  border-radius: 0.25rem;
+.content code:not([data-product-card] *) {
+  border-radius: 0.3rem;
   background: var(--muted);
-  padding: 0.125rem 0.25rem;
+  padding: 0.125rem 0.35rem;
   font-family: var(--font-mono);
-  font-size: 0.875em;
+  font-size: 0.85em;
 }
 
-.content pre {
+.content pre:not([data-product-card] *) {
   max-width: 100%;
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
   background: var(--muted);
-  padding: 0.75rem;
+  padding: 0.75rem 0.875rem;
 }
 
-.content pre code {
+.content pre code:not([data-product-card] *) {
   padding: 0;
   white-space: pre;
   overflow-wrap: normal;
@@ -82,9 +90,10 @@
 .tableScroll {
   max-width: 100%;
   overflow-x: auto;
-  margin-block: 0.75rem;
+  margin-block: 0.625rem;
   border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
+  background: var(--card);
 }
 
 .content table {
@@ -100,10 +109,15 @@
   vertical-align: top;
 }
 
+.content tr:last-child td {
+  border-bottom: 0;
+}
+
 .content th {
   background: var(--muted);
   text-align: start;
   font-weight: 600;
+  text-wrap: balance;
 }
 
 .content > :first-child {
