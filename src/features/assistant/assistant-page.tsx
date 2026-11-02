@@ -25,12 +25,13 @@ import {STATIC_MESSAGE_KEYS} from "@/lib/api/contracts/common";
 import {AssistantFailureReason} from "@/lib/domain/assistant-enums";
 import {streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
 import type {Confirmation} from "./contracts/stateful";
-import {CHAT_FOLLOW_BOTTOM_DISTANCE_PX, MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
+import {ACTIVE_CONVERSATION_STORAGE_KEY, CHAT_FOLLOW_BOTTOM_DISTANCE_PX, MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
 import {AssistantMarkdown} from "./assistant-markdown";
 import {loadConversationHistory, setConversationUrl} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
-import type {ChatTurn} from "./models";
+import type {AssistantProduct, ChatTurn} from "./models";
 import {PcBuildSummary} from "./components/pc-build-summary";
+import {ProductQuickViewDialog} from "./components/product-quick-view-dialog";
 import {formatSpecLabel, formatSpecValue} from "./mappers";
 import {MessageAttachments} from "./components/message-attachments";
 import styles from "./assistant-page.module.css";
@@ -58,7 +59,17 @@ export function AssistantPage({
   const [prompt, setPrompt] = useState(initialPrompt);
   const [productIds, setProductIds] = useState<string[]>(initialProductIds);
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
-  const [conversationId, setConversationId] = useState<string | undefined>(initialConversationId);
+  const [conversationId, setConversationId] = useState<string | undefined>(() => {
+    if (initialConversationId) return initialConversationId;
+    if (!initialPrompt && !initialProductIds.length && !invalidBuild && typeof window !== "undefined") {
+      try {
+        return window.sessionStorage.getItem(ACTIVE_CONVERSATION_STORAGE_KEY) || undefined;
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  });
   const [streamingPrompt, setStreamingPrompt] = useState("");
   const [streamingAnswer, setStreamingAnswer] = useState("");
   const [streamingProductIds, setStreamingProductIds] = useState<string[]>([]);
@@ -66,12 +77,13 @@ export function AssistantPage({
   const [streamError, setStreamError] = useState<unknown>(null);
   const [pendingDelivery, setPendingDelivery] = useState<{conversationId: string; runId: string} | null>(null);
   const lastConfirmationRef = useRef<Confirmation | undefined>(undefined);
-  const [loading, setLoading] = useState(Boolean(initialConversationId));
+  const [loading, setLoading] = useState(() => Boolean(conversationId));
   const [error, setError] = useState<unknown>(null);
   const streamController = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const followBottom = useRef(true);
+  const initialTargetIdRef = useRef<string | undefined>(conversationId);
   const lastResponse = chatTurns.findLast((turn) => turn.response)?.response;
   const proposal = lastResponse && "stateful" in lastResponse ? lastResponse.stateful?.proposal : null;
   const proposalChanges = proposal?.changes ?? [];
@@ -89,23 +101,28 @@ export function AssistantPage({
   }, [chatTurns, streamingPrompt, streamingAnswer, error]);
 
   useEffect(() => {
-    if (!initialConversationId) return;
+    const targetId = initialConversationId ?? initialTargetIdRef.current;
+    if (!targetId) return;
+    setConversationUrl(targetId);
     const controller = new AbortController();
     streamController.current = controller;
     void (async () => {
       try {
-        const history = await loadConversationHistory(initialConversationId, controller.signal);
+        const history = await loadConversationHistory(targetId, controller.signal);
         if (controller.signal.aborted) return;
         setChatTurns(history.turns);
         if (history.pendingRunId) {
-          const result = await waitForRunResult(initialConversationId, history.pendingRunId, controller.signal);
+          const result = await waitForRunResult(targetId, history.pendingRunId, controller.signal);
           if (!controller.signal.aborted)
             setChatTurns((turns) => turns.map((turn) => turn.runId === history.pendingRunId ? {...turn, response: result} : turn));
         }
       } catch (cause) {
         if (!controller.signal.aborted) {
           if (cause instanceof ApiClientError && cause.status === 401) setSignInOpen(true);
-          else setError(cause);
+          else if (!initialConversationId && cause instanceof ApiClientError && cause.status === 404) {
+            setConversationId(undefined);
+            setConversationUrl();
+          } else setError(cause);
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -281,11 +298,11 @@ export function AssistantPage({
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <Link href="/products" className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
+            <Link href="/products" className="hidden items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary lg:inline-flex">
               {t("browseCatalog")}
               <ArrowUpRight className="size-3.5 text-muted-foreground" />
             </Link>
-            <Link href="/build-pc" className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary">
+            <Link href="/build-pc" className="hidden items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary lg:inline-flex">
               {t("buildPc")}
               <ArrowUpRight className="size-3.5 text-muted-foreground" />
             </Link>
@@ -602,6 +619,7 @@ function AssistantResult({
   hideAnswer?: boolean;
 }) {
   const t = useTranslations("assistant");
+  const [quickViewProduct, setQuickViewProduct] = useState<AssistantProduct | null>(null);
   const answer = "answer" in result ? result.answer : undefined;
   const products = "products" in result ? (result.products ?? []) : "product" in result && result.product ? [result.product] : [];
   const build = "stateful" in result ? result.stateful?.build : null;
@@ -614,7 +632,7 @@ function AssistantResult({
   return (
     <div className="min-w-0 space-y-4">
         {!hideAnswer ? <AssistantMarkdown>{answer ?? t("noAnswer")}</AssistantMarkdown> : null}
-        {build ? <PcBuildSummary build={build} /> : null}
+        {build ? <PcBuildSummary build={build} products={products} /> : null}
         {hasComparisonTable ? (
           <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-xs">
             <Table>
@@ -622,11 +640,25 @@ function AssistantResult({
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   <TableHead className="whitespace-nowrap px-4 py-3">{t("specification")}</TableHead>
-                  {products.map((product, index) => (
-                    <TableHead key={"product_id" in product ? (product.product_id ?? index) : index} className="min-w-44 px-4 py-3 font-semibold text-foreground">
-                      {product.name}
-                    </TableHead>
-                  ))}
+                  {products.map((product, index) => {
+                    const canQuickView = Boolean(product.id || product.product_id || product.seo_name);
+                    return (
+                      <TableHead key={"product_id" in product ? (product.product_id ?? index) : index} className="min-w-44 px-4 py-3 font-semibold text-foreground">
+                        {canQuickView ? (
+                          <button
+                            type="button"
+                            onClick={() => setQuickViewProduct(product)}
+                            className="group inline-flex items-center gap-1 text-left font-semibold text-foreground transition hover:text-primary hover:underline"
+                          >
+                            <span>{product.name}</span>
+                            <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground transition group-hover:text-primary" />
+                          </button>
+                        ) : (
+                          product.name
+                        )}
+                      </TableHead>
+                    );
+                  })}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -643,6 +675,14 @@ function AssistantResult({
               </TableBody>
             </Table>
           </div>
+        ) : null}
+        {quickViewProduct ? (
+          <ProductQuickViewDialog
+            productId={quickViewProduct.id || quickViewProduct.product_id}
+            seoName={quickViewProduct.seo_name}
+            open={Boolean(quickViewProduct)}
+            onClose={() => setQuickViewProduct(null)}
+          />
         ) : null}
     </div>
   );
@@ -778,5 +818,3 @@ function StreamingChatTurn({
     </div>
   );
 }
-
-

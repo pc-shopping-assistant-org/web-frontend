@@ -590,6 +590,7 @@
       "addAll": "Add the whole build to cart",
       "adding": "Adding ({done}/{total})...",
       "added": "Added {count} parts to cart!",
+      "openBuilder": "Customize in PC Builder",
       "slots": {
         "CPU": "Processor (CPU)",
         "MAINBOARD": "Motherboard",

@@ -132,6 +132,11 @@ export async function getProductById(productId: string) {
   return mapProductDetail(response);
 }
 
+export async function getProductByVariantId(variantId: string) {
+  const variant = await backendFetch<ProductVariantLookupDto>(`/catalog-service/product-variants/${encodeURIComponent(variantId)}`);
+  return getProductById(variant.productId);
+}
+
 export async function getProductSummariesByIds(productIds: string[]) {
   const products = await Promise.all(productIds.map((productId) => getProductById(productId)));
   return products.map(mapProductDetailToSummary);

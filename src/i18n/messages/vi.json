@@ -590,6 +590,7 @@
       "addAll": "Thêm toàn bộ cấu hình vào giỏ",
       "adding": "Đang thêm ({done}/{total})...",
       "added": "Đã thêm {count} linh kiện vào giỏ!",
+      "openBuilder": "Tự tùy chỉnh thêm",
       "slots": {
         "CPU": "Bộ vi xử lý (CPU)",
         "MAINBOARD": "Bo mạch chủ (Mainboard)",

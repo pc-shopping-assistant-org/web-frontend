@@ -1,7 +1,7 @@
 import {z} from "zod";
 import {parseRequest} from "@/lib/api/parse-request";
 import {AiMode, AssistantRunStatus} from "@/lib/domain/assistant-enums";
-import {CONVERSATION_HISTORY_PAGE_SIZE, CONVERSATION_ID_PARAM} from "./constants";
+import {ACTIVE_CONVERSATION_STORAGE_KEY, CONVERSATION_HISTORY_PAGE_SIZE, CONVERSATION_ID_PARAM} from "./constants";
 import {runSchema} from "./contracts/stateful";
 import {getChatResource, waitForRunResult} from "./stateful-api";
 import type {ChatTurn} from "./models";
@@ -13,10 +13,33 @@ const messagePageSchema = z.object({
   next_cursor: z.uuid().nullable(),
 });
 
+export function getStoredConversationId(): string | undefined {
+  try {
+    const raw = typeof window !== "undefined" ? window.sessionStorage.getItem(ACTIVE_CONVERSATION_STORAGE_KEY) : null;
+    const parsed = z.uuid().safeParse(raw);
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export function setConversationUrl(conversationId?: string) {
   const url = new URL(window.location.href);
-  if (conversationId) url.searchParams.set(CONVERSATION_ID_PARAM, conversationId);
-  else url.searchParams.delete(CONVERSATION_ID_PARAM);
+  if (conversationId) {
+    url.searchParams.set(CONVERSATION_ID_PARAM, conversationId);
+    try {
+      window.sessionStorage.setItem(ACTIVE_CONVERSATION_STORAGE_KEY, conversationId);
+    } catch {
+      // ignore storage quota / privacy mode errors
+    }
+  } else {
+    url.searchParams.delete(CONVERSATION_ID_PARAM);
+    try {
+      window.sessionStorage.removeItem(ACTIVE_CONVERSATION_STORAGE_KEY);
+    } catch {
+      // ignore storage errors
+    }
+  }
   for (const key of ["build", "productId", "productIds"]) url.searchParams.delete(key);
   window.history.replaceState(window.history.state, "", url);
 }
