@@ -1,6 +1,6 @@
 "use client";
 
-import {Plus, Undo2} from "lucide-react";
+import {Undo2} from "lucide-react";
 import {useTranslations} from "next-intl";
 import {useState, type FormEvent, type ReactNode} from "react";
 
@@ -11,15 +11,18 @@ import {ErrorMessage} from "@/components/ui/error-message";
 import {Input} from "@/components/ui/input";
 import {Label} from "@/components/ui/label";
 import {Select} from "@/components/ui/select";
-import type {ProductDetail, ProductVariant} from "@/features/catalog/contracts/responses";
+import type {ProductDetail, ProductOption, ProductVariant} from "@/features/catalog/contracts/responses";
 import {ResourceStatus, type EditableResourceStatus} from "@/lib/domain/catalog-enums";
 
-import {useCreateAdminVariant, useDeleteAdminVariant, useUpdateAdminVariant} from "./queries";
+import {useAdjustAdminVariantStock, useDeleteAdminVariant, useSaveAdminVariations, useUpdateAdminVariant} from "./queries";
 import {CellFields, MoneyInput, ValueImage, VariantMatrixEditor} from "./variant-matrix";
 import {
-  buildVariantRequests,
-  emptyMatrix,
+  buildVariationItems,
+  carryExisting,
+  cellFromVariant,
   isValidCell,
+  lockedValueIds,
+  matrixFromVariants,
   validateMatrix,
   type VariantImage,
   type VariantProblem,
@@ -56,11 +59,10 @@ function draftOf(variant: ProductVariant): RowDraft {
   };
 }
 
-/** The update the backend takes for an edited row; the options are the columns of the table. */
-function updateRequest(row: RowDraft, optionNames: string[]) {
+/** The update the backend takes for an edited row. Options change through the variations editor, so they are sent as they are. */
+function updateRequest(row: RowDraft, options: ProductOption[]) {
   return {
     price: Number(row.price),
-    quantity: Number(row.quantity),
     sku: row.sku.trim(),
     model: row.model.trim() || undefined,
     barcode: row.barcode.trim() || undefined,
@@ -68,12 +70,12 @@ function updateRequest(row: RowDraft, optionNames: string[]) {
     description: row.description.trim() || undefined,
     warrantyMonths: Number(row.warranty),
     imageFileId: row.image?.fileId,
-    options: optionNames.map((name) => ({name, value: (row.options[name] ?? "").trim()})).filter((option) => option.value),
+    options: options.map((option) => ({name: option.name, value: option.value})),
     status: row.status,
   };
 }
 
-/** The variants of a product as a table you edit in place, and the same editor as the create page to add more. */
+/** The variants of a product as a table you edit in place, and the create page's editor to change the variations as a whole. */
 export function ProductVariantsSection({product}: {product: ProductDetail}) {
   const t = useTranslations("admin");
   const tv = useTranslations("admin.variantMatrix");
@@ -93,7 +95,7 @@ export function ProductVariantsSection({product}: {product: ProductDetail}) {
         ) : (
           <VariantRows productId={product.id} variants={variants} />
         )}
-        <AddVariants productId={product.id} withSingle={variants.length === 0} />
+        <VariationsEditor productId={product.id} active={variants.filter((variant) => variant.status === ResourceStatus.Active)} />
       </CardContent>
     </Card>
   );
@@ -123,7 +125,7 @@ function SingleVariantForm({productId, variant}: {productId: string; variant: Pr
       return;
     }
     try {
-      await update.mutateAsync({productId, id: variant.id, request: updateRequest(row, [])});
+      await update.mutateAsync({productId, id: variant.id, request: updateRequest(row, variant.options)});
     } catch (cause) {
       setError(cause);
     }
@@ -132,7 +134,7 @@ function SingleVariantForm({productId, variant}: {productId: string; variant: Pr
   return (
     <form className="space-y-4" onSubmit={(event) => void submit(event)}>
       <div className="grid gap-4 sm:grid-cols-3">
-        <CellFields id="variant-edit" cell={row} onChange={(change) => patch(change)} />
+        <CellFields id="variant-edit" cell={row} stockLocked onChange={(change) => patch(change)} />
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="variant-edit-description">{tv("variantDescription")}</Label>
           <Input id="variant-edit-description" value={row.description} onChange={(event) => patch({description: event.target.value})} />
@@ -149,6 +151,7 @@ function SingleVariantForm({productId, variant}: {productId: string; variant: Pr
           </Select>
         </div>
       </div>
+      <StockAdjuster productId={productId} variant={variant} />
       {error ? (
         typeof error === "string" ? (
           <p role="alert" className="text-sm text-destructive">
@@ -203,7 +206,7 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
       return;
     }
     try {
-      await update.mutateAsync({productId, id: variant.id, request: updateRequest(row, names)});
+      await update.mutateAsync({productId, id: variant.id, request: updateRequest(row, variant.options)});
       drop(variant.id);
     } catch (error) {
       setErrors((all) => ({...all, [variant.id]: error}));
@@ -243,28 +246,18 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
                   <ValueImage label={label} image={row.image} onChange={(image) => patch(variant, {image: image ?? undefined})} />
                 </td>
                 {names.map((name) => (
-                  <td key={name} className="min-w-32 px-3 py-3">
-                    <Input
-                      aria-label={`${name} · ${label}`}
-                      value={row.options[name] ?? ""}
-                      maxLength={255}
-                      onChange={(event) => patch(variant, {options: {...row.options, [name]: event.target.value}})}
-                    />
+                  <td key={name} className="min-w-32 px-3 py-3 align-middle font-medium">
+                    {row.options[name] ?? "—"}
                   </td>
                 ))}
                 <td className="min-w-40 px-3 py-3">
                   <MoneyInput label={tv("priceOf", {name: label})} value={row.price} onChange={(price) => patch(variant, {price})} />
                 </td>
-                <td className="min-w-24 px-3 py-3">
-                  <Input
-                    aria-label={tv("stockOf", {name: label})}
-                    type="number"
-                    min="0"
-                    step="1"
-                    inputMode="numeric"
-                    value={row.quantity}
-                    onChange={(event) => patch(variant, {quantity: event.target.value})}
-                  />
+                <td className="min-w-36 px-3 py-3">
+                  <p className="mb-1 font-medium tabular-nums" aria-label={tv("stockOf", {name: label})}>
+                    {variant.quantity}
+                  </p>
+                  <StockAdjuster productId={productId} variant={variant} label={label} />
                 </td>
                 <td className="min-w-28 px-3 py-3">
                   <Input
@@ -318,7 +311,7 @@ function VariantRows({productId, variants}: {productId: string; variants: Produc
                 </td>
                 <td className="px-3 py-3">
                   <Select
-                    className="h-9 w-36"
+                    className="h-9 w-44"
                     aria-label={`${t("status")} · ${label}`}
                     value={row.status}
                     onChange={(event) => patch(variant, {status: event.target.value as EditableResourceStatus})}
@@ -398,64 +391,194 @@ function Th({children}: {children: ReactNode}) {
   );
 }
 
-/**
- * New variants, made the way the create page makes them. A variant that fails leaves the ones before it made;
- * pressing the button again makes only those still missing.
- */
-function AddVariants({productId, withSingle}: {productId: string; withSingle: boolean}) {
+/** Adds or takes off stock by an amount, so what orders took since the page was loaded is never undone. */
+function StockAdjuster({productId, variant, label}: {productId: string; variant: ProductVariant; label?: string}) {
+  const t = useTranslations("admin");
   const tv = useTranslations("admin.variantMatrix");
-  const create = useCreateAdminVariant();
-  const [matrix, setMatrix] = useState(emptyMatrix);
-  const [problem, setProblem] = useState<VariantProblem | null>(null);
-  const [done, setDone] = useState<string[]>([]);
+  const adjust = useAdjustAdminVariantStock();
+  const [open, setOpen] = useState(false);
+  const [delta, setDelta] = useState("");
   const [error, setError] = useState<unknown>(null);
-  const requests = buildVariantRequests(matrix);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    const found = validateMatrix(matrix);
-    setProblem(found);
-    if (found) return;
+  const amount = Number(delta.trim());
+  const valid = /^[+-]?\d+$/.test(delta.trim()) && amount !== 0;
+  const close = () => {
+    setOpen(false);
+    setDelta("");
     setError(null);
-    const made = [...done];
-    for (const {key, request} of requests) {
-      if (made.includes(key)) continue;
-      try {
-        await create.mutateAsync({productId, request});
-      } catch (cause) {
-        setError(cause);
-        setDone(made);
-        return;
-      }
-      made.push(key);
+  };
+
+  async function submit() {
+    if (!valid) return;
+    try {
+      await adjust.mutateAsync({productId, id: variant.id, delta: amount});
+      close();
+    } catch (cause) {
+      setError(cause);
     }
-    setDone([]);
-    setMatrix(emptyMatrix());
   }
 
+  if (!open) {
+    return (
+      <Button type="button" variant="link" size="xs" className="h-auto p-0 text-sm font-medium" onClick={() => setOpen(true)}>
+        {tv("adjustStock")}
+      </Button>
+    );
+  }
   return (
-    <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+    <div className="max-w-xs space-y-2">
+      <Input
+        aria-label={tv("adjustStockOf", {name: label ?? variant.sku})}
+        className="h-8"
+        inputMode="numeric"
+        placeholder={tv("adjustStockPlaceholder")}
+        value={delta}
+        autoFocus
+        onChange={(event) => {
+          setDelta(event.target.value);
+          setError(null);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            void submit();
+          }
+        }}
+      />
+      <p className="text-xs text-muted-foreground">
+        {valid ? tv("adjustStockPreview", {from: variant.quantity, to: variant.quantity + amount}) : tv("adjustStockHint")}
+      </p>
+      {error ? <ErrorMessage error={error} /> : null}
+      <div className="flex gap-2">
+        <Button type="button" size="xs" disabled={!valid || adjust.isPending} onClick={() => void submit()}>
+          {tv("saveRow")}
+        </Button>
+        <Button type="button" variant="ghost" size="xs" onClick={close}>
+          {t("cancel")}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The variations of the product as a whole, in the create page's editor: groups and options can be added or removed and
+ * everything is saved in one call. Existing variants keep their stock and orders; an option an ordered variant uses
+ * cannot be renamed. Variants on sale that are no longer listed are hidden, or deleted when nothing refers to them.
+ */
+function VariationsEditor({productId, active}: {productId: string; active: ProductVariant[]}) {
+  const t = useTranslations("admin");
+  const tv = useTranslations("admin.variantMatrix");
+  const save = useSaveAdminVariations();
+  const [open, setOpen] = useState(active.length === 0);
+  const [matrix, setMatrix] = useState(() => matrixFromVariants(active));
+  // Taken when the editor opens: an option typed afterwards is new, even once an ordered variant is carried onto it
+  const [locked, setLocked] = useState(() => lockedValueIds(matrix));
+  const [problem, setProblem] = useState<VariantProblem | null>(null);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<unknown>(null);
+  const items = buildVariationItems(matrix);
+  const keptIds = new Set(items.map((item) => item.id).filter(Boolean));
+  const leftOut = active.filter((variant) => !keptIds.has(variant.id));
+  const grouped = matrix.groups.some((group) => group.values.some((value) => value.text.trim()));
+  const nameOf = (variant: ProductVariant) => variant.options.map((option) => option.value).join(" / ") || variant.sku;
+
+  function start() {
+    const loaded = matrixFromVariants(active);
+    setMatrix(loaded);
+    setLocked(lockedValueIds(loaded));
+    setProblem(null);
+    setError(null);
+    setConfirming(false);
+    setOpen(true);
+  }
+
+  async function persist() {
+    setError(null);
+    try {
+      await save.mutateAsync({productId, request: {variants: items}});
+      setConfirming(false);
+      setOpen(false);
+    } catch (cause) {
+      setConfirming(false);
+      setError(cause);
+    }
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+    const found = validateMatrix(matrix) ?? (items.length === 0 ? {code: "empty" as const} : null);
+    setProblem(found);
+    if (found) return;
+    if (leftOut.length > 0) setConfirming(true);
+    else void persist();
+  }
+
+  if (!open) {
+    return (
+      <Button type="button" variant="outline" onClick={start}>
+        {tv("editVariations")}
+      </Button>
+    );
+  }
+  return (
+    <form className="space-y-4 rounded-xl border p-4" onSubmit={submit}>
       <VariantMatrixEditor
-        title={tv("addTitle")}
-        description={tv("addDescription")}
+        title={tv("editVariationsTitle")}
+        description={tv("editVariationsDescription")}
         value={matrix}
-        withSingle={withSingle}
+        lockedValues={locked}
         onChange={(next) => {
-          setMatrix(next);
+          setMatrix((previous) => carryExisting(previous, next));
           setProblem(null);
+          setConfirming(false);
         }}
         problem={problem}
       />
-      {error ? (
-        <div role="alert" className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
-          <p className="font-medium">{tv("addPartial", {done: done.length, total: requests.length})}</p>
-          <ErrorMessage error={error} />
+      {!grouped && active.length > 1 ? (
+        <div className="max-w-md space-y-2">
+          <Label htmlFor="variation-keep">{tv("keepVariant")}</Label>
+          <Select
+            id="variation-keep"
+            value={matrix.single.variantId ?? ""}
+            onChange={(event) => {
+              const kept = active.find((variant) => variant.id === event.target.value);
+              if (kept) setMatrix((current) => ({...current, single: cellFromVariant(kept)}));
+            }}
+          >
+            {active.map((variant) => (
+              <option key={variant.id} value={variant.id}>
+                {nameOf(variant)}
+              </option>
+            ))}
+          </Select>
         </div>
       ) : null}
-      <Button type="submit" disabled={create.isPending || requests.length === 0}>
-        <Plus className="size-4" />
-        {tv("addVariants")}
-      </Button>
+      {confirming ? (
+        <div role="alert" className="space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/5 p-4 text-sm">
+          <p className="font-medium">{tv("leftOutTitle", {count: leftOut.length})}</p>
+          <p>{leftOut.map(nameOf).join(", ")}</p>
+          <p className="text-muted-foreground">{tv("leftOutDescription")}</p>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" disabled={save.isPending} onClick={() => void persist()}>
+              {tv("confirmSaveVariations")}
+            </Button>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+              {t("cancel")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      {error ? <ErrorMessage error={error} /> : null}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={save.isPending || confirming}>
+          {tv("saveVariations")}
+        </Button>
+        {active.length > 0 ? (
+          <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+            {t("cancel")}
+          </Button>
+        ) : null}
+      </div>
     </form>
   );
 }

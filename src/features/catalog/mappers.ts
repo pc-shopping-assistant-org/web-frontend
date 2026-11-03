@@ -154,6 +154,7 @@ export function mapProductVariant(dto: ProductVariantDto): ProductVariant {
     status: dto.status,
     warrantyMonths: dto.warrantyMonths ?? undefined,
     createdAt: dto.createdAt,
+    hasOrders: dto.hasOrders ?? undefined,
     options: (dto.options ?? []).map(mapProductOption),
   };
 }

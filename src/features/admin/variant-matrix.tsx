@@ -23,6 +23,9 @@ import {
   type VariantProblem,
 } from "./variant-matrix-model";
 
+/** An existing variant's stock only moves through stock adjustments, so its field reads like text. */
+const READ_ONLY_INPUT = "bg-muted text-muted-foreground focus-visible:ring-0";
+
 /**
  * The seller's way of describing variants: up to two groups ("Color", "Size") with their options, then one row of
  * price, stock and SKU for every combination. It only edits the state; the page turns that into variants.
@@ -34,6 +37,7 @@ export function VariantMatrixEditor({
   title,
   description,
   withSingle = true,
+  lockedValues,
 }: {
   value: VariantMatrixState;
   onChange: (next: VariantMatrixState) => void;
@@ -43,6 +47,8 @@ export function VariantMatrixEditor({
   description?: string;
   /** Offer the price and stock of a product without groups; off when the product already has its variants. */
   withSingle?: boolean;
+  /** Options an ordered variant uses: they can be removed (the variant is then hidden) but not renamed. */
+  lockedValues?: Set<string>;
 }) {
   const t = useTranslations("admin.variantMatrix");
   const rows = variantRows(value);
@@ -64,6 +70,7 @@ export function VariantMatrixEditor({
           key={group.id}
           index={index}
           group={group}
+          lockedValues={lockedValues}
           onChange={(patch) => setGroup(group.id, patch)}
           onRemove={() => onChange({...value, groups: value.groups.filter((other) => other.id !== group.id)})}
         />
@@ -103,11 +110,13 @@ export function VariantMatrixEditor({
 function GroupCard({
   index,
   group,
+  lockedValues,
   onChange,
   onRemove,
 }: {
   index: number;
   group: VariantGroup;
+  lockedValues?: Set<string>;
   onChange: (patch: Partial<VariantGroup>) => void;
   onRemove: () => void;
 }) {
@@ -150,6 +159,8 @@ function GroupCard({
                   maxLength={255}
                   aria-label={t("optionLabel", {group: index + 1, n: position + 1})}
                   placeholder={t("optionPlaceholder")}
+                  disabled={lockedValues?.has(value.id)}
+                  title={lockedValues?.has(value.id) ? t("optionLocked") : undefined}
                   onChange={(event) => setText(value.id, event.target.value)}
                 />
                 {last ? (
@@ -181,7 +192,8 @@ function SingleVariant({cell, onChange}: {cell: VariantCell; onChange: (patch: P
     <div className="space-y-3 rounded-xl border p-4">
       <div>
         <p className="font-medium">{t("singleTitle")}</p>
-        <p className="mt-1 text-sm text-muted-foreground">{t("singleDescription")}</p>
+        {/* Leaving the price empty only makes sense while creating; an existing variant keeps its SKU */}
+        {cell.variantId ? null : <p className="mt-1 text-sm text-muted-foreground">{t("singleDescription")}</p>}
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <CellFields id="variant-single" cell={cell} onChange={onChange} />
@@ -190,7 +202,18 @@ function SingleVariant({cell, onChange}: {cell: VariantCell; onChange: (patch: P
   );
 }
 
-export function CellFields({id, cell, onChange}: {id: string; cell: VariantCell; onChange: (patch: Partial<VariantCell>) => void}) {
+/** The stock of an existing variant is shown but not edited here: it changes only by a stock adjustment. */
+export function CellFields({
+  id,
+  cell,
+  onChange,
+  stockLocked = Boolean(cell.variantId),
+}: {
+  id: string;
+  cell: Pick<VariantCell, "price" | "quantity" | "sku" | "warranty" | "model" | "barcode" | "releaseAt" | "variantId">;
+  onChange: (patch: Partial<VariantCell>) => void;
+  stockLocked?: boolean;
+}) {
   const t = useTranslations("admin.variantMatrix");
   return (
     <>
@@ -207,6 +230,9 @@ export function CellFields({id, cell, onChange}: {id: string; cell: VariantCell;
           step="1"
           inputMode="numeric"
           value={cell.quantity}
+          readOnly={stockLocked}
+          className={stockLocked ? READ_ONLY_INPUT : undefined}
+          title={stockLocked ? t("stockLocked") : undefined}
           onChange={(event) => onChange({quantity: event.target.value})}
         />
       </div>
@@ -311,7 +337,7 @@ function VariantTable({
       cells[row.key] = {
         ...cellOf(value, row.key),
         ...(bulk.price.trim() ? {price: bulk.price} : {}),
-        ...(bulk.quantity.trim() ? {quantity: bulk.quantity} : {}),
+        ...(bulk.quantity.trim() && !cellOf(value, row.key).variantId ? {quantity: bulk.quantity} : {}),
         ...(bulk.warranty.trim() ? {warranty: bulk.warranty} : {}),
       };
     }
@@ -419,6 +445,9 @@ function VariantTable({
                       step="1"
                       inputMode="numeric"
                       value={cell.quantity}
+                      readOnly={Boolean(cell.variantId)}
+                      className={cell.variantId ? READ_ONLY_INPUT : undefined}
+                      title={cell.variantId ? t("stockLocked") : undefined}
                       onChange={(event) => setCell(row.key, {quantity: event.target.value})}
                     />
                   </td>

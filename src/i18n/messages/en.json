@@ -789,6 +789,21 @@
     "comparable": "Comparable",
     "status": "Status",
     "orderStatus": "Order status",
+    "orderActions": {
+      "confirm": "Confirm",
+      "ship": "Ship order",
+      "complete": "Complete",
+      "cancel": "Cancel order"
+    },
+    "orderSteps": {
+      "placed": "Order Placed",
+      "confirmed": "Confirmed",
+      "shipping": "Shipping",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "copied": "Copied",
+      "copy": "Copy"
+    },
     "confirmStatusChange": "Confirm status change",
     "statusChangeDescription": "This record will move to {status}. Do you want to continue?",
     "cancel": "Cancel",
@@ -893,6 +908,8 @@
     "deliveredAt": "Delivered at",
     "moreItems": "and {count} more",
     "customerName": "Customer name",
+    "recipientName": "Recipient name",
+    "recipientPhone": "Phone number",
     "collectCash": "Confirm cash collected",
     "collectCashDescription": "Confirm the courier collected the full cash amount. The payment becomes Paid and can only change again by a refund.",
     "refundPayment": "Refund",
@@ -925,12 +942,12 @@
       "rowCount": "{count} variants",
       "singleTitle": "Price and stock",
       "singleDescription": "A product without variants sells at one price. Leave the price empty to add SKUs later, on the detail page.",
-      "singleEditDescription": "This product has no variants, so it has a single SKU. Add a variant group below to sell more options.",
+      "singleEditDescription": "This product has no variants, so it has a single SKU. Press Edit variations below to sell more options.",
       "imageFor": "Image for {name}",
       "imageFailed": "The upload failed, click to try again",
       "removeImage": "Remove image",
       "retry": "Try again",
-      "partial": "The product was created but only {done} of {total} variants were. The details are saved; press Try again to create the missing ones, or open the product to add them later.",
+      "partial": "The product was created but its variants were not saved. The details are saved; press Try again to save the variants, or open the product to add them later.",
       "openCreated": "Open the product",
       "problem": {
         "groupName": "Give a name to each group that has options.",
@@ -938,7 +955,8 @@
         "duplicateValue": "A group has two options that are the same.",
         "cells": "{count} variants lack a valid price, stock, warranty or SKU (whole numbers; the warranty is at least 1 month).",
         "duplicateSku": "Two variants cannot share a SKU.",
-        "duplicateBarcode": "Two variants cannot share a barcode."
+        "duplicateBarcode": "Two variants cannot share a barcode.",
+        "empty": "Enter a price for the product or add at least one variant."
       },
       "warranty": "Warranty (months)",
       "warrantyOf": "Warranty of {name}",
@@ -953,10 +971,21 @@
       "image": "Image",
       "saveRow": "Save",
       "undo": "Undo",
-      "addVariants": "Add variants",
-      "addPartial": "Only {done} of {total} variants were added. Press Add variants to try the rest again.",
-      "addTitle": "Add new variants",
-      "addDescription": "Add groups such as Color or Storage; every combination is one SKU with its own price and stock. They are added next to the variants above."
+      "optionLocked": "This option has been ordered, so it cannot be renamed. Add a new option and remove the old one (its variant is then hidden).",
+      "stockLocked": "The stock of an existing variant changes only by a stock adjustment, so orders placed meanwhile are never undone.",
+      "adjustStock": "Adjust stock",
+      "adjustStockOf": "Adjust stock of {name}",
+      "adjustStockPlaceholder": "+20 or -1",
+      "adjustStockHint": "Enter how many to add (a delivery) or take off (damaged, stock count).",
+      "adjustStockPreview": "Stock: {from} → {to}",
+      "editVariations": "Edit variations",
+      "editVariationsTitle": "Edit variations",
+      "editVariationsDescription": "Add or remove groups and options, then save once. Existing variants keep their stock and orders; stock is entered only for new ones.",
+      "keepVariant": "Variant to keep as the product without variations",
+      "leftOutTitle": "{count} variants on sale are no longer listed",
+      "leftOutDescription": "Those never ordered and out of stock are deleted; the others are hidden to keep their stock and order history.",
+      "confirmSaveVariations": "Save anyway",
+      "saveVariations": "Save variations"
     },
     "makeCover": "Make cover",
     "removeImage": "Remove image",
@@ -1191,7 +1220,16 @@
       "actions": "Actions",
       "empty": "There are no orders yet.",
       "emptyFiltered": "No order matches the filters.",
-      "rangeError": "The start date must be on or before the end date."
+      "rangeError": "The start date must be on or before the end date.",
+      "kpiPending": "Pending Confirmation",
+      "kpiShipping": "In Transit",
+      "kpiCompleted": "Completed",
+      "kpiRevenue": "Completed Revenue",
+      "refresh": "Refresh",
+      "export": "Export Report",
+      "filterHint": "Quick filter by this status",
+      "totalRecords": "{count} total orders",
+      "completedRecords": "{count} completed orders"
     },
     "paymentList": {
       "all": "All",
@@ -1340,7 +1378,12 @@
     "EXTERNAL_SERVICE_ERROR": "An external service failed.",
     "AI_PRODUCT_NOT_FOUND": "The requested AI product could not be found.",
     "UNKNOWN": "Something went wrong. Please try again.",
-    "PAYLOAD_TOO_LARGE": "The uploaded file is too large (10 MB maximum)."
+    "PAYLOAD_TOO_LARGE": "The uploaded file is too large (10 MB maximum).",
+    "VARIANT_OPTIONS_MISMATCH": "Every variant on sale must have the same option groups. Use Edit variations to add or remove a group.",
+    "DUPLICATE_VARIANT_COMBINATION": "Another variant on sale already has exactly these options.",
+    "VARIANT_OPTIONS_LOCKED": "This variant has been ordered, so its options cannot change. Create a new variant and hide the old one.",
+    "STOCK_BELOW_ZERO": "You cannot take off more than the stock on hand.",
+    "VARIANT_LISTED_TWICE": "The same variant is listed twice. Reload the page and try again."
   },
   "status": {
     "PENDING_PAYMENT": "Pending payment",

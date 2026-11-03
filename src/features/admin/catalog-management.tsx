@@ -19,12 +19,12 @@ import {CategoryPicker} from "./category-picker";
 import {galleryRequest, ProductGalleryEditor, type GalleryItem} from "./product-fields";
 import {SpecificationsEditor} from "./specifications-editor";
 import {VariantMatrixEditor} from "./variant-matrix";
-import {buildVariantRequests, emptyMatrix, validateMatrix, type VariantProblem} from "./variant-matrix-model";
-import {useCreateAdminProduct, useCreateAdminVariant} from "./queries";
+import {buildVariationItems, emptyMatrix, validateMatrix, type VariantProblem} from "./variant-matrix-model";
+import {useCreateAdminProduct, useSaveAdminVariations} from "./queries";
 
 /**
- * The product and its variants in one go. They are separate backend calls, so the product is made first and the
- * variants one by one; one that fails leaves the product behind and a retry makes only the variants still missing.
+ * The product and its variants in one go. They are two backend calls: the product first, then all its variants at once,
+ * so a failure leaves either no variant or all of them. When only the variants failed, a retry sends just them again.
  */
 export function ProductCreateForm() {
   const t = useTranslations("admin");
@@ -33,10 +33,10 @@ export function ProductCreateForm() {
   const categories = useCategories();
   const brands = useBrands();
   const create = useCreateAdminProduct();
-  const createVariant = useCreateAdminVariant();
+  const saveVariations = useSaveAdminVariations();
   const [matrix, setMatrix] = useState(emptyMatrix);
   const [matrixProblem, setMatrixProblem] = useState<VariantProblem | null>(null);
-  const [created, setCreated] = useState<{id: string; done: string[]} | null>(null);
+  const [created, setCreated] = useState<{id: string} | null>(null);
   const [variantError, setVariantError] = useState<unknown>(null);
   const [form, setForm] = useState({
     name: "",
@@ -84,18 +84,15 @@ export function ProductCreateForm() {
       }
       if (!productId) return;
     }
-    const done = [...(created?.done ?? [])];
-    setCreated({id: productId, done});
-    for (const {key, request} of buildVariantRequests(matrix)) {
-      if (done.includes(key)) continue;
+    setCreated({id: productId});
+    const variants = buildVariationItems(matrix);
+    if (variants.length > 0) {
       try {
-        await createVariant.mutateAsync({productId, request});
+        await saveVariations.mutateAsync({productId, request: {variants}});
       } catch (error) {
         setVariantError(error);
         return;
       }
-      done.push(key);
-      setCreated({id: productId, done: [...done]});
     }
     router.push(`/admin/products/${productId}`);
   }
@@ -187,7 +184,7 @@ export function ProductCreateForm() {
             />
             {created && variantError ? (
               <div role="alert" className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm sm:col-span-2">
-                <p className="font-medium">{tv("partial", {done: created.done.length, total: buildVariantRequests(matrix).length})}</p>
+                <p className="font-medium">{tv("partial")}</p>
                 <ErrorMessage error={variantError} />
                 <Link
                   href={`/admin/products/${created.id}`}
@@ -198,7 +195,7 @@ export function ProductCreateForm() {
               </div>
             ) : null}
             <div className="flex flex-wrap gap-2 sm:col-span-2">
-              <Button type="submit" disabled={create.isPending || createVariant.isPending || !form.categoryId || !form.name.trim()}>
+              <Button type="submit" disabled={create.isPending || saveVariations.isPending || !form.categoryId || !form.name.trim()}>
                 <Plus className="size-4" />
                 {created ? tv("retry") : t("create")}
               </Button>
