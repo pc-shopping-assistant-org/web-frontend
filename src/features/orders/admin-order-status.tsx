@@ -1,22 +1,25 @@
 "use client";
 
+import {Ban, Check, CheckCircle2, Loader2, Truck} from "lucide-react";
 import {useTranslations} from "next-intl";
-import {useState} from "react";
+import {useMemo, useState} from "react";
 
 import {Button} from "@/components/ui/button";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Label} from "@/components/ui/label";
-import {Select} from "@/components/ui/select";
 import {Textarea} from "@/components/ui/textarea";
 import {ORDER_STATUS_TRANSITIONS, OrderStatus} from "@/lib/domain/commerce-enums";
+import {cn} from "@/lib/utils";
 
 import {useAdvanceOrder, useCancelOrderAsAdmin} from "./queries";
 
 const MAX_REASON_LENGTH = 500;
 
 /**
- * The steps the shop can take on an order: the select moves it on, and cancelling asks for the reason first.
- * {@code onError} takes over the refusal of a step, for a list whose row disappears when the order is refreshed.
+ * Modern Quick-Action Buttons for Order Status Management:
+ * - Highlights the single primary progressive next step (Confirm / Ship / Complete).
+ * - Discrete, dedicated cancellation button with full reason modal.
+ * - Loading indicator feedback during asynchronous status mutations.
  */
 export function AdminOrderStatusControl({
   orderId,
@@ -34,50 +37,119 @@ export function AdminOrderStatusControl({
   const cancel = useCancelOrderAsAdmin();
   const [showCancel, setShowCancel] = useState(false);
   const [reason, setReason] = useState("");
+
   const options = ORDER_STATUS_TRANSITIONS[status as OrderStatus] ?? [status];
+  const nextStatus = options.find((opt) => opt !== status && opt !== OrderStatus.Cancelled);
+  const canCancel = options.includes(OrderStatus.Cancelled) && status !== OrderStatus.Cancelled;
   const pending = advance.isPending || cancel.isPending;
 
-  function change(next: string) {
-    if (!next || next === status) return;
-    if (next === OrderStatus.Cancelled) {
-      setReason("");
-      cancel.reset();
-      setShowCancel(true);
-      return;
-    }
-    onError?.(null);
-    advance.mutateAsync({orderId, status: next}).catch((error: unknown) => onError?.(error));
-  }
+  const nextActionConfig = useMemo(() => {
+    if (!nextStatus) return null;
 
-  async function confirmCancel() {
+    if (nextStatus === OrderStatus.Confirmed) {
+      return {
+        label: t("orderActions.confirm"),
+        icon: Check,
+        className: "bg-primary text-primary-foreground hover:bg-primary/90",
+      };
+    }
+    if (nextStatus === OrderStatus.Shipping) {
+      return {
+        label: t("orderActions.ship"),
+        icon: Truck,
+        className: "bg-primary text-primary-foreground hover:bg-primary/90",
+      };
+    }
+    if (nextStatus === OrderStatus.Completed) {
+      return {
+        label: t("orderActions.complete"),
+        icon: CheckCircle2,
+        className: "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500",
+      };
+    }
+
+    return {
+      label: t.has(`statusValues.${nextStatus}`) ? t(`statusValues.${nextStatus}`) : nextStatus,
+      icon: Check,
+      className: "bg-primary text-primary-foreground hover:bg-primary/90",
+    };
+  }, [nextStatus, t]);
+
+  const handleAdvance = async (targetStatus: string) => {
+    if (pending || !targetStatus) return;
+    onError?.(null);
+    try {
+      await advance.mutateAsync({orderId, status: targetStatus});
+    } catch (error: unknown) {
+      onError?.(error);
+    }
+  };
+
+  const handleOpenCancel = () => {
+    setReason("");
+    cancel.reset();
+    setShowCancel(true);
+  };
+
+  const confirmCancel = async () => {
     try {
       await cancel.mutateAsync({orderId, reason: reason.trim()});
       setShowCancel(false);
     } catch {
-      // the dialog shows the refusal
+      // dialog renders error
     }
+  };
+
+  if (!nextStatus && !canCancel) {
+    return null;
   }
+
+  const ActionIcon = nextActionConfig?.icon;
 
   return (
     <>
-      <Select
-        className={className ?? "h-9 w-52"}
-        value={status}
-        onChange={(event) => change(event.target.value)}
-        disabled={pending || options.length < 2}
-        aria-label={t("orderStatus")}
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {t.has(`statusValues.${option}`) ? t(`statusValues.${option}`) : option}
-          </option>
-        ))}
-      </Select>
+      <div className={cn("inline-flex flex-wrap items-center gap-1.5", className)}>
+        {/* Primary progressive next status button */}
+        {nextStatus && nextActionConfig ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleAdvance(nextStatus)}
+            disabled={pending}
+            className={cn(
+              "h-8 gap-1.5 px-3 text-xs font-medium shadow-none transition-all active:scale-[0.98]",
+              nextActionConfig.className,
+            )}
+          >
+            {advance.isPending ? <Loader2 className="size-3.5 animate-spin" /> : ActionIcon ? <ActionIcon className="size-3.5" /> : null}
+            <span>{nextActionConfig.label}</span>
+          </Button>
+        ) : null}
+
+        {/* Dedicated cancellation action */}
+        {canCancel ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleOpenCancel}
+            disabled={pending}
+            title={t("cancelOrder")}
+            className="h-8 gap-1 px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+          >
+            {cancel.isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Ban className="size-3.5" />}
+            <span>{t("orderActions.cancel")}</span>
+          </Button>
+        ) : null}
+      </div>
+
       {advance.isError && !onError ? (
-        <div className="w-full">
+        <div className="mt-2 w-full">
           <ErrorMessage error={advance.error} />
         </div>
       ) : null}
+
+      {/* Cancellation confirmation modal */}
       {showCancel ? (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm"
@@ -109,6 +181,7 @@ export function AdminOrderStatusControl({
                 maxLength={MAX_REASON_LENGTH}
                 onChange={(event) => setReason(event.target.value)}
                 autoFocus
+                placeholder={t("cancellationReason")}
               />
             </div>
             {cancel.isError ? <ErrorMessage error={cancel.error} /> : null}

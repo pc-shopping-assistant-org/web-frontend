@@ -739,6 +739,21 @@
     "comparable": "Comparable",
     "status": "Status",
     "orderStatus": "Order status",
+    "orderActions": {
+      "confirm": "Confirm",
+      "ship": "Ship order",
+      "complete": "Complete",
+      "cancel": "Cancel order"
+    },
+    "orderSteps": {
+      "placed": "Order Placed",
+      "confirmed": "Confirmed",
+      "shipping": "Shipping",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "copied": "Copied",
+      "copy": "Copy"
+    },
     "confirmStatusChange": "Confirm status change",
     "statusChangeDescription": "This record will move to {status}. Do you want to continue?",
     "cancel": "Cancel",
@@ -843,6 +858,8 @@
     "deliveredAt": "Delivered at",
     "moreItems": "and {count} more",
     "customerName": "Customer name",
+    "recipientName": "Recipient name",
+    "recipientPhone": "Phone number",
     "collectCash": "Confirm cash collected",
     "collectCashDescription": "Confirm the courier collected the full cash amount. The payment becomes Paid and can only change again by a refund.",
     "refundPayment": "Refund",
@@ -1153,7 +1170,16 @@
       "actions": "Actions",
       "empty": "There are no orders yet.",
       "emptyFiltered": "No order matches the filters.",
-      "rangeError": "The start date must be on or before the end date."
+      "rangeError": "The start date must be on or before the end date.",
+      "kpiPending": "Pending Confirmation",
+      "kpiShipping": "In Transit",
+      "kpiCompleted": "Completed",
+      "kpiRevenue": "Completed Revenue",
+      "refresh": "Refresh",
+      "export": "Export Report",
+      "filterHint": "Quick filter by this status",
+      "totalRecords": "{count} total orders",
+      "completedRecords": "{count} completed orders"
     },
     "paymentList": {
       "all": "All",

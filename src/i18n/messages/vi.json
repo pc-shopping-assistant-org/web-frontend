@@ -739,6 +739,21 @@
     "comparable": "Cho phép so sánh",
     "status": "Trạng thái",
     "orderStatus": "Trạng thái đơn hàng",
+    "orderActions": {
+      "confirm": "Duyệt đơn",
+      "ship": "Giao hàng",
+      "complete": "Hoàn tất",
+      "cancel": "Hủy đơn"
+    },
+    "orderSteps": {
+      "placed": "Đặt hàng",
+      "confirmed": "Xác nhận",
+      "shipping": "Đang giao",
+      "completed": "Hoàn tất",
+      "cancelled": "Đã hủy",
+      "copied": "Đã chép",
+      "copy": "Sao chép"
+    },
     "confirmStatusChange": "Xác nhận đổi trạng thái",
     "statusChangeDescription": "Bản ghi sẽ chuyển sang trạng thái {status}. Bạn có muốn tiếp tục không?",
     "cancel": "Hủy",
@@ -843,6 +858,8 @@
     "deliveredAt": "Giao hàng lúc",
     "moreItems": "và {count} sản phẩm khác",
     "customerName": "Tên khách hàng",
+    "recipientName": "Người nhận",
+    "recipientPhone": "Số điện thoại",
     "collectCash": "Xác nhận đã thu tiền",
     "collectCashDescription": "Xác nhận nhân viên giao hàng đã thu đủ tiền mặt. Thanh toán chuyển sang Đã thanh toán và không đổi lại được trừ khi hoàn tiền.",
     "refundPayment": "Hoàn tiền",
@@ -1153,7 +1170,16 @@
       "actions": "Thao tác",
       "empty": "Chưa có đơn hàng nào.",
       "emptyFiltered": "Không có đơn hàng nào khớp bộ lọc.",
-      "rangeError": "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc."
+      "rangeError": "Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.",
+      "kpiPending": "Chờ xác nhận",
+      "kpiShipping": "Đang giao hàng",
+      "kpiCompleted": "Đã hoàn tất",
+      "kpiRevenue": "Doanh thu hoàn tất",
+      "refresh": "Làm mới",
+      "export": "Xuất báo cáo",
+      "filterHint": "Lọc nhanh theo trạng thái này",
+      "totalRecords": "Tổng {count} đơn hàng",
+      "completedRecords": "{count} đơn hoàn tất"
     },
     "paymentList": {
       "all": "Tất cả",

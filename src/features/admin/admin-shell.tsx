@@ -49,13 +49,13 @@ const navGroups = [
   },
   {
     label: "navGroups.tools",
-    items: [{key: "aiAssistant", href: "/assistant", icon: Bot}],
+    items: [{key: "aiAssistant", href: "/assistant", icon: Bot, hidden: true}],
   },
   {
     label: "navGroups.orders",
     items: [
       {key: "orders", href: "/admin/orders", icon: Boxes, employeeOnly: true},
-      {key: "invoices", href: "/admin/invoices", icon: FileText, employeeOnly: true},
+      {key: "invoices", href: "/admin/invoices", icon: FileText, employeeOnly: true, hidden: true},
     ],
   },
   {
@@ -167,7 +167,7 @@ export function AdminShell({children}: {children: ReactNode}) {
     }
   }
 
-  const isVisible = (item: object) => (!("adminOnly" in item) || isAdminRole(role)) && (!("employeeOnly" in item) || isEmployeeRole(role));
+  const isVisible = (item: object) => !("hidden" in item) && (!("adminOnly" in item) || isAdminRole(role)) && (!("employeeOnly" in item) || isEmployeeRole(role));
 
   function isActive(href: string) {
     return href === "/admin" ? pathname === href : pathname.startsWith(href);
