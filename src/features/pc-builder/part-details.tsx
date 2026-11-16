@@ -7,6 +7,16 @@ import type {BuilderCopy} from "./copy";
 import type {Part} from "./models";
 import {PartArt} from "./part-art";
 
+/** The few specs worth showing on a card, in order; catalog entries carry many more and some are only loose numbers. */
+const CARD_SPEC_KEYS = ["socket", "ram_type", "form_factor", "capacity", "vram", "wattage", "chipset"];
+
+function keySpecs(specs: Part["specs"]): string {
+  return CARD_SPEC_KEYS.filter((key) => specs[key] !== undefined && specs[key] !== "")
+    .slice(0, 2)
+    .map((key) => String(specs[key]))
+    .join(" · ");
+}
+
 export function PartDetails({
   part,
   compact = false,
@@ -25,26 +35,33 @@ export function PartDetails({
   const [open, setOpen] = useState(false);
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <div className={compact ? "flex items-start gap-3" : ""}>
+      <div className={compact ? "flex flex-col gap-3" : ""}>
         <Dialog.Trigger
           aria-label={`${t.details}: ${part.name}`}
           className={
             compact
-              ? "flex size-16 shrink-0 items-center justify-center rounded-lg bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring"
+              ? "flex h-36 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-white focus-visible:ring-2 focus-visible:ring-ring"
               : "block w-full rounded-xl focus-visible:ring-2 focus-visible:ring-ring"
           }
         >
-          <PartArt slot={part.slot} compact={compact} />
+          <PartArt slot={part.slot} compact={compact} fill={compact} imageUrl={part.imageUrl} alt={part.name} />
         </Dialog.Trigger>
         <div className={compact ? "min-w-0 flex-1" : "mt-3"}>
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{part.brand}</p>
-          <h3 className={compact ? "mt-1 line-clamp-2 text-sm font-semibold leading-5" : "mt-1 min-h-12 text-base font-semibold leading-6"}>
-            <Dialog.Trigger className="text-left hover:text-primary focus-visible:outline-2 focus-visible:outline-ring">
+          <h3 className={compact ? "mt-1 min-h-10 text-sm font-semibold leading-5" : "mt-1 min-h-12 text-base font-semibold leading-6"}>
+            <Dialog.Trigger
+              title={part.name}
+              className={
+                compact
+                  ? "line-clamp-2 break-words text-left hover:text-primary focus-visible:outline-2 focus-visible:outline-ring"
+                  : "text-left hover:text-primary focus-visible:outline-2 focus-visible:outline-ring"
+              }
+            >
               {part.name}
             </Dialog.Trigger>
           </h3>
           <p className="mt-1 truncate text-xs text-muted-foreground">
-            {compact ? Object.values(part.specs).slice(0, 2).join(" · ") : part.sku}
+            {compact ? keySpecs(part.specs) : part.sku}
           </p>
         </div>
       </div>
@@ -62,9 +79,9 @@ export function PartDetails({
               <IconX className="size-5" />
             </Dialog.Close>
           </div>
-          <Dialog.Description className="mt-2 text-xs text-muted-foreground">{t.notice}</Dialog.Description>
+          <Dialog.Description className="sr-only">{part.name}</Dialog.Description>
           <div className="my-5">
-            <PartArt slot={part.slot} />
+            <PartArt slot={part.slot} imageUrl={part.imageUrl} alt={part.name} />
           </div>
           <p className="text-xs text-muted-foreground">{t.illustration}</p>
           <p className="mt-3 text-2xl font-bold text-primary">{money(part.price)}</p>

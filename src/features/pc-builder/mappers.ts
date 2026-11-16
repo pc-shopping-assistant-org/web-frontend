@@ -11,6 +11,7 @@ export function toPart(dto: ComponentDto): Part {
     price: dto.listPrice,
     inStock: dto.quantity > 0,
     specs: dto.specifications,
+    imageUrl: dto.imageUrl,
   };
 }
 export function toQuote(dto: QuoteDto): BuildQuote {

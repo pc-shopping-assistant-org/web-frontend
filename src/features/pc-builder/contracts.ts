@@ -16,6 +16,8 @@ export const Slot = {
 } as const;
 export type Slot = (typeof Slot)[keyof typeof Slot];
 export const slots = Object.values(Slot);
+/** Most units of one part a build can ask for. */
+export const MAX_QUANTITY = 10;
 export const coreSlots: Slot[] = [Slot.CPU, Slot.MAINBOARD, Slot.RAM, Slot.GPU, Slot.SSD, Slot.PSU, Slot.CASE, Slot.COOLER];
 export const optionalSlots: Slot[] = [Slot.MONITOR, Slot.MOUSE, Slot.KEYBOARD, Slot.HEADSET];
 export const slotGroups = [
@@ -37,11 +39,13 @@ export const componentSchema = z.object({
   listPrice: z.number().int().nonnegative(),
   quantity: z.number().int().nonnegative(),
   specifications: z.record(z.string(), z.union([z.string(), z.number()])),
+  imageUrl: z.string().optional(),
 });
 export const checkSchema = z.object({
   code: z.string(),
   status: z.enum(["COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"]),
   slots: z.array(z.enum(slots)),
+  message: z.string().optional(),
 });
 export const quoteSchema = z.object({
   total: z.number().int().nonnegative(),

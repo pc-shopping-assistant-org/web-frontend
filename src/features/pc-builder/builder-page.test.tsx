@@ -17,10 +17,16 @@ vi.mock("@/i18n/navigation", () => ({
   ),
 }));
 vi.mock("./api", () => ({
-  getComponents: async (slot: string) => components.filter((p) => p.slot === slot).map(toPart),
+  getComponentPage: async (slot: string) => {
+    const parts = components.filter((p) => p.slot === slot).map(toPart);
+    return {parts, totalPages: 1, totalElements: parts.length};
+  },
+  getBrands: async (slot: string) =>
+    [...new Set(components.filter((p) => p.slot === slot).map((p) => toPart(p).brand))].map((name) => ({id: name, name})),
   getAccessories: async () => components.filter((p) => ["MOUSE", "KEYBOARD", "MONITOR", "HEADSET"].includes(p.slot)).map(toPart),
   getQuote: async (selection: Parameters<typeof quoteBuild>[0]) => toQuote(quoteBuild(selection)),
-  getCandidates: async (...args: Parameters<typeof validateCandidates>) => validateCandidates(...args),
+  getCandidates: async (selection: Parameters<typeof validateCandidates>[0], slot: Parameters<typeof validateCandidates>[1]) =>
+    validateCandidates(selection, slot),
 }));
 
 afterEach(() => {
@@ -80,6 +86,7 @@ describe("PC builder interactions", () => {
     expect(within(summary).queryByText("Chưa chọn")).not.toBeInTheDocument();
     await user.click(screen.getByRole("tab", {name: "Phụ kiện"}));
     await user.click(within(screen.getByRole("navigation", {name: "Chọn linh kiện"})).getByRole("button", {name: "Chuột"}));
+    await user.click(screen.getByRole("button", {name: "Đóng chi tiết"}));
     await user.click(screen.getByRole("tab", {name: "Core"}));
     await user.click(screen.getByRole("tab", {name: "Phụ kiện"}));
     expect(within(screen.getByRole("navigation", {name: "Chọn linh kiện"})).getByRole("button", {name: "Chuột"})).toHaveAttribute(
@@ -98,6 +105,7 @@ describe("PC builder interactions", () => {
     expect(within(navigation).queryByRole("button", {name: /Vi xử lý/})).not.toBeInTheDocument();
     await user.click(within(navigation).getByRole("button", {name: /Chuột/}));
     await screen.findByRole("heading", {name: "Razer Viper V3 HyperSpeed"});
+    await user.click(screen.getByRole("button", {name: "Đóng chi tiết"}));
     await user.click(screen.getByRole("button", {name: "Thay thế Vi xử lý"}));
     expect(screen.getByRole("tab", {name: "Core"})).toHaveAttribute("aria-selected", "true");
     await screen.findByRole("heading", {name: "AMD Ryzen 5 7600"});
@@ -115,6 +123,7 @@ describe("PC builder interactions", () => {
   it("selects, keeps selection across slots, and removes a part", async () => {
     const user = userEvent.setup();
     mount();
+    await user.click(within(screen.getByRole("navigation", {name: "Chọn linh kiện"})).getByRole("button", {name: /Vi xử lý/}));
     const title = await screen.findByRole("heading", {name: "AMD Ryzen 5 7600"});
     await user.click(within(title.closest("article")!).getByRole("button", {name: "Chọn linh kiện"}));
     await screen.findByRole("button", {name: "Bỏ Vi xử lý"});
@@ -154,6 +163,7 @@ describe("PC builder interactions", () => {
   it("filters known conflicts but keeps candidates with unknown compatibility", async () => {
     const user = userEvent.setup();
     mount();
+    await user.click(within(screen.getByRole("navigation", {name: "Chọn linh kiện"})).getByRole("button", {name: /Vi xử lý/}));
     const title = await screen.findByRole("heading", {name: "AMD Ryzen 5 7600"});
     await user.click(within(title.closest("article")!).getByRole("button", {name: "Chọn linh kiện"}));
     await user.click(within(screen.getByRole("navigation", {name: "Chọn linh kiện"})).getByRole("button", {name: /Bo mạch chủ/}));

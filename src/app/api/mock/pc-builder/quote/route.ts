@@ -2,8 +2,7 @@ import {buildRequestSchema} from "@/features/pc-builder/contracts";
 import {quoteBuild} from "@/features/pc-builder/service";
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => null);
-  const parsed = buildRequestSchema.safeParse(body);
+  const parsed = buildRequestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success)
     return Response.json(
       {

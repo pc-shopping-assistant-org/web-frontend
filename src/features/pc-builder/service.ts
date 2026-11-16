@@ -43,14 +43,17 @@ export function validateCandidates(selection: Selection, slot: Slot) {
   quoteBuild(selection); // Reject invalid existing IDs instead of masking them.
   return Object.fromEntries(
     components
-      .filter((part) => part.slot === slot)
+      .filter((part) => part.slot === slot && part.quantity > 0)
       .map((part) => {
-        const checks = quoteBuild({...selection, [slot]: part.id}).checks.filter((check) => check.slots.includes(slot));
-        const status = checks.some((c) => c.status === "INCOMPATIBLE")
+        const allChecks = quoteBuild({...selection, [slot]: part.id}).checks.filter((check) => check.slots.includes(slot));
+        const evaluatedChecks = allChecks.filter(
+          (c) => c.code !== "PSU_CAPACITY" && c.code !== "SSD_INTERFACE" && c.code !== "COOLER_CLEARANCE",
+        );
+        const status = allChecks.some((c) => c.status === "INCOMPATIBLE")
           ? "INCOMPATIBLE"
-          : !checks.length || checks.some((c) => c.status === "UNKNOWN")
-            ? "UNKNOWN"
-            : "COMPATIBLE";
+          : evaluatedChecks.length > 0 && evaluatedChecks.every((c) => c.status === "COMPATIBLE")
+            ? "COMPATIBLE"
+            : "UNKNOWN";
         return [part.id, status];
       }),
   );
