@@ -34,7 +34,7 @@ export function PartCard({
           <div className="mt-2.5 flex min-h-6 items-center">
             {status === "COMPATIBLE" ? (
               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-                ✓ {part.specs.socket ? `Khớp Socket ${part.specs.socket}` : part.specs.ram_type ? `Khớp chuẩn ${part.specs.ram_type}` : t.statuses.COMPATIBLE}
+                ✓ {part.specs.socket ? `Khớp Socket ${part.specs.socket}` : part.specs.ram_type ? `Khớp chuẩn ${part.specs.ram_type}` : part.specs.interface ? `Khớp ${part.specs.interface}` : t.statuses.COMPATIBLE}
               </span>
             ) : status === "INCOMPATIBLE" ? (
               <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-0.5 text-[11px] font-bold text-destructive">
@@ -42,7 +42,7 @@ export function PartCard({
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                {part.specs.socket ? `Socket ${part.specs.socket}` : part.specs.ram_type ? `Chuẩn ${part.specs.ram_type}` : t.statuses.UNKNOWN}
+                {part.specs.socket ? `Socket ${part.specs.socket}` : part.specs.ram_type ? `Chuẩn ${part.specs.ram_type}` : part.specs.interface ? `Chuẩn ${part.specs.interface}` : t.statuses.UNKNOWN}
               </span>
             )}
           </div>

@@ -9,9 +9,9 @@ const MAX_QUESTION_LENGTH = 4000;
 const REQUEST_TIMEOUT_MS = 15_000;
 /** Spec keys that say what a part is; the rest of a catalog entry is marketing detail the model does not need. */
 const SPEC_KEYS = [
-  "socket", "ram_type", "form_factor", "supported_form_factors", "memory_type", "capacity", "speed", "cores", "threads",
+  "socket", "ram_type", "form_factor", "supported_form_factors", "memory_type", "capacity", "capacity_gb", "speed", "cores", "threads",
   "tdp_watts", "wattage", "efficiency", "gpu_length_mm", "max_gpu_length_mm", "cooler_height_mm", "max_cooler_height_mm",
-  "supported_sockets", "chipset", "vram", "interface",
+  "radiator_mm", "max_radiator_mm", "supported_sockets", "chipset", "vram", "vram_gb", "interface",
 ];
 
 type Envelope<T> = {data: T | null};

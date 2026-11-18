@@ -132,7 +132,7 @@ export const components: ComponentDto[] = [
     brand: "MSI",
     listPrice: 3890000,
     quantity: 10,
-    specifications: {socket: "AM5", ram_type: "DDR5", form_factor: "mATX"},
+    specifications: {socket: "AM5", ram_type: "DDR5", form_factor: "mATX", m2_slots: 2},
   },
   {
     id: "board-intel",
@@ -143,7 +143,7 @@ export const components: ComponentDto[] = [
     brand: "ASUS",
     listPrice: 4190000,
     quantity: 7,
-    specifications: {socket: "LGA1700", ram_type: "DDR5", form_factor: "ATX"},
+    specifications: {socket: "LGA1700", ram_type: "DDR5", form_factor: "ATX", m2_slots: 3},
   },
   {
     id: "board-amd-atx",
@@ -154,7 +154,7 @@ export const components: ComponentDto[] = [
     brand: "Gigabyte",
     listPrice: 4590000,
     quantity: 6,
-    specifications: {socket: "AM5", ram_type: "DDR5", form_factor: "ATX"},
+    specifications: {socket: "AM5", ram_type: "DDR5", form_factor: "ATX", m2_slots: 3},
   },
   {
     id: "ram-ddr5",
@@ -243,6 +243,17 @@ export const components: ComponentDto[] = [
     listPrice: 3990000,
     quantity: 10,
     specifications: {capacity: "2TB", interface: "PCIe 4.0", format: "M.2 2280"},
+  },
+  {
+    id: "hdd-2tb",
+    productId: "mock-hdd2",
+    sku: "DEMO-HDD-2TB",
+    name: "Seagate Barracuda 2TB 3.5\"",
+    slot: "SSD",
+    brand: "Seagate",
+    listPrice: 1550000,
+    quantity: 15,
+    specifications: {capacity: "2TB", interface: "SATA 3", format: "3.5 inch"},
   },
   {
     id: "psu-650",

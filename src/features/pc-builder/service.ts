@@ -32,9 +32,22 @@ export function quoteBuild(input: Selection): QuoteDto {
   check("COOLER_SOCKET", ["CPU", "COOLER"], specs("CPU")?.socket, specs("COOLER")?.supported_sockets, (a, b) =>
     String(b).split(",").includes(String(a)),
   );
+  // Mainboard vs Storage (SSD/HDD) interface check
+  const mbSpecs = specs("MAINBOARD");
+  const ssdSpecs = specs("SSD");
+  if (mbSpecs && ssdSpecs) {
+    const isM2 = String(ssdSpecs.format || "").includes("M.2") || String(ssdSpecs.interface || "").toUpperCase().includes("NVME") || String(ssdSpecs.interface || "").toUpperCase().includes("PCIE");
+    const m2Slots = mbSpecs.m2_slots != null ? Number(mbSpecs.m2_slots) : null;
+    if (isM2 && m2Slots === 0) {
+      checks.push({code: "SSD_INTERFACE", slots: ["SSD", "MAINBOARD"], status: "INCOMPATIBLE"});
+    } else {
+      checks.push({code: "SSD_INTERFACE", slots: ["SSD", "MAINBOARD"], status: "COMPATIBLE"});
+    }
+  } else {
+    checks.push({code: "SSD_INTERFACE", slots: ["SSD", "MAINBOARD"], status: "UNKNOWN"});
+  }
   // PSU wattage alone cannot prove system power/connector requirements.
   checks.push({code: "PSU_CAPACITY", slots: ["PSU", "GPU", "CPU"], status: "UNKNOWN"});
-  checks.push({code: "SSD_INTERFACE", slots: ["SSD", "MAINBOARD"], status: "UNKNOWN"});
   checks.push({code: "COOLER_CLEARANCE", slots: ["COOLER", "CASE"], status: "UNKNOWN"});
   return {items, total: items.reduce((sum, p) => sum + p.listPrice, 0), missingSlots: coreSlots.filter((slot) => !selection[slot]), checks};
 }
@@ -47,7 +60,7 @@ export function validateCandidates(selection: Selection, slot: Slot) {
       .map((part) => {
         const allChecks = quoteBuild({...selection, [slot]: part.id}).checks.filter((check) => check.slots.includes(slot));
         const evaluatedChecks = allChecks.filter(
-          (c) => c.code !== "PSU_CAPACITY" && c.code !== "SSD_INTERFACE" && c.code !== "COOLER_CLEARANCE",
+          (c) => c.code !== "PSU_CAPACITY" && c.code !== "COOLER_CLEARANCE",
         );
         const status = allChecks.some((c) => c.status === "INCOMPATIBLE")
           ? "INCOMPATIBLE"

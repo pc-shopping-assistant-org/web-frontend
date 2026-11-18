@@ -17,10 +17,12 @@ import {PartArt} from "./part-art";
 import {PartPickerDialog} from "./part-picker-dialog";
 import {SetupSummary} from "./setup-summary";
 import {SlotRow} from "./slot-row";
+import {getPrebuiltBuilds} from "./compatibility-api";
 
 const storageKey = "gearpc:demo-build:v1";
 
-const templates: {name: string; goal: "gaming" | "creator"; selection: Selection}[] = [
+// Fallback sample presets for unit testing / mock mode
+const sampleTemplates: {name: string; goal: "gaming" | "creator" | "office"; selection: Selection}[] = [
   {
     name: "AMD · AM5 / DDR5",
     goal: "gaming",
@@ -84,7 +86,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const [lastCoreSlot, setLastCoreSlot] = useState<Slot>("CPU");
   const [lastPeripheralSlot, setLastPeripheralSlot] = useState<Slot>("MONITOR");
   const [budget, setBudget] = useState(0);
-  const [goal, setGoal] = useState<"gaming" | "creator">("gaming");
+  const [goal, setGoal] = useState<"gaming" | "creator" | "office">("gaming");
   const [notice, setNotice] = useState(invalidLink ? t.invalid : "");
   const [shareLink, setShareLink] = useState("");
 
@@ -98,6 +100,20 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
     queryKey: ["pc-builder", "quote", selection],
     queryFn: ({signal}) => getQuote(selection, signal),
   });
+
+  const prebuiltQuery = useQuery({
+    queryKey: ["pc-builder", "prebuilt-builds"],
+    queryFn: ({signal}) => getPrebuiltBuilds(signal),
+    staleTime: 5 * 60_000,
+  });
+
+  const realTemplates = (prebuiltQuery.data || []).map((b) => ({
+    id: b.id,
+    name: b.name,
+    goal: b.goal,
+    price: b.total_price,
+    selection: b.selection as Selection,
+  }));
 
   function openPicker(slot: Slot) {
     setPickerSlot(slot);
@@ -209,7 +225,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.start}:</span>
-              {(["gaming", "creator"] as const).map((value) => (
+              {(["gaming", "creator", "office"] as const).map((value) => (
                 <Button
                   key={value}
                   size="sm"
@@ -217,7 +233,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
                   className="h-8 text-xs font-semibold"
                   onClick={() => setGoal(value)}
                 >
-                  {t[value]}
+                  {t[value] || value}
                 </Button>
               ))}
             </div>
@@ -226,14 +242,16 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
               <span className="shrink-0 text-xs font-medium text-muted-foreground">{t.budget}:</span>
               <div className="relative">
                 <select
+                  id="builder-budget-select"
+                  name="budget"
                   value={budget}
                   onChange={(e) => setBudget(Number(e.target.value))}
                   className="h-9 cursor-pointer appearance-none rounded-lg border bg-background pl-3 pr-8 text-xs font-medium transition hover:border-primary/50"
                 >
                   <option value={0}>{t.noBudget}</option>
-                  {[15000000, 25000000, 35000000, 50000000].map((value) => (
+                  {[15000000, 20000000, 30000000, 50000000, 80000000].map((value) => (
                     <option key={value} value={value}>
-                      {money(value)}
+                      ≤ {money(value)}
                     </option>
                   ))}
                 </select>
@@ -242,26 +260,47 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
             </label>
           </div>
 
-          {/* Preset configuration buttons */}
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
-            {templates
-              .filter((template) => template.goal === goal)
-              .map((template) => (
-                <button
-                  key={template.name}
-                  type="button"
-                  onClick={() => {
-                    setSelection(template.selection);
-                    setQuantities({});
-                    setShareLink("");
-                    setNotice("");
-                  }}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border bg-muted/30 px-3 text-left text-xs font-semibold text-foreground transition hover:border-primary hover:bg-primary/5"
-                >
-                  <span>{template.name}</span>
-                  <IconChevronRight className="size-4 shrink-0 text-primary" />
-                </button>
-              ))}
+          {/* Preset configuration buttons - Max 4 rows with vertical scroll */}
+          <div className="mt-3 flex max-h-[180px] flex-wrap items-center gap-2 overflow-y-auto border-t pt-3 pr-1 scrollbar-thin">
+            {/* Show all real prebuilt configurations from AI service when available, fallback to sample templates */}
+            {realTemplates.length > 0
+              ? realTemplates
+                  .filter((template) => template.goal === goal && (budget === 0 || template.price <= budget))
+                  .map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => {
+                        setSelection(template.selection);
+                        setQuantities({});
+                        setShareLink("");
+                        setNotice("");
+                      }}
+                      className="inline-flex h-9 items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 text-left text-xs font-semibold text-foreground transition hover:border-primary hover:bg-primary/10"
+                    >
+                      <span className="max-w-[220px] truncate">{template.name}</span>
+                      <span className="text-[11px] font-bold text-primary">{money(template.price)}</span>
+                      <IconChevronRight className="size-4 shrink-0 text-primary" />
+                    </button>
+                  ))
+              : sampleTemplates
+                  .filter((template) => template.goal === goal)
+                  .map((template) => (
+                    <button
+                      key={template.name}
+                      type="button"
+                      onClick={() => {
+                        setSelection(template.selection);
+                        setQuantities({});
+                        setShareLink("");
+                        setNotice("");
+                      }}
+                      className="inline-flex h-9 items-center gap-2 rounded-xl border bg-muted/30 px-3 text-left text-xs font-semibold text-foreground transition hover:border-primary hover:bg-primary/5"
+                    >
+                      <span>{template.name}</span>
+                      <IconChevronRight className="size-4 shrink-0 text-primary" />
+                    </button>
+                  ))}
             <button
               type="button"
               onClick={() => {

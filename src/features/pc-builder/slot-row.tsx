@@ -63,52 +63,51 @@ export function SlotRow({
     );
   }
 
-  const specSummary = Object.entries(part.specs)
-    .slice(0, 3)
-    .map(([key, value]) => `${t.specLabels[key as keyof typeof t.specLabels] ?? key}: ${value}`)
-    .join(" · ");
+  const compatibilityLabel = compatibilityCheck
+    ? compatibilityCheck.status === "COMPATIBLE"
+      ? `✓ ${compatibilityCheck.message || t.allCompatible}`
+      : compatibilityCheck.status === "INCOMPATIBLE"
+        ? `⚠ ${compatibilityCheck.message || t.statuses.INCOMPATIBLE}`
+        : compatibilityCheck.message || t.statuses.UNKNOWN
+    : null;
 
   return (
     <article
       aria-label={`${index}. ${t.slots[slot]}`}
       className="flex flex-col justify-between gap-3 rounded-xl border bg-card p-3 transition hover:border-primary/40 sm:flex-row sm:items-center"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="flex size-14 shrink-0 items-center justify-center rounded-lg border bg-white p-1">
           <PartArt slot={slot} compact fill imageUrl={part.imageUrl} alt={part.name} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 whitespace-nowrap text-xs font-bold uppercase tracking-wide text-muted-foreground">
               {index}. {t.slots[slot]}
             </span>
-            {compatibilityCheck && (
+            {compatibilityCheck && compatibilityLabel && (
               <span
+                title={compatibilityLabel}
                 className={
                   compatibilityCheck.status === "COMPATIBLE"
-                    ? "rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400"
+                    ? "min-w-0 truncate whitespace-nowrap rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400"
                     : compatibilityCheck.status === "INCOMPATIBLE"
-                      ? "rounded-full bg-destructive/10 px-2.5 py-0.5 text-[11px] font-bold text-destructive"
-                      : "rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground"
+                      ? "min-w-0 truncate whitespace-nowrap rounded-full bg-destructive/10 px-2 py-0.5 text-[11px] font-bold text-destructive"
+                      : "min-w-0 truncate whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
                 }
               >
-                {compatibilityCheck.status === "COMPATIBLE"
-                  ? `✓ ${compatibilityCheck.message || t.allCompatible}`
-                  : compatibilityCheck.status === "INCOMPATIBLE"
-                    ? `⚠ ${compatibilityCheck.message || t.statuses.INCOMPATIBLE}`
-                    : compatibilityCheck.message || t.statuses.UNKNOWN}
+                {compatibilityLabel}
               </span>
             )}
           </div>
           <p className="mt-0.5 line-clamp-1 text-sm font-semibold text-foreground">{part.name}</p>
-          {specSummary && <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{specSummary}</p>}
           <div className="mt-2 text-sm font-extrabold text-primary sm:hidden">{money(part.price * quantity)}</div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-4 border-t pt-3 sm:border-t-0 sm:pt-0">
+      <div className="flex shrink-0 items-center justify-between gap-3 border-t pt-3 sm:border-t-0 sm:pt-0">
         <div className="hidden text-right sm:block">
-          <div className="text-sm font-extrabold text-primary">{money(part.price * quantity)}</div>
+          <div className="whitespace-nowrap text-sm font-extrabold text-primary">{money(part.price * quantity)}</div>
         </div>
         <div className="flex h-8 items-center overflow-hidden rounded-lg border bg-muted/20 text-xs font-semibold">
           <button

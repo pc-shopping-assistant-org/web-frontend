@@ -8,7 +8,7 @@ import type {Part} from "./models";
 import {PartArt} from "./part-art";
 
 /** The few specs worth showing on a card, in order; catalog entries carry many more and some are only loose numbers. */
-const CARD_SPEC_KEYS = ["socket", "ram_type", "form_factor", "capacity", "vram", "wattage", "chipset"];
+const CARD_SPEC_KEYS = ["socket", "ram_type", "form_factor", "capacity_gb", "capacity", "vram_gb", "vram", "radiator_mm", "cooler_height_mm", "wattage", "chipset"];
 
 function keySpecs(specs: Part["specs"]): string {
   return CARD_SPEC_KEYS.filter((key) => specs[key] !== undefined && specs[key] !== "")
@@ -60,9 +60,11 @@ export function PartDetails({
               {part.name}
             </Dialog.Trigger>
           </h3>
-          <p className="mt-1 truncate text-xs text-muted-foreground">
-            {compact ? keySpecs(part.specs) : part.sku}
-          </p>
+          {!compact && (
+            <p className="mt-1 truncate text-xs text-muted-foreground">
+              {part.sku}
+            </p>
+          )}
         </div>
       </div>
       <Dialog.Portal>

@@ -24,7 +24,7 @@ export const SLOT_CATEGORY_MAP: Record<Slot, string> = {
   PSU: "01a1ac19-709b-7b46-a896-a1378a7b4977",
   CASE: "01a1ac19-709b-7ca4-a716-181b26ea8efc",
   COOLER: "01a1ac19-709b-7d20-af45-013045962465",
-  SSD: "01a119fe-8dd1-72c0-bd03-7683fbd7240e",
+  SSD: "01a1ac19-709b-7d7c-a911-284fb49b031a",
   MONITOR: "01a1ac19-709b-7dd7-93be-7c74a4a480cf",
   MOUSE: "01a1ac19-709b-7e2f-9ad7-580e5acb5817",
   KEYBOARD: "01a1ac19-709b-7e84-8fef-0f6bb5408b50",

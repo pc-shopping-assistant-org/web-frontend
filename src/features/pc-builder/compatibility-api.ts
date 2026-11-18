@@ -108,3 +108,26 @@ export async function checkCandidates(
   );
   return Object.assign({}, ...answers) as Record<string, CandidateVerdict>;
 }
+
+export type PrebuiltBuildDto = {
+  id: string;
+  name: string;
+  tier: string;
+  goal: "gaming" | "creator" | "office";
+  subtitle: string;
+  total_price: number;
+  selection: Record<string, string>;
+};
+
+export async function getPrebuiltBuilds(signal?: AbortSignal): Promise<PrebuiltBuildDto[]> {
+  try {
+    const payload = await aiFetch<PrebuiltBuildDto[]>("/compatibility/prebuilt-builds", {
+      method: "GET",
+      signal,
+    });
+    return Array.isArray(payload) ? payload : [];
+  } catch {
+    return [];
+  }
+}
+
