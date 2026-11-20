@@ -1,7 +1,7 @@
 "use client";
 
 import {Tabs} from "@base-ui/react/tabs";
-import {IconCheck, IconChevronDown, IconChevronRight, IconFolderOpen, IconPlus, IconRefresh} from "@tabler/icons-react";
+import {IconCheck, IconChevronDown, IconChevronRight, IconFolderOpen, IconPlus, IconRefresh, IconSparkles} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useLocale} from "next-intl";
 import {useState} from "react";
@@ -15,6 +15,7 @@ import {coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Sel
 import {copy} from "./copy";
 import {PartArt} from "./part-art";
 import {PartPickerDialog} from "./part-picker-dialog";
+import {PresetBuildsDialog} from "./preset-builds-dialog";
 import {SetupSummary} from "./setup-summary";
 import {SlotRow} from "./slot-row";
 import {getPrebuiltBuilds} from "./compatibility-api";
@@ -36,6 +37,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const [quantities, setQuantities] = useState<Partial<Record<Slot, number>>>({});
   const [pickerSlot, setPickerSlot] = useState<Slot | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [allPresetsOpen, setAllPresetsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "core" | "peripherals">("core");
   const [lastCoreSlot, setLastCoreSlot] = useState<Slot>("CPU");
   const [lastPeripheralSlot, setLastPeripheralSlot] = useState<Slot>("MONITOR");
@@ -214,39 +216,89 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
             </label>
           </div>
 
-          {/* Preset configuration buttons - Max 4 rows with vertical scroll */}
-          <div className="mt-3 flex max-h-[180px] flex-wrap items-center gap-2 overflow-y-auto border-t pt-3 pr-1 scrollbar-thin">
-            {realTemplates
-              .filter((template) => template.goal === goal && (budget === 0 || template.price <= budget))
-              .map((template) => (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => {
-                    setSelection(template.selection);
-                    setQuantities({});
-                    setShareLink("");
-                    setNotice("");
-                  }}
-                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 text-left text-xs font-semibold text-foreground transition hover:border-primary hover:bg-primary/10"
-                >
-                  <span className="max-w-[220px] truncate">{template.name}</span>
-                  <span className="text-[11px] font-bold text-primary">{money(template.price)}</span>
-                  <IconChevronRight className="size-4 shrink-0 text-primary" />
-                </button>
-              ))}
-            <button
-              type="button"
-              onClick={() => {
-                resetBuild();
-                setShareLink("");
-              }}
-              className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-dashed px-3 text-left text-xs font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
-            >
-              <IconPlus className="size-4" />
-              {t.custom}
-            </button>
-          </div>
+          {/* Preset configuration Mini-Cards & See All button */}
+          {(() => {
+            const matchingTemplates = realTemplates.filter(
+              (template) => template.goal === goal && (budget === 0 || template.price <= budget),
+            );
+            // Select up to 4 representative templates spread across price range
+            const featuredCount = 4;
+            const featuredTemplates =
+              matchingTemplates.length <= featuredCount
+                ? matchingTemplates
+                : [
+                    matchingTemplates[0],
+                    matchingTemplates[Math.floor(matchingTemplates.length * 0.33)],
+                    matchingTemplates[Math.floor(matchingTemplates.length * 0.66)],
+                    matchingTemplates[matchingTemplates.length - 1],
+                  ];
+
+            return (
+              <div className="mt-3.5 border-t pt-3.5">
+                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                  {featuredTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => {
+                        setSelection(template.selection);
+                        setQuantities({});
+                        setShareLink("");
+                        setNotice("");
+                      }}
+                      className="group flex flex-col justify-between rounded-xl border border-border/80 bg-background p-3 text-left transition-all duration-150 hover:border-primary/50 hover:bg-primary/5 hover:shadow-2xs"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            {t[template.goal] || template.goal}
+                          </span>
+                        </div>
+                        <h4 className="mt-1 line-clamp-2 text-xs font-bold text-foreground group-hover:text-primary transition-colors" title={template.name}>
+                          {template.name}
+                        </h4>
+                      </div>
+                      <div className="mt-2.5 flex items-center justify-between border-t border-border/50 pt-2">
+                        <span className="text-xs font-black text-primary">{money(template.price)}</span>
+                        <span className="inline-flex items-center text-[11px] font-semibold text-primary">
+                          Chọn <IconChevronRight className="ml-0.5 size-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed pt-2.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAllPresetsOpen(true)}
+                      className="h-8 font-bold text-primary hover:bg-primary/10 hover:text-primary"
+                    >
+                      <IconSparkles className="mr-1.5 size-3.5" />
+                      Xem tất cả cấu hình mẫu ({matchingTemplates.length})
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetBuild();
+                        setShareLink("");
+                      }}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-dashed px-3 text-xs font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
+                    >
+                      <IconPlus className="size-3.5" />
+                      {t.custom}
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    Đã kiểm tra 100% không xung đột phần cứng
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </section>
 
         {/* Main 2-Column Grid: Left Slot Rows List (Phong Vũ style) - Right Sticky Summary */}
@@ -455,6 +507,22 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
         slot={pickerSlot}
         selection={selection}
         onSelect={handleSelect}
+        t={t}
+        money={money}
+      />
+
+      {/* Modal Dialog for Exploring All 100 Prebuilt Conflict-Free Builds */}
+      <PresetBuildsDialog
+        open={allPresetsOpen}
+        onOpenChange={setAllPresetsOpen}
+        presets={realTemplates}
+        currentGoal={goal}
+        onSelect={(item) => {
+          setSelection(item.selection);
+          setQuantities({});
+          setShareLink("");
+          setNotice("");
+        }}
         t={t}
         money={money}
       />
