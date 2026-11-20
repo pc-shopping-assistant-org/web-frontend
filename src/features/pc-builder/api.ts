@@ -1,16 +1,6 @@
-import {z} from "zod";
-import {apiFetch, backendFetch} from "@/lib/api/client";
-import {
-  candidatesSchema,
-  componentSchema,
-  coreSlots,
-  optionalSlots,
-  quoteSchema,
-  type Selection,
-  type Slot,
-} from "./contracts";
+import {backendFetch} from "@/lib/api/client";
+import {coreSlots, optionalSlots, type Selection, type Slot} from "./contracts";
 import type {BuildQuote, Part} from "./models";
-import {toPart, toQuote} from "./mappers";
 import {checkCandidates, checkCompatibility} from "./compatibility-api";
 import type {ProductDetailDto} from "@/features/catalog/contracts/dto";
 
@@ -111,114 +101,49 @@ export type PickerQuery = {page: number; keyword?: string; brandId?: string; sor
 export type PickerPage = {parts: Part[]; totalPages: number; totalElements: number};
 export type PickerBrand = {id: string; name: string};
 
-async function getFallbackComponents(slot: Slot, signal?: AbortSignal): Promise<Part[]> {
-  const parts = z
-    .array(componentSchema)
-    .parse(await apiFetch<unknown>(`/api/mock/pc-builder/components?slot=${slot}`, {signal}))
-    .map(toPart);
-  for (const p of parts) registerPart(p);
-  return parts;
-}
-
-async function getFallbackAccessories(signal?: AbortSignal): Promise<Part[]> {
-  const parts = z
-    .array(componentSchema)
-    .parse(await apiFetch<unknown>("/api/mock/pc-builder/accessories", {signal}))
-    .map(toPart);
-  for (const p of parts) registerPart(p);
-  return parts;
-}
-
-/** Sample parts paged, filtered and sorted here, for when the catalog is offline or the build uses sample ids. */
-async function getFallbackPage(slot: Slot, query: PickerQuery, signal?: AbortSignal): Promise<PickerPage> {
-  const keyword = query.keyword?.trim().toLowerCase();
-  const matching = (await getFallbackComponents(slot, signal))
-    .filter((part) => !query.brandId || part.brand === query.brandId)
-    .filter((part) => !keyword || `${part.name} ${part.brand} ${part.sku}`.toLowerCase().includes(keyword))
-    .sort((a, b) => (query.sort === "price_asc" ? a.price - b.price : b.price - a.price));
-  const start = query.page * PICKER_PAGE_SIZE;
-  return {
-    parts: matching.slice(start, start + PICKER_PAGE_SIZE),
-    totalPages: Math.max(1, Math.ceil(matching.length / PICKER_PAGE_SIZE)),
-    totalElements: matching.length,
-  };
-}
-
 /**
  * One page of the products for a PC slot, filtered and ordered by catalog-service itself, so a category of any size
- * pages without being loaded whole. Falls back to the sample parts if the catalog cannot be reached.
+ * pages without being loaded whole.
  */
 export async function getComponentPage(slot: Slot, query: PickerQuery, signal?: AbortSignal): Promise<PickerPage> {
   const categoryId = SLOT_CATEGORY_MAP[slot];
-  if (categoryId) {
-    const params = new URLSearchParams({
-      categoryId,
-      limit: String(PICKER_PAGE_SIZE),
-      page: String(query.page),
-      sort: query.sort,
-    });
-    if (query.keyword?.trim()) params.set("keyword", query.keyword.trim());
-    if (query.brandId) params.set("brandId", query.brandId);
-    try {
-      const res = await backendFetch<SnapshotPageResponse>(`/catalog-service/products/snapshot?${params}`, {signal});
-      if (res?.items && Array.isArray(res.items)) {
-        const filtered = Boolean(query.keyword?.trim() || query.brandId);
-        // An empty, unfiltered category means the catalog has nothing for this slot yet, so show the samples instead.
-        if (res.items.length > 0 || filtered) {
-          return {
-            parts: res.items.flatMap((prod) => mapSnapshotProductToParts(prod, slot)),
-            totalPages: Math.max(1, res.totalPages ?? 1),
-            totalElements: res.totalElements ?? res.items.length,
-          };
-        }
-      }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-      // Backend unavailable or isolated test environment.
-    }
-  }
-  return getFallbackPage(slot, query, signal);
+  const params = new URLSearchParams({
+    categoryId,
+    limit: String(PICKER_PAGE_SIZE),
+    page: String(query.page),
+    sort: query.sort,
+  });
+  if (query.keyword?.trim()) params.set("keyword", query.keyword.trim());
+  if (query.brandId) params.set("brandId", query.brandId);
+  const res = await backendFetch<SnapshotPageResponse>(`/catalog-service/products/snapshot?${params}`, {signal});
+  const items = Array.isArray(res?.items) ? res.items : [];
+  return {
+    parts: items.flatMap((prod) => mapSnapshotProductToParts(prod, slot)),
+    totalPages: Math.max(1, res.totalPages ?? 1),
+    totalElements: res.totalElements ?? items.length,
+  };
 }
 
 /** Brands that sell in a slot's category, for the picker's brand filter. */
 export async function getBrands(slot: Slot, signal?: AbortSignal): Promise<PickerBrand[]> {
   const categoryId = SLOT_CATEGORY_MAP[slot];
-  if (categoryId) {
-    try {
-      const brands = await backendFetch<{id: string; name: string}[]>(`/catalog-service/brands?categoryId=${categoryId}`, {signal});
-      if (Array.isArray(brands) && brands.length > 0) return brands.map(({id, name}) => ({id, name}));
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-    }
-  }
-  // Sample parts carry only a brand name, which doubles as the filter value there.
-  const names = new Set((await getFallbackComponents(slot, signal)).map((part) => part.brand));
-  return [...names].sort().map((name) => ({id: name, name}));
+  const brands = await backendFetch<{id: string; name: string}[]>(`/catalog-service/brands?categoryId=${categoryId}`, {signal});
+  return Array.isArray(brands) ? brands.map(({id, name}) => ({id, name})) : [];
 }
 
 /**
  * Fetch real accessory components from catalog-service.
  */
 export async function getAccessories(signal?: AbortSignal): Promise<Part[]> {
-  try {
-    const results = await Promise.all(
-      optionalSlots.map((slot) => {
-        const catId = SLOT_CATEGORY_MAP[slot];
-        if (!catId) return Promise.resolve<Part[]>([]);
-        return backendFetch<SnapshotPageResponse>(
-          `/catalog-service/products/snapshot?categoryId=${catId}&limit=20`,
-          {signal},
-        )
-          .then((res) => (res?.items ? res.items.flatMap((p) => mapSnapshotProductToParts(p, slot)) : []))
-          .catch(() => []);
-      }),
-    );
-    const combined = results.flat();
-    if (combined.length > 0) return combined;
-  } catch {
-    // Fallback to mock accessories
-  }
-  return getFallbackAccessories(signal);
+  const results = await Promise.all(
+    optionalSlots.map((slot) =>
+      backendFetch<SnapshotPageResponse>(
+        `/catalog-service/products/snapshot?categoryId=${SLOT_CATEGORY_MAP[slot]}&limit=20`,
+        {signal},
+      ).then((res) => (res?.items ? res.items.flatMap((p) => mapSnapshotProductToParts(p, slot)) : [])),
+    ),
+  );
+  return results.flat();
 }
 
 /**
@@ -230,27 +155,14 @@ export async function getCandidates(
   candidateIds: string[],
   signal?: AbortSignal,
 ): Promise<Record<string, "COMPATIBLE" | "INCOMPATIBLE" | "UNKNOWN">> {
-  // If selection only uses mock fixture keys (non-UUID), delegate to mock validator
   const selectedEntries = Object.entries(selection).filter(([, id]) => Boolean(id));
-  const hasOnlyMockIds = selectedEntries.every(([, id]) => id && !UUID_REGEX.test(id));
-  if (hasOnlyMockIds && selectedEntries.length > 0) {
-    return candidatesSchema.parse(
-      await apiFetch<unknown>("/api/mock/pc-builder/validate", {
-        method: "POST",
-        body: JSON.stringify({selection, slot}),
-        signal,
-      }),
-    );
-  }
-
-  // Real catalog: the AI service checks every candidate against the parts chosen for the other slots.
   const chosen: Record<string, string> = {};
   for (const [chosenSlot, id] of selectedEntries) {
-    if (chosenSlot !== slot && id && UUID_REGEX.test(id)) chosen[chosenSlot] = id;
+    if (chosenSlot !== slot && id) chosen[chosenSlot] = id;
   }
   const verdicts =
     Object.keys(chosen).length > 0
-      ? await checkCandidates(chosen, slot, candidateIds.filter((id) => UUID_REGEX.test(id)), signal)
+      ? await checkCandidates(chosen, slot, candidateIds, signal)
       : {};
   return Object.fromEntries(candidateIds.map((id) => [id, verdicts[id] ?? "UNKNOWN"]));
 }
@@ -258,34 +170,24 @@ export async function getCandidates(
 /**
  * Fetch variant details if missing from memory cache
  */
-async function resolvePart(slot: Slot, variantId: string): Promise<Part | undefined> {
+async function resolvePart(slot: Slot, variantId: string): Promise<Part> {
   const cached = getCachedPart(variantId);
   if (cached) return cached;
-
-  if (UUID_REGEX.test(variantId)) {
-    try {
-      type VariantRes = {
-        id: string;
-        productId: string;
-        price: number;
-        quantity: number;
-        sku: string;
-        imageUrl?: string | null;
-      };
-      const v = await backendFetch<VariantRes>(`/catalog-service/product-variants/${variantId}`);
-      if (v?.productId) {
-        const prod = await backendFetch<ProductDetailDto>(`/catalog-service/products/${v.productId}`);
-        const parts = mapSnapshotProductToParts(prod, slot);
-        return parts.find((p) => p.id === variantId) || parts[0];
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
-  // Fallback to checking mock fixtures
-  const fallbackList = await getFallbackComponents(slot);
-  return fallbackList.find((p) => p.id === variantId);
+  if (!UUID_REGEX.test(variantId)) throw new Error("INVALID_VARIANT_ID");
+  type VariantRes = {
+    id: string;
+    productId: string;
+    price: number;
+    quantity: number;
+    sku: string;
+    imageUrl?: string | null;
+  };
+  const variant = await backendFetch<VariantRes>(`/catalog-service/product-variants/${variantId}`);
+  const product = await backendFetch<ProductDetailDto>(`/catalog-service/products/${variant.productId}`);
+  const parts = mapSnapshotProductToParts(product, slot);
+  const part = parts.find((candidate) => candidate.id === variantId);
+  if (!part) throw new Error("VARIANT_NOT_FOUND");
+  return part;
 }
 
 /**
@@ -293,27 +195,7 @@ async function resolvePart(slot: Slot, variantId: string): Promise<Part | undefi
  */
 export async function getQuote(selection: Selection, signal?: AbortSignal): Promise<BuildQuote> {
   const selectedEntries = Object.entries(selection).filter(([, id]) => Boolean(id)) as [Slot, string][];
-  const hasUuid = selectedEntries.some(([, id]) => UUID_REGEX.test(id));
-
-  // If entirely mock IDs, use mock quote endpoint
-  if (!hasUuid) {
-    return toQuote(
-      quoteSchema.parse(
-        await apiFetch<unknown>("/api/mock/pc-builder/quote", {
-          method: "POST",
-          body: JSON.stringify({selection}),
-          signal,
-        }),
-      ),
-    );
-  }
-
-  // Resolve parts for real UUID selection
-  const resolvedParts: Part[] = [];
-  for (const [slot, id] of selectedEntries) {
-    const part = await resolvePart(slot, id);
-    if (part) resolvedParts.push(part);
-  }
+  const resolvedParts = await Promise.all(selectedEntries.map(([slot, id]) => resolvePart(slot, id)));
 
   const total = resolvedParts.reduce((sum, p) => sum + p.price, 0);
   const missing = coreSlots.filter((slot) => !selection[slot]);
@@ -321,27 +203,23 @@ export async function getQuote(selection: Selection, signal?: AbortSignal): Prom
   // Execute backend compatibility check
   const slotsPayload: Record<string, string> = {};
   for (const [slot, id] of selectedEntries) {
-    if (UUID_REGEX.test(id)) slotsPayload[slot] = id;
+    slotsPayload[slot] = id;
   }
 
   let checks: BuildQuote["checks"] = [];
   let power: BuildQuote["power"];
   if (Object.keys(slotsPayload).length > 0) {
-    try {
-      const compatRes = await checkCompatibility(slotsPayload, signal);
-      power = compatRes.power;
-      checks = compatRes.results.map((r) => ({
-        code: r.rule,
-        status: (r.status === "OK" ? "COMPATIBLE" : r.status === "INCOMPATIBLE" ? "INCOMPATIBLE" : "UNKNOWN") as
-          | "COMPATIBLE"
-          | "INCOMPATIBLE"
-          | "UNKNOWN",
-        slots: [r.slotA as Slot, r.slotB as Slot].filter(Boolean),
-        message: r.message ?? undefined,
-      }));
-    } catch {
-      // Graceful fallback if compatibility endpoint fails
-    }
+    const compatRes = await checkCompatibility(slotsPayload, signal);
+    power = compatRes.power;
+    checks = compatRes.results.map((r) => ({
+      code: r.rule,
+      status: (r.status === "OK" ? "COMPATIBLE" : r.status === "INCOMPATIBLE" ? "INCOMPATIBLE" : "UNKNOWN") as
+        | "COMPATIBLE"
+        | "INCOMPATIBLE"
+        | "UNKNOWN",
+      slots: [r.slotA as Slot, r.slotB as Slot].filter(Boolean),
+      message: r.message ?? undefined,
+    }));
   }
 
   return {total, parts: resolvedParts, missing, checks, power};

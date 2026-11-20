@@ -1,7 +1,6 @@
 import {getServerEnv} from "@/lib/config/env";
 import type {ProductDetailDto} from "@/features/catalog/contracts/dto";
 import {mapSnapshotProductToParts} from "./api";
-import {buildQuestion} from "./ask-ai";
 import type {Selection, Slot} from "./contracts";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -11,7 +10,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const SPEC_KEYS = [
   "socket", "ram_type", "form_factor", "supported_form_factors", "memory_type", "capacity", "capacity_gb", "speed", "cores", "threads",
   "tdp_watts", "wattage", "efficiency", "gpu_length_mm", "max_gpu_length_mm", "cooler_height_mm", "max_cooler_height_mm",
-  "radiator_mm", "max_radiator_mm", "supported_sockets", "chipset", "vram", "vram_gb", "interface",
+  "radiator_mm", "max_radiator_mm", "supported_sockets", "chipset", "vram", "vram_gb", "interface", "ram_slots", "kit_modules",
 ];
 
 type Envelope<T> = {data: T | null};
@@ -42,13 +41,13 @@ function pickSpecs(specs: Record<string, string | number>): Record<string, strin
 
 /**
  * Server-side handoff of a build to the assistant. A build made of real catalog variants is read back from the catalog
- * and checked by the AI service, so the question carries verified facts only; a build of sample ids (no catalog) still
- * goes through the fixtures. Never trusts prices or specs from the URL, only the variant ids.
+ * and checked by the AI service, so the question carries verified facts only. Never trusts prices or specs from the
+ * URL, only the variant ids.
  */
 export async function resolveBuildQuestion(selection: Selection, locale: string): Promise<string> {
   const entries = Object.entries(selection).filter(([, id]) => Boolean(id)) as [Slot, string][];
   if (entries.length === 0) throw new Error("EMPTY_BUILD");
-  if (!entries.some(([, id]) => UUID_REGEX.test(id))) return buildQuestion(selection, locale);
+  if (entries.some(([, id]) => !UUID_REGEX.test(id))) throw new Error("INVALID_BUILD");
 
   const {BACKEND_API_URL, AI_API_URL} = getServerEnv();
   const catalog = `${BACKEND_API_URL}/catalog-service`;

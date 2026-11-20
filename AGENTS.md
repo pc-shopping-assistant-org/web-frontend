@@ -44,10 +44,9 @@ The normal local dependencies are the backend at `http://localhost:8080` and
 the AI service at `http://localhost:8000`. Runtime development does not use
 mock data; tests may stub `fetch`.
 
-Explicit owner-approved exception: `/build-pc` is a clearly labeled mock-only
-prototype. Synthetic SKU fixtures and `/api/mock/pc-builder/*` must remain
-isolated; never send their IDs to real cart/order APIs. Track production
-integration requirements in the root tracker (`ISSUE-073`).
+`/build-pc` uses live catalog variants and AI compatibility only. Tests may use
+local deterministic data through module or fetch stubs, but runtime code must not
+fall back to synthetic products or `/api/mock/pc-builder/*` routes.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

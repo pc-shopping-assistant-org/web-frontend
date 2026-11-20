@@ -24,34 +24,5 @@ export const slotGroups = [
   {id: "core", slots: coreSlots},
   {id: "peripherals", slots: optionalSlots},
 ] as const;
-export const selectionSchema = z.partialRecord(z.enum(slots), z.string().min(1).max(80));
-export const buildRequestSchema = z.object({selection: selectionSchema}).strict();
-export const candidatesRequestSchema = buildRequestSchema.extend({slot: z.enum(slots)});
-export const candidatesSchema = z.record(z.string(), z.enum(["COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"]));
+export const selectionSchema = z.partialRecord(z.enum(slots), z.uuid());
 export type Selection = z.infer<typeof selectionSchema>;
-export const componentSchema = z.object({
-  id: z.string(),
-  productId: z.string(),
-  sku: z.string(),
-  name: z.string(),
-  slot: z.enum(slots),
-  brand: z.string(),
-  listPrice: z.number().int().nonnegative(),
-  quantity: z.number().int().nonnegative(),
-  specifications: z.record(z.string(), z.union([z.string(), z.number()])),
-  imageUrl: z.string().optional(),
-});
-export const checkSchema = z.object({
-  code: z.string(),
-  status: z.enum(["COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"]),
-  slots: z.array(z.enum(slots)),
-  message: z.string().optional(),
-});
-export const quoteSchema = z.object({
-  total: z.number().int().nonnegative(),
-  items: z.array(componentSchema),
-  missingSlots: z.array(z.enum(slots)),
-  checks: z.array(checkSchema),
-});
-export type ComponentDto = z.infer<typeof componentSchema>;
-export type QuoteDto = z.infer<typeof quoteSchema>;

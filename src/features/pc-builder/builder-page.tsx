@@ -19,53 +19,7 @@ import {SetupSummary} from "./setup-summary";
 import {SlotRow} from "./slot-row";
 import {getPrebuiltBuilds} from "./compatibility-api";
 
-const storageKey = "gearpc:demo-build:v1";
-
-// Fallback sample presets for unit testing / mock mode
-const sampleTemplates: {name: string; goal: "gaming" | "creator" | "office"; selection: Selection}[] = [
-  {
-    name: "AMD · AM5 / DDR5",
-    goal: "gaming",
-    selection: {
-      CPU: "cpu-amd",
-      MAINBOARD: "board-amd",
-      RAM: "ram-ddr5",
-      GPU: "gpu-radeon",
-      SSD: "ssd-1tb",
-      PSU: "psu-650",
-      CASE: "case-atx",
-      COOLER: "cooler-air",
-    },
-  },
-  {
-    name: "Intel · RTX 4060",
-    goal: "gaming",
-    selection: {
-      CPU: "cpu-intel",
-      MAINBOARD: "board-intel",
-      RAM: "ram-ddr5",
-      GPU: "gpu-rtx",
-      SSD: "ssd-1tb",
-      PSU: "psu-650",
-      CASE: "case-atx",
-      COOLER: "cooler-air",
-    },
-  },
-  {
-    name: "Ryzen 7 · RTX 4070 Super",
-    goal: "creator",
-    selection: {
-      CPU: "cpu-amd7",
-      MAINBOARD: "board-amd-atx",
-      RAM: "ram-ddr5-rgb",
-      GPU: "gpu-unknown",
-      SSD: "ssd-2tb",
-      PSU: "psu-750",
-      CASE: "case-atx",
-      COOLER: "cooler-liquid",
-    },
-  },
-];
+const storageKey = "gearpc:build:v1";
 
 function omitSlot<T>(record: Partial<Record<Slot, T>>, slot: Slot): Partial<Record<Slot, T>> {
   const next = {...record};
@@ -188,8 +142,8 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const displayedSlots: Slot[] = activeTab === "all" ? slots : activeTab === "core" ? coreSlots : optionalSlots;
 
   return (
-    <section aria-label={t.title} className="min-h-screen bg-muted/30 px-4 pb-24 pt-4 sm:px-5 lg:px-6 lg:pb-8">
-      <div className="mx-auto w-full max-w-[75rem]">
+    <section aria-label={t.title} className="min-h-screen bg-muted/30 px-4 pb-24 pt-4 sm:px-6 lg:px-8 lg:pb-8">
+      <div className="mx-auto w-full max-w-[90rem]">
         {/* Breadcrumb & Header */}
         <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
@@ -262,45 +216,25 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
 
           {/* Preset configuration buttons - Max 4 rows with vertical scroll */}
           <div className="mt-3 flex max-h-[180px] flex-wrap items-center gap-2 overflow-y-auto border-t pt-3 pr-1 scrollbar-thin">
-            {/* Show all real prebuilt configurations from AI service when available, fallback to sample templates */}
-            {realTemplates.length > 0
-              ? realTemplates
-                  .filter((template) => template.goal === goal && (budget === 0 || template.price <= budget))
-                  .map((template) => (
-                    <button
-                      key={template.id}
-                      type="button"
-                      onClick={() => {
-                        setSelection(template.selection);
-                        setQuantities({});
-                        setShareLink("");
-                        setNotice("");
-                      }}
-                      className="inline-flex h-9 items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 text-left text-xs font-semibold text-foreground transition hover:border-primary hover:bg-primary/10"
-                    >
-                      <span className="max-w-[220px] truncate">{template.name}</span>
-                      <span className="text-[11px] font-bold text-primary">{money(template.price)}</span>
-                      <IconChevronRight className="size-4 shrink-0 text-primary" />
-                    </button>
-                  ))
-              : sampleTemplates
-                  .filter((template) => template.goal === goal)
-                  .map((template) => (
-                    <button
-                      key={template.name}
-                      type="button"
-                      onClick={() => {
-                        setSelection(template.selection);
-                        setQuantities({});
-                        setShareLink("");
-                        setNotice("");
-                      }}
-                      className="inline-flex h-9 items-center gap-2 rounded-xl border bg-muted/30 px-3 text-left text-xs font-semibold text-foreground transition hover:border-primary hover:bg-primary/5"
-                    >
-                      <span>{template.name}</span>
-                      <IconChevronRight className="size-4 shrink-0 text-primary" />
-                    </button>
-                  ))}
+            {realTemplates
+              .filter((template) => template.goal === goal && (budget === 0 || template.price <= budget))
+              .map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => {
+                    setSelection(template.selection);
+                    setQuantities({});
+                    setShareLink("");
+                    setNotice("");
+                  }}
+                  className="inline-flex h-9 items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 text-left text-xs font-semibold text-foreground transition hover:border-primary hover:bg-primary/10"
+                >
+                  <span className="max-w-[220px] truncate">{template.name}</span>
+                  <span className="text-[11px] font-bold text-primary">{money(template.price)}</span>
+                  <IconChevronRight className="size-4 shrink-0 text-primary" />
+                </button>
+              ))}
             <button
               type="button"
               onClick={() => {
@@ -316,7 +250,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
         </section>
 
         {/* Main 2-Column Grid: Left Slot Rows List (Phong Vũ style) - Right Sticky Summary */}
-        <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_410px]">
+        <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_450px] 2xl:grid-cols-[minmax(0,1fr)_480px]">
           {/* Left Column: Numbered Slots List */}
           <div className="min-w-0 max-w-full space-y-4">
             <Tabs.Root
