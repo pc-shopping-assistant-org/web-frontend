@@ -195,7 +195,7 @@ it("restores product attachments with their original user message from history",
   expect(streamChat).not.toHaveBeenCalled();
 });
 
-it("places a clickable catalog product between the surrounding answer paragraphs", async () => {
+it("links a mentioned catalog product inline between paragraphs and renders its card in the bottom shelf", async () => {
   vi.mocked(streamChat).mockResolvedValueOnce({
     conversation_id: "test", intent: AiMode.Chat,
     answer: "Một lựa chọn phù hợp:\n\n**RTX 4070 Super**\n\nNếu cần di chuyển, hãy cân nhắc thêm trọng lượng.",
@@ -207,9 +207,11 @@ it("places a clickable catalog product between the surrounding answer paragraphs
   await user.click(screen.getByRole("button", {name: /send/}));
   const before = await screen.findByText("Một lựa chọn phù hợp:");
   const after = screen.getByText("Nếu cần di chuyển, hãy cân nhắc thêm trọng lượng.");
-  const productLink = screen.getByRole("link", {name: "viewProduct"});
-  expect(before.compareDocumentPosition(productLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(productLink.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const inlineLink = screen.getByRole("link", {name: pickerProduct.name});
+  const cardLink = screen.getByRole("link", {name: "viewProduct"});
+  expect(before.compareDocumentPosition(inlineLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(inlineLink.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(after.compareDocumentPosition(cardLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 it("shows successive text chunks immediately and replaces the draft with the final validated answer", async () => {
