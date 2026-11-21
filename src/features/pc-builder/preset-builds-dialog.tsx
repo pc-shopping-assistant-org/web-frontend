@@ -21,7 +21,6 @@ export function PresetBuildsDialog({
   open,
   onOpenChange,
   presets,
-  currentGoal,
   onSelect,
   t,
   money,
@@ -29,7 +28,7 @@ export function PresetBuildsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   presets: PresetBuildItem[];
-  currentGoal: "gaming" | "creator" | "office";
+  currentGoal?: "gaming" | "creator" | "office";
   onSelect: (preset: PresetBuildItem) => void;
   t: BuilderCopy;
   money: (value: number) => string;
@@ -38,11 +37,9 @@ export function PresetBuildsDialog({
   const [search, setSearch] = useState("");
   const [budgetCap, setBudgetCap] = useState(0);
 
-  const activeGoal = filterGoal === "all" ? currentGoal : filterGoal;
-
   const filtered = useMemo(() => {
     return presets.filter((item) => {
-      if (filterGoal !== "all" && item.goal !== activeGoal) return false;
+      if (filterGoal !== "all" && item.goal !== filterGoal) return false;
       if (budgetCap > 0 && item.price > budgetCap) return false;
       if (search.trim()) {
         const query = search.toLowerCase();
@@ -50,7 +47,7 @@ export function PresetBuildsDialog({
       }
       return true;
     });
-  }, [presets, filterGoal, activeGoal, budgetCap, search]);
+  }, [presets, filterGoal, budgetCap, search]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>

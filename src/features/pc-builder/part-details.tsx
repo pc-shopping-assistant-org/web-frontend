@@ -7,16 +7,6 @@ import type {BuilderCopy} from "./copy";
 import type {Part} from "./models";
 import {PartArt} from "./part-art";
 
-/** The few specs worth showing on a card, in order; catalog entries carry many more and some are only loose numbers. */
-const CARD_SPEC_KEYS = ["socket", "ram_type", "form_factor", "capacity_gb", "capacity", "vram_gb", "vram", "radiator_mm", "cooler_height_mm", "wattage", "chipset"];
-
-function keySpecs(specs: Part["specs"]): string {
-  return CARD_SPEC_KEYS.filter((key) => specs[key] !== undefined && specs[key] !== "")
-    .slice(0, 2)
-    .map((key) => String(specs[key]))
-    .join(" · ");
-}
-
 export function PartDetails({
   part,
   compact = false,
