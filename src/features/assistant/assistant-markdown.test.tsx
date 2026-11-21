@@ -19,7 +19,7 @@ const testQueryClient = new QueryClient({defaultOptions: {queries: {retry: false
 function Answer({text, products}: {text: string; products?: AssistantProduct[]}) {
   return (
     <QueryClientProvider client={testQueryClient}>
-      <NextIntlClientProvider locale="en" messages={{assistant: {answerTable: "AI answer table", viewProduct: "View product", askAboutProduct: "Ask"}, catalog: {quickAdd: "Add", productDetails: "Details", addingToCart: "Adding"}, common: {saved: "Saved"}}}>
+      <NextIntlClientProvider locale="en" messages={{assistant: {answerTable: "AI answer table", viewProduct: "View product", relatedProducts: "Related products", scrollLeft: "Scroll left", scrollRight: "Scroll right", askAboutProduct: "Ask"}, catalog: {quickAdd: "Add", productDetails: "Details", addingToCart: "Adding"}, common: {saved: "Saved"}}}>
         <AssistantMarkdown products={products}>{text}</AssistantMarkdown>
       </NextIntlClientProvider>
     </QueryClientProvider>
@@ -85,4 +85,22 @@ it("links mentioned catalog products inline in the same tab without altering cod
   const inlineLink = screen.getByRole("link", {name: "HyperX Cloud III"});
   expect(inlineLink).toHaveAttribute("href", "/products/hyperx-cloud-iii");
   expect(inlineLink).not.toHaveAttribute("target");
+});
+
+it("renders multiple products in a single horizontal carousel at the bottom with navigation buttons", () => {
+  const products: AssistantProduct[] = [
+    {id: "p1", name: "HyperX Cloud III", seo_name: "hyperx-cloud-iii", list_price: 2190000, specifications: {}},
+    {id: "p2", name: "Logitech G Pro X", seo_name: "logitech-g-pro-x", list_price: 2990000, specifications: {}},
+  ];
+  const {container} = render(
+    <Answer
+      products={products}
+      text={"Đoạn 1 nhắc HyperX Cloud III.\n\nĐoạn 2 nhắc Logitech G Pro X."}
+    />,
+  );
+  expect(container.querySelectorAll("[data-product-cards]")).toHaveLength(1);
+  expect(container.querySelectorAll("[data-product-card]")).toHaveLength(2);
+  expect(screen.getByText("Related products (2)")).toBeInTheDocument();
+  expect(screen.getByRole("button", {name: "Scroll left"})).toBeInTheDocument();
+  expect(screen.getByRole("button", {name: "Scroll right"})).toBeInTheDocument();
 });

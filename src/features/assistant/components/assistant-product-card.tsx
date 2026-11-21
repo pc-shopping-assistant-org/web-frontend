@@ -71,7 +71,7 @@ export function AssistantProductCard({
 
   return (
     <>
-      <div data-product-card className="group flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs transition-all hover:border-primary/35 hover:shadow-md">
+      <div data-product-card className="group flex w-full min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card shadow-xs transition-all hover:border-primary/35 hover:shadow-md">
         {/* Top: Image + Info */}
         <div>
           <div className="flex gap-3 p-3.5">

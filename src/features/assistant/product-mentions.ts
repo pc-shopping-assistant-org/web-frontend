@@ -8,8 +8,6 @@ type MarkdownNode = {
   data?: {hProperties?: Record<string, unknown>};
 };
 
-const normalized = (text: string) => text.normalize("NFKC").toLocaleLowerCase().replace(/\s+/g, " ").trim();
-const nodeText = (node: MarkdownNode): string => node.value ?? node.children?.map(nodeText).join("") ?? "";
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function linkifyMentions(node: MarkdownNode, linkables: {name: string; href: string; pattern: RegExp}[]) {
@@ -56,20 +54,9 @@ function linkifyMentions(node: MarkdownNode, linkables: {name: string; href: str
   node.children = nextChildren;
 }
 
-/** Annotate top-level paragraphs from canonical cards and link mentioned catalog products inline. */
+/** Link mentioned catalog products inline inside markdown text. */
 export function productMentions(products: AssistantProduct[]) {
   return () => (tree: MarkdownNode) => {
-    const remaining = new Map(products.map((product, index) => [String(index), product]));
-    for (const node of tree.children ?? []) {
-      if (node.type === "paragraph") {
-        const text = normalized(nodeText(node));
-        const ids = [...remaining].filter(([, product]) => text.includes(normalized(product.name))).map(([id]) => id);
-        if (ids.length) {
-          node.data = {...node.data, hProperties: {...node.data?.hProperties, "data-products": ids.join(",")}};
-          ids.forEach((id) => remaining.delete(id));
-        }
-      }
-    }
     const linkables = products
       .filter((product): product is AssistantProduct & {seo_name: string} => Boolean(product.name?.trim() && product.seo_name?.trim()))
       .sort((a, b) => b.name.length - a.name.length)
@@ -79,6 +66,5 @@ export function productMentions(products: AssistantProduct[]) {
         pattern: new RegExp(escapeRegExp(product.name.trim()), "gi"),
       }));
     if (linkables.length) linkifyMentions(tree, linkables);
-    if (remaining.size) tree.children?.push({type: "paragraph", children: [], data: {hProperties: {"data-products": [...remaining.keys()].join(",")}}});
   };
 }
