@@ -2,8 +2,9 @@ import {useTranslations} from "next-intl";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import {Link} from "@/i18n/navigation";
 import styles from "./assistant-markdown.module.css";
-import {AssistantProductCard} from "./components/assistant-product-card";
+import {AssistantProductCarousel} from "./components/assistant-product-carousel";
 import type {AssistantProduct} from "./models";
 import {productMentions} from "./product-mentions";
 
@@ -11,42 +12,44 @@ import {productMentions} from "./product-mentions";
 export function AssistantMarkdown({children, products = [], onAskAboutProduct}: {children: string; products?: AssistantProduct[]; onAskAboutProduct?: (id: string) => void}) {
   const t = useTranslations("assistant");
   return (
-    <div className={styles.content}>
-      <Markdown
-        remarkPlugins={[remarkGfm, productMentions(products)]}
-        skipHtml
-        components={{
-          p: ({node, children}) => {
-            const indexes = node?.properties["data-products"];
-            const selected = typeof indexes === "string" ? indexes.split(",").map((index) => products[Number(index)]).filter(Boolean) : [];
-            const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
-            return <>
-              {hasChildren ? <p>{children}</p> : null}
-              {selected.length ? <div className="my-2.5 grid min-w-0 gap-3 sm:grid-cols-2" data-product-cards>
-                {selected.map((product) => <AssistantProductCard key={product.id ?? product.product_id ?? product.name} product={product} onAskAboutProduct={onAskAboutProduct} />)}
-              </div> : null}
-            </>;
-          },
-          a: ({href, children}) => {
-            if (!href) return <>{children}</>;
-            const external = /^https?:\/\//i.test(href) || href.startsWith("//");
-            return (
-              <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
-                {children}
-              </a>
-            );
-          },
-          // Catalog images come from validated product cards, not model URLs.
-          img: ({alt}) => alt ? <span>{alt}</span> : null,
-          table: ({children}) => (
-            <div className={styles.tableScroll} role="region" aria-label={t("answerTable")} tabIndex={0}>
-              <table>{children}</table>
-            </div>
-          ),
-        }}
-      >
-        {children}
-      </Markdown>
+    <div>
+      <div className={styles.content}>
+        <Markdown
+          remarkPlugins={[remarkGfm, productMentions(products)]}
+          skipHtml
+          components={{
+            a: ({href, children}) => {
+              if (!href) return <>{children}</>;
+              if (href.startsWith("/products/")) {
+                return (
+                  <Link
+                    href={href}
+                    className="font-medium text-primary underline decoration-primary/40 underline-offset-2 transition hover:decoration-primary"
+                  >
+                    {children}
+                  </Link>
+                );
+              }
+              const external = /^https?:\/\//i.test(href) || href.startsWith("//");
+              return (
+                <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
+                  {children}
+                </a>
+              );
+            },
+            // Catalog images come from validated product cards, not model URLs.
+            img: ({alt}) => alt ? <span>{alt}</span> : null,
+            table: ({children}) => (
+              <div className={styles.tableScroll} role="region" aria-label={t("answerTable")} tabIndex={0}>
+                <table>{children}</table>
+              </div>
+            ),
+          }}
+        >
+          {children}
+        </Markdown>
+      </div>
+      <AssistantProductCarousel products={products} onAskAboutProduct={onAskAboutProduct} />
     </div>
   );
 }
