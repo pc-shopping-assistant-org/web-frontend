@@ -1,16 +1,28 @@
 import {cleanup, render, screen} from "@testing-library/react";
 import {NextIntlClientProvider} from "next-intl";
-import {afterEach, expect, it} from "vitest";
+import {afterEach, expect, it, vi} from "vitest";
+import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 
 import {AssistantMarkdown} from "./assistant-markdown";
+import type {AssistantProduct} from "./models";
+
+vi.mock("@/i18n/navigation", () => ({
+  Link: ({children, href, className}: {children: React.ReactNode; href: string; className?: string}) => (
+    <a href={href} className={className}>{children}</a>
+  ),
+}));
 
 afterEach(cleanup);
 
-function Answer({text}: {text: string}) {
+const testQueryClient = new QueryClient({defaultOptions: {queries: {retry: false}, mutations: {retry: false}}});
+
+function Answer({text, products}: {text: string; products?: AssistantProduct[]}) {
   return (
-    <NextIntlClientProvider locale="en" messages={{assistant: {answerTable: "AI answer table"}}}>
-      <AssistantMarkdown>{text}</AssistantMarkdown>
-    </NextIntlClientProvider>
+    <QueryClientProvider client={testQueryClient}>
+      <NextIntlClientProvider locale="en" messages={{assistant: {answerTable: "AI answer table", viewProduct: "View product", askAboutProduct: "Ask"}, catalog: {quickAdd: "Add", productDetails: "Details", addingToCart: "Adding"}, common: {saved: "Saved"}}}>
+        <AssistantMarkdown products={products}>{text}</AssistantMarkdown>
+      </NextIntlClientProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -58,4 +70,19 @@ it("handles an unfinished streamed code fence and renders the completed answer o
   rerender(<Answer text={'**Budget**\n\n```json\n{"budget":25000000}\n```\n\nReady.'} />);
   expect(container.querySelector("pre > code")).toHaveTextContent('{"budget":25000000}');
   expect(screen.getByText("Ready.")).toBeInTheDocument();
+});
+
+it("links mentioned catalog products inline in the same tab without altering code blocks", () => {
+  const products: AssistantProduct[] = [
+    {id: "p1", name: "HyperX Cloud III", seo_name: "hyperx-cloud-iii", list_price: 2190000, specifications: {}},
+  ];
+  render(
+    <Answer
+      products={products}
+      text={"Bạn nên chọn **HyperX Cloud III** cho FPS.\n\n`HyperX Cloud III`"}
+    />,
+  );
+  const inlineLink = screen.getByRole("link", {name: "HyperX Cloud III"});
+  expect(inlineLink).toHaveAttribute("href", "/products/hyperx-cloud-iii");
+  expect(inlineLink).not.toHaveAttribute("target");
 });

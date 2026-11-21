@@ -2,6 +2,7 @@ import {useTranslations} from "next-intl";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import {Link} from "@/i18n/navigation";
 import styles from "./assistant-markdown.module.css";
 import {AssistantProductCard} from "./components/assistant-product-card";
 import type {AssistantProduct} from "./models";
@@ -29,6 +30,16 @@ export function AssistantMarkdown({children, products = [], onAskAboutProduct}: 
           },
           a: ({href, children}) => {
             if (!href) return <>{children}</>;
+            if (href.startsWith("/products/")) {
+              return (
+                <Link
+                  href={href}
+                  className="font-medium text-primary underline decoration-primary/40 underline-offset-2 transition hover:decoration-primary"
+                >
+                  {children}
+                </Link>
+              );
+            }
             const external = /^https?:\/\//i.test(href) || href.startsWith("//");
             return (
               <a href={href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>
