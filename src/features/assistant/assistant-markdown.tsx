@@ -22,7 +22,7 @@ export function AssistantMarkdown({children, products = [], onAskAboutProduct}: 
             const hasChildren = Array.isArray(children) ? children.length > 0 : Boolean(children);
             return <>
               {hasChildren ? <p>{children}</p> : null}
-              {selected.length ? <div className="my-2.5 grid min-w-0 gap-3 sm:grid-cols-2" data-product-cards>
+              {selected.length ? <div className={`my-2.5 grid min-w-0 gap-3 ${selected.length > 1 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`} data-product-cards>
                 {selected.map((product) => <AssistantProductCard key={product.id ?? product.product_id ?? product.name} product={product} onAskAboutProduct={onAskAboutProduct} />)}
               </div> : null}
             </>;

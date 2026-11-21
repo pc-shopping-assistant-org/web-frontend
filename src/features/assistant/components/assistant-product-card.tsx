@@ -39,6 +39,7 @@ export function AssistantProductCard({
   const [quickViewOpen, setQuickViewOpen] = useState(false);
   const [quickAddLoading, setQuickAddLoading] = useState(false);
   const [added, setAdded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const id = product.id || product.product_id;
   const slug = product.seo_name;
@@ -75,13 +76,14 @@ export function AssistantProductCard({
         <div>
           <div className="flex gap-3 p-3.5">
             <div className="relative flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/60 bg-muted/25 text-primary/60">
-              {product.image_url ? (
+              {product.image_url && !imageError ? (
                 <Image
                   src={product.image_url}
                   alt={product.name}
                   fill
                   sizes="64px"
                   unoptimized
+                  onError={() => setImageError(true)}
                   className="object-contain p-1.5 transition-transform duration-200 group-hover:scale-105"
                 />
               ) : (
