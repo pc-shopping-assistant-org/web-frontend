@@ -1,17 +1,24 @@
+"use client";
+
 import {
   IconAlertTriangle,
-  IconInfoCircle,
+  IconCheck,
+  IconChevronDown,
   IconChevronRight,
   IconDeviceDesktop,
   IconDeviceFloppy,
+  IconInfoCircle,
   IconPencil,
   IconPlus,
   IconShare,
+  IconShoppingCart,
   IconTrash,
 } from "@tabler/icons-react";
+import {useState} from "react";
 
 import {Button} from "@/components/ui/button";
 import {Input} from "@/components/ui/input";
+import {useAddToCart} from "@/features/cart/queries";
 import {cn} from "@/lib/utils";
 import {Link} from "@/i18n/navigation";
 import {coreSlots, optionalSlots, slotGroups, type Selection, type Slot} from "./contracts";
@@ -19,9 +26,12 @@ import type {BuilderCopy} from "./copy";
 import type {BuildQuote} from "./models";
 import {PartArt} from "./part-art";
 
+const VARIANT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 type Props = {
   t: BuilderCopy;
   selection: Selection;
+  quantities: Partial<Record<Slot, number>>;
   quote?: BuildQuote;
   ready: boolean;
   error: boolean;
@@ -40,6 +50,7 @@ type Props = {
 export function SetupSummary({
   t,
   selection,
+  quantities,
   quote,
   ready,
   error,
@@ -54,27 +65,53 @@ export function SetupSummary({
   onShare,
   onRetry,
 }: Props) {
+  const addToCart = useAddToCart();
+  const [cartResult, setCartResult] = useState<{added: number; total: number} | null>(null);
   const selectedSlots = Object.keys(selection) as Slot[];
-  const total = quote?.total ?? 0;
-  const extrasTotal = (quote?.parts ?? []).filter((part) => optionalSlots.includes(part.slot)).reduce((sum, part) => sum + part.price, 0);
+  const quantityOf = (slot: Slot) => quantities[slot] ?? 1;
+  const total = (quote?.parts ?? []).reduce((sum, part) => sum + part.price * quantityOf(part.slot), 0);
+  const extrasTotal = (quote?.parts ?? [])
+    .filter((part) => optionalSlots.includes(part.slot))
+    .reduce((sum, part) => sum + part.price * quantityOf(part.slot), 0);
   const conflictCount = quote?.checks.filter((check) => check.status === "INCOMPATIBLE").length ?? 0;
   const unknownCount = quote?.checks.filter((check) => check.status === "UNKNOWN").length ?? 0;
   const missing = coreSlots.filter((slot) => !selection[slot]);
+
+  /** Puts every chosen part with a catalog variant into the signed-in customer's cart; stops at the first one that fails. */
+  async function addAllToCart() {
+    const buyable = (quote?.parts ?? []).filter((part) => VARIANT_ID.test(part.id));
+    let added = 0;
+    setCartResult(null);
+    for (const part of buyable) {
+      try {
+        await addToCart.mutateAsync({productVariantId: part.id, quantity: quantityOf(part.slot)});
+        added += 1;
+      } catch {
+        break;
+      }
+    }
+    setCartResult({added, total: buyable.length});
+  }
+  const coreSelectedCount = coreSlots.filter((slot) => selection[slot]).length;
+
+  // Power draw as the AI service estimates it; the meter is hidden until the build has a CPU or GPU to size it by.
+  const power = quote?.power ?? null;
+  const capacity = power ? (power.psuWatts ?? power.recommendedPsuWatts) : 0;
+  const loadPercentage = power && capacity > 0 ? Math.min(100, Math.round((power.estimatedWatts / capacity) * 100)) : 0;
+  const overloaded = power?.sufficient === false || loadPercentage > 85;
 
   return (
     <aside
       id="build-summary"
       aria-label={t.summary}
-      className="scroll-mt-5 overflow-hidden rounded-2xl border bg-background shadow-sm xl:sticky xl:top-5"
+      className="scroll-mt-5 flex flex-col overflow-hidden rounded-2xl border bg-background shadow-xs lg:sticky lg:top-5"
     >
-      <header className="border-b bg-slate-950 p-5 text-white">
-        <div className="flex items-center gap-3">
-          <span className="flex size-10 items-center justify-center rounded-xl bg-white/10">
-            <IconDeviceDesktop className="size-6" />
-          </span>
-          <div className="flex-1">
-            <h2 className="text-xl font-semibold">{t.summary}</h2>
-            <p className="mt-0.5 text-xs text-slate-400">
+      {/* Header with Visual Chassis Art & Price (Phong Vũ Style) */}
+      <header className="border-b bg-muted/20 p-5 text-center">
+        <div className="flex items-center justify-between">
+          <div className="text-left">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{t.summary}</h2>
+            <p className="text-xs text-muted-foreground">
               {selectedSlots.length} {t.selectedItems}
             </p>
           </div>
@@ -82,176 +119,316 @@ export function SetupSummary({
             variant="ghost"
             size="icon"
             aria-label={t.clear}
-            className="text-slate-400 hover:bg-white/10 hover:text-white"
+            className="size-8 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
             disabled={!selectedSlots.length}
             onClick={onClear}
           >
-            <IconTrash />
+            <IconTrash className="size-4" />
           </Button>
         </div>
-        <p className="mt-5 text-xs text-slate-400">{t.total}</p>
-        <p aria-live="polite" className="mt-1 text-3xl font-bold tracking-tight">
-          {ready ? money(total) : t.updating}
-        </p>
+
+        {/* Chassis Art Box */}
+        <div className="mx-auto my-3 flex size-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 sm:size-20">
+          <IconDeviceDesktop className="size-8 text-primary sm:size-10" />
+        </div>
+
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+          <IconCheck className="size-3.5" />
+          {coreSelectedCount}/8 {t.coreProgress}
+        </span>
+
+        <div className="mt-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.total}</p>
+          <p aria-live="polite" className="mt-0.5 text-3xl font-black tracking-tight text-foreground">
+            {ready ? money(total) : t.updating}
+          </p>
+        </div>
+
         {budget > 0 && ready && (
-          <p className={cn("mt-2 text-xs", total > budget ? "text-amber-300" : "text-emerald-300")}>
+          <p
+            className={cn(
+              "mt-1 text-xs font-medium",
+              total > budget ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400",
+            )}
+          >
             {total > budget ? t.overBudget : t.withinBudget} · {money(Math.abs(budget - total))}
           </p>
         )}
       </header>
 
-      <div className="space-y-4 p-4 xl:max-h-[46vh] xl:overflow-y-auto">
+      {/* Body Section */}
+      <div className="space-y-4 p-4 sm:p-5">
         {!selectedSlots.length ? (
-          <div className="rounded-xl border border-dashed px-5 py-8 text-center">
-            <IconPlus className="mx-auto mb-3 size-7 text-muted-foreground" />
+          <div className="rounded-xl border border-dashed px-4 py-8 text-center text-muted-foreground">
+            <IconPlus className="mx-auto mb-2 size-6" />
             <h3 className="font-semibold">{t.setupEmpty}</h3>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">{t.setupEmptyHint}</p>
+            <p className="mt-1 text-xs leading-5">{t.setupEmptyHint}</p>
           </div>
         ) : (
-          slotGroups.map((group) => {
-            const selected = group.slots.filter((slot) => selection[slot]);
-            if (!selected.length) return null;
-            return (
-              <section key={group.id} aria-label={t.groups[group.id]}>
-                <h3 className="mb-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {t.groups[group.id]}
-                  <span className="rounded-full bg-muted px-2 py-0.5">{selected.length}</span>
-                </h3>
-                <div className="space-y-2">
-                  {selected.map((slot) => {
-                    const part = quote?.parts.find((part) => part.slot === slot);
-                    return (
-                      <div key={slot} className="flex items-start gap-3 rounded-xl border p-3">
-                        <PartArt slot={slot} compact />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[11px] text-muted-foreground">{t.slots[slot]}</p>
-                          <p className="mt-0.5 line-clamp-2 text-sm font-medium leading-5">{part?.name ?? t.updating}</p>
-                          <div className="mt-2 flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold">{part ? money(part.price) : "—"}</span>
-                            <div className="flex gap-1">
-                              <button
+          <>
+            {power && (
+              <div className="space-y-2 rounded-xl border bg-muted/15 p-3.5 text-xs">
+                <div className="flex items-center justify-between font-semibold">
+                  <span className="text-muted-foreground">{t.estimatedLoad}:</span>
+                  <span className="font-bold text-foreground">
+                    {power.estimatedWatts}W / {capacity}W
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={cn("h-full rounded-full transition-all duration-300", overloaded ? "bg-amber-500" : "bg-primary")}
+                    style={{width: `${loadPercentage}%`}}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                  {power.psuWatts !== null && power.sufficient ? (
+                    <>
+                      <span>{t.safeHeadroom}:</span>
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">+{Math.max(0, 100 - loadPercentage)}%</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>{t.recommendedPsu}:</span>
+                      <span className={cn("font-bold", overloaded ? "text-amber-600 dark:text-amber-400" : "text-foreground")}>
+                        ≥ {power.recommendedPsuWatts}W
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Compatibility status card */}
+            <div className="space-y-1.5 rounded-xl border bg-muted/20 p-3.5 text-xs">
+              <div className="flex items-center gap-2 font-bold">
+                <span className={cn("size-2 rounded-full", conflictCount > 0 ? "bg-destructive" : "bg-emerald-500")} />
+                <span className={conflictCount > 0 ? "text-destructive" : "text-foreground"}>
+                  {conflictCount > 0 ? `${conflictCount} ${t.conflicts}` : `${t.compatibility}: ${t.allCompatible}`}
+                </span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                {conflictCount > 0
+                  ? "Phát hiện linh kiện có thông số kỹ thuật không tương thích. Vui lòng thay đổi."
+                  : "Các thông số Socket, RAM, Form-factor và chuẩn kết nối hoàn toàn đồng bộ."}
+              </p>
+            </div>
+
+            {/* Selected Components List */}
+            <div className="space-y-3">
+              {slotGroups.map((group) => {
+                const selected = group.slots.filter((slot) => selection[slot]);
+                if (!selected.length) return null;
+                return (
+                  <section key={group.id} aria-label={t.groups[group.id]}>
+                    <h3 className="mb-2 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {t.groups[group.id]}
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold">{selected.length}</span>
+                    </h3>
+                    <div className="space-y-1.5">
+                      {selected.map((slot) => {
+                        const part = quote?.parts.find((part) => part.slot === slot);
+                        return (
+                          <div
+                            key={slot}
+                            className="flex items-center justify-between gap-2.5 rounded-xl border bg-card/60 p-2.5 transition hover:border-primary/30"
+                          >
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/20">
+                                <PartArt slot={slot} compact />
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-xs font-semibold text-foreground">{part?.name ?? t.updating}</p>
+                                <p className="text-[11px] font-medium text-primary">
+                                  {part
+                                    ? `${money(part.price * quantityOf(slot))}${quantityOf(slot) > 1 ? ` · x${quantityOf(slot)}` : ""}`
+                                    : "—"}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
                                 aria-label={`${t.replace} ${t.slots[slot]}`}
                                 onClick={() => onEdit(slot)}
-                                className="rounded-lg p-1.5 text-primary hover:bg-primary/10"
+                                className="size-7 rounded-lg text-primary hover:bg-primary/10"
                               >
-                                <IconPencil className="size-4" />
-                              </button>
-                              <button
+                                <IconPencil className="size-3.5" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
                                 aria-label={`${t.remove} ${t.slots[slot]}`}
                                 onClick={() => onRemove(slot)}
-                                className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                className="size-7 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                               >
-                                <IconTrash className="size-4" />
-                              </button>
+                                <IconTrash className="size-3.5" />
+                              </Button>
                             </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            );
-          })
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => onEdit(missing[0] ?? coreSlots[0])}>
-            <IconPlus />
-            {t.addMore}
-          </Button>
-          <Button variant="ghost" onClick={() => onEdit(optionalSlots.find((slot) => !selection[slot]) ?? optionalSlots[0])}>
-            {t.addExtras}
-            <IconChevronRight />
-          </Button>
-        </div>
-      </div>
+                        );
+                      })}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
 
-      <div className="space-y-4 border-t p-4">
-        {selectedSlots.length > 0 && (
-          <details className="rounded-xl border bg-muted/20 p-3">
-            <summary className="cursor-pointer text-sm font-medium">
-              {conflictCount ? (
-                <IconAlertTriangle className="mr-2 inline size-4 text-destructive" />
-              ) : (
-                <IconInfoCircle className="mr-2 inline size-4 text-muted-foreground" />
-              )}
-              {t.compatibility}
-              <span className="mt-1 block pl-6 text-xs text-muted-foreground">
-                {conflictCount > 0 ? `${conflictCount} ${t.conflicts}` : `${unknownCount} ${t.unknownChecks}`}
-              </span>
-            </summary>
-            <ul className="mt-3 space-y-3">
-              {quote?.checks.map((check) => (
-                <li key={check.code} className="text-xs">
-                  <span className="block font-medium">{t.checks[check.code as keyof typeof t.checks] ?? check.code}</span>
-                  <span
-                    className={cn(
-                      "mt-1 block",
-                      check.status === "INCOMPATIBLE"
-                        ? "text-destructive"
-                        : check.status === "COMPATIBLE"
-                          ? "text-emerald-700"
-                          : "text-muted-foreground",
-                    )}
-                  >
-                    {t.statuses[check.status]}
+            {/* Quick add more / extras buttons */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button variant="outline" size="sm" className="h-8 text-xs font-semibold" onClick={() => onEdit(missing[0] ?? coreSlots[0])}>
+                <IconPlus className="mr-1 size-3.5" />
+                {t.addMore}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                onClick={() => onEdit(optionalSlots.find((slot) => !selection[slot]) ?? optionalSlots[0])}
+              >
+                {t.addExtras}
+                <IconChevronRight className="ml-1 size-3.5" />
+              </Button>
+            </div>
+
+            {/* Expandable compatibility rule checks details */}
+            <details className="group rounded-xl border bg-muted/10 p-3 text-xs transition-colors">
+              <summary className="flex cursor-pointer list-none items-center justify-between font-semibold select-none [&::-webkit-details-marker]:hidden">
+                <div className="flex items-center gap-2">
+                  {conflictCount ? (
+                    <IconAlertTriangle className="size-4 shrink-0 text-destructive" />
+                  ) : (
+                    <IconInfoCircle className="size-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span>
+                    {t.compatibility} ({quote?.checks.length ?? 0} tiêu chí)
                   </span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3 text-xs leading-5 text-muted-foreground">{t.limited}</p>
-          </details>
+                </div>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <span className="text-[11px]">{unknownCount > 0 ? `${unknownCount} ${t.unknownChecks}` : ""}</span>
+                  <IconChevronDown className="size-4 transition-transform duration-200 group-open:rotate-180" />
+                </div>
+              </summary>
+              <ul className="mt-3 space-y-2.5 border-t pt-3">
+                {quote?.checks.map((check) => (
+                  <li key={check.code} className="text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-foreground">{t.checks[check.code as keyof typeof t.checks] ?? check.code}</span>
+                      <span
+                        className={cn(
+                          "shrink-0 font-medium",
+                          check.status === "INCOMPATIBLE"
+                            ? "text-destructive"
+                            : check.status === "COMPATIBLE"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-muted-foreground",
+                        )}
+                      >
+                        {t.statuses[check.status]}
+                      </span>
+                    </div>
+                    {check.message && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{check.message}</p>}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-[11px] leading-5 text-muted-foreground">{t.limited}</p>
+            </details>
+
+            {/* Subtotal breakdown */}
+            <dl className="space-y-1.5 border-t pt-3 text-xs">
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">{t.coreTotal}:</dt>
+                <dd className="font-semibold text-foreground">{ready ? money(total - extrasTotal) : "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-muted-foreground">{t.accessoriesTotal}:</dt>
+                <dd className="font-semibold text-foreground">{ready ? money(extrasTotal) : "—"}</dd>
+              </div>
+            </dl>
+          </>
         )}
+
         {error && (
-          <div role="alert" className="text-sm text-destructive">
+          <div role="alert" className="text-xs text-destructive">
             {t.error}
-            <Button variant="ghost" onClick={onRetry}>
+            <Button variant="ghost" size="sm" onClick={onRetry}>
               {t.retry}
             </Button>
           </div>
         )}
-        <dl className="space-y-2 text-sm">
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">{t.coreTotal}</dt>
-            <dd className="font-medium">{ready ? money(total - extrasTotal) : "—"}</dd>
-          </div>
-          <div className="flex justify-between gap-2">
-            <dt className="text-muted-foreground">{t.accessoriesTotal}</dt>
-            <dd className="font-medium">{ready ? money(extrasTotal) : "—"}</dd>
-          </div>
-        </dl>
-        <p className="text-xs leading-5 text-muted-foreground">{t.exclusions}</p>
+      </div>
+
+      {/* Action Buttons Footer (Phong Vũ style) */}
+      <footer className="space-y-2.5 border-t bg-card/50 p-4 sm:p-5">
         {ready && selectedSlots.length > 0 ? (
           <Link
             href={`/assistant?build=${encodeURIComponent(JSON.stringify(selection))}`}
-            className="flex min-h-11 items-center justify-center rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 font-bold text-sm text-primary-foreground shadow-xs transition hover:opacity-90"
           >
             {t.askAi}
           </Link>
         ) : (
-          <Button variant="outline" className="h-11 w-full" disabled>
+          <Button variant="outline" className="h-11 w-full rounded-xl" disabled>
             {t.askAi}
           </Button>
         )}
-        <p className="text-xs leading-5 text-muted-foreground">{t.askAiHint}</p>
-        <div className="grid grid-cols-2 gap-2">
-          <Button className="h-11" disabled={!ready || !selectedSlots.length} onClick={onSave}>
-            <IconDeviceFloppy />
+
+        <Button
+          type="button"
+          className="h-11 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-xs hover:bg-emerald-700 disabled:opacity-50"
+          disabled={!ready || !selectedSlots.length || addToCart.isPending}
+          onClick={() => void addAllToCart()}
+        >
+          <IconShoppingCart className="mr-1.5 size-5" />
+          {t.addAllToCart}
+        </Button>
+
+        {cartResult && (
+          <div
+            role="status"
+            className={cn(
+              "rounded-lg p-2.5 text-xs font-medium",
+              cartResult.added === cartResult.total
+                ? "bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+                : "bg-destructive/10 text-destructive",
+            )}
+          >
+            {cartResult.added === cartResult.total ? t.cartNotice : `${t.cartFailed} (${cartResult.added}/${cartResult.total})`}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-lg text-xs font-semibold"
+            disabled={!ready || !selectedSlots.length}
+            onClick={onSave}
+          >
+            <IconDeviceFloppy className="mr-1 size-3.5" />
             {t.save}
           </Button>
-          <Button variant="outline" className="h-11" disabled={!ready || !selectedSlots.length} onClick={onShare}>
-            <IconShare />
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 rounded-lg text-xs font-semibold"
+            disabled={!ready || !selectedSlots.length}
+            onClick={onShare}
+          >
+            <IconShare className="mr-1 size-3.5" />
             {t.share}
           </Button>
         </div>
-        <p className="text-xs leading-5 text-muted-foreground">{t.noCart}</p>
+
         {notice && (
-          <p role="status" className="rounded-lg bg-muted p-3 text-sm">
+          <p role="status" className="rounded-lg bg-muted p-2.5 text-xs text-muted-foreground">
             {notice}
           </p>
         )}
         {shareLink && <Input aria-label={t.shareLabel} value={shareLink} readOnly onFocus={(event) => event.target.select()} />}
-      </div>
+      </footer>
     </aside>
   );
 }

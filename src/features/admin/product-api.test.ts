@@ -2,7 +2,16 @@ import {afterEach, describe, expect, it, vi} from "vitest";
 
 import {ResourceStatus} from "@/lib/domain/catalog-enums";
 
-import {createProduct, createVariant, deleteVariant, getAdminProductById, getAdminProducts, updateVariant} from "./api";
+import {
+  adjustVariantStock,
+  createProduct,
+  createVariant,
+  deleteVariant,
+  getAdminProductById,
+  getAdminProducts,
+  saveVariations,
+  updateVariant,
+} from "./api";
 import {galleryRequest} from "./product-fields";
 
 afterEach(() => vi.restoreAllMocks());
@@ -125,13 +134,13 @@ describe("admin product writes", () => {
 
   it("changes a variant status with a second call only when it differs", async () => {
     const unchanged = stubFetch(variant("ACTIVE"));
-    await updateVariant("p1", "v1", {price: 1, quantity: 1, sku: "SKU-1", warrantyMonths: 1, status: ResourceStatus.Active});
+    await updateVariant("p1", "v1", {price: 1, sku: "SKU-1", warrantyMonths: 1, status: ResourceStatus.Active});
+    expect(JSON.parse(unchanged.mock.calls[0][1].body)).not.toHaveProperty("quantity");
     expect(unchanged).toHaveBeenCalledTimes(1);
 
     const changed = stubFetch(variant("ACTIVE"), variant("INACTIVE"));
     const result = await updateVariant("p1", "v1", {
       price: 1,
-      quantity: 1,
       sku: "SKU-1",
       warrantyMonths: 1,
       status: ResourceStatus.Inactive,
@@ -141,6 +150,33 @@ describe("admin product writes", () => {
       "PATCH /api/backend/catalog-service/products/p1/variants/v1/status",
     ]);
     expect(result.status).toBe("INACTIVE");
+  });
+
+  it("adjusts stock by an amount instead of setting it", async () => {
+    const fetchMock = stubFetch(variant("ACTIVE"));
+
+    await adjustVariantStock("p1", "v1", {delta: -2});
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/products/p1/variants/v1/stock-adjustments");
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({delta: -2});
+    expect(() => adjustVariantStock("p1", "v1", {delta: 0})).toThrow();
+  });
+
+  it("saves the variations of a product in one call", async () => {
+    const fetchMock = stubFetch({id: "p1", name: "X", seoName: "x", status: "ACTIVE", variants: [variant("ACTIVE")]});
+
+    await saveVariations("p1", {
+      variants: [
+        {id: "0190f3a2-7b1c-7cde-8f00-0000000000a1", price: 1, sku: "X-BLACK", warrantyMonths: 12, options: [{name: "Color", value: "Black"}]},
+        {price: 1, quantity: 5, sku: "X-WHITE", warrantyMonths: 12, options: [{name: "Color", value: "White"}]},
+      ],
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toBe("/api/backend/catalog-service/products/p1/variations");
+    expect(fetchMock.mock.calls[0][1].method).toBe("PUT");
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.variants[0]).not.toHaveProperty("quantity");
+    expect(body.variants[1].quantity).toBe(5);
   });
 
   it("deletes a variant under its product", async () => {

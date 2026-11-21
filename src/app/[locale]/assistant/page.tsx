@@ -1,6 +1,6 @@
 import type {Metadata} from "next";
 import {z} from "zod";
-import {buildQuestion} from "@/features/pc-builder/ask-ai";
+import {resolveBuildQuestion} from "@/features/pc-builder/ask-ai-server";
 import {selectionSchema} from "@/features/pc-builder/contracts";
 
 import {AssistantRouteClient} from "./assistant-route-client";
@@ -20,7 +20,7 @@ export default async function AssistantRoute({
   let invalidBuild = false;
   if (params.build) {
     try {
-      initialPrompt = buildQuestion(selectionSchema.parse(JSON.parse(String(params.build))), locale);
+      initialPrompt = await resolveBuildQuestion(selectionSchema.parse(JSON.parse(String(params.build))), locale);
     } catch {
       invalidBuild = true;
     }

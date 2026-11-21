@@ -223,23 +223,25 @@ export function ProductCard({
   return (
     <Card
       className={cn(
-        "group overflow-hidden border-border/70 transition duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-xl",
+        "group flex h-full flex-col overflow-hidden border-border/70 transition duration-200 hover:-translate-y-1 hover:border-primary/25 hover:shadow-xl",
         compact && "hover:-translate-y-0.5 hover:shadow-lg",
       )}
     >
       {productHref ? (
-        <Link href={productHref} prefetch={false} className="block" aria-label={`${t("productDetails")}: ${name}`}>
+        <Link href={productHref} prefetch={false} className="block shrink-0" aria-label={`${t("productDetails")}: ${name}`}>
           <ProductVisual product={product} name={name} theme={theme} interactive compact={compact} />
         </Link>
       ) : (
-        <ProductVisual product={product} name={name} theme={theme} compact={compact} />
+        <div className="shrink-0">
+          <ProductVisual product={product} name={name} theme={theme} compact={compact} />
+        </div>
       )}
-      <CardContent className={cn("flex flex-col gap-3 p-5", compact ? "min-h-40 gap-2.5 p-4" : "min-h-48")}>
+      <CardContent className={cn("flex flex-1 flex-col gap-3 p-5", compact ? "gap-2.5 p-4" : "")}>
         <div className="space-y-1">
           <p className={cn("text-xs font-medium uppercase tracking-wider text-muted-foreground", compact && "text-[0.68rem]")}>
             {product.brandName ?? t("brandFallback")}
           </p>
-          <h3 className={cn("line-clamp-2 font-semibold tracking-tight", compact ? "text-sm leading-5" : "text-lg")}>
+          <h3 className={cn("line-clamp-2 font-semibold tracking-tight", compact ? "min-h-10 text-sm leading-5" : "min-h-14 text-lg")}>
             {productHref ? (
               <Link
                 href={productHref}
@@ -253,7 +255,7 @@ export function ProductCard({
             )}
           </h3>
         </div>
-        <div className="mt-auto flex items-end justify-between gap-3">
+        <div className="mt-auto flex min-h-[4.5rem] items-end justify-between gap-3 pt-2">
           <div>
             <p className="text-xs text-muted-foreground">{t("from")}</p>
             <p className={cn("font-semibold", compact ? "text-base" : "text-lg")}>{formatMoney(price, locale)}</p>

@@ -9,7 +9,7 @@ import {
   createAttribute,
   createProduct,
   createSupplier,
-  createVariant,
+  adjustVariantStock,
   deleteBrand,
   deleteCategory,
   deleteDiscount,
@@ -35,6 +35,7 @@ import {
   updateProduct,
   updateSupplier,
   updateVariant,
+  saveVariations,
   updateDiscountStatus,
   updateProductStatus,
   replaceCategorySpecs,
@@ -200,11 +201,6 @@ export function useDeleteAdminProduct() {
 export function useUpdateAdminProduct() {
   return useAdminMutation(({id, request}: {id: string; request: Parameters<typeof updateProduct>[1]}) => updateProduct(id, request));
 }
-export function useCreateAdminVariant() {
-  return useAdminMutation(({productId, request}: {productId: string; request: Parameters<typeof createVariant>[1]}) =>
-    createVariant(productId, request),
-  );
-}
 export function useUpdateAdminVariant() {
   return useAdminMutation(({productId, id, request}: {productId: string; id: string; request: Parameters<typeof updateVariant>[2]}) =>
     updateVariant(productId, id, request),
@@ -212,6 +208,16 @@ export function useUpdateAdminVariant() {
 }
 export function useDeleteAdminVariant() {
   return useAdminMutation(deleteVariant);
+}
+export function useAdjustAdminVariantStock() {
+  return useAdminMutation(({productId, id, delta}: {productId: string; id: string; delta: number}) =>
+    adjustVariantStock(productId, id, {delta}),
+  );
+}
+export function useSaveAdminVariations() {
+  return useAdminMutation(({productId, request}: {productId: string; request: Parameters<typeof saveVariations>[1]}) =>
+    saveVariations(productId, request),
+  );
 }
 export function useCreateAdminDiscount() {
   return useAdminMutation(createDiscount);

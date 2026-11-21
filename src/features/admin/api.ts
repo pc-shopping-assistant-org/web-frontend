@@ -33,6 +33,8 @@ import {
   updateProductVariantRequestSchema,
   updateResourceStatusRequestSchema,
   replaceCategorySpecsRequestSchema,
+  saveVariationsRequestSchema,
+  stockAdjustmentRequestSchema,
   reorderCategoriesRequestSchema,
   updateReviewStatusRequestSchema,
   updateSupplierRequestSchema,
@@ -47,6 +49,8 @@ import type {
   CreateProductVariantRequest,
   CreateSupplierRequest,
   ReplaceCategorySpecsRequest,
+  SaveVariationsRequest,
+  StockAdjustmentRequest,
   UpdateAttributeDefinitionRequest,
   UpdateBrandRequest,
   UpdateCategoryRequest,
@@ -165,6 +169,20 @@ export async function updateVariant(productId: string, id: string, request: Upda
     variant = await backendFetch<ProductVariantDto>(`${path}/status`, {method: "PATCH", body: JSON.stringify({status})});
   }
   return mapProductVariant(variant);
+}
+/** Adds or takes off stock in the database, whatever orders took since the page was loaded. */
+export function adjustVariantStock(productId: string, id: string, request: StockAdjustmentRequest) {
+  const payload = parseRequest(stockAdjustmentRequestSchema, request);
+  const path = `${CATALOG}/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(id)}/stock-adjustments`;
+  return backendFetch<ProductVariantDto>(path, {method: "POST", body: JSON.stringify(payload)}).then(mapProductVariant);
+}
+/** Replaces the variations of a product in one call: the listed variants become the ones on sale. */
+export function saveVariations(productId: string, request: SaveVariationsRequest) {
+  const payload = parseRequest(saveVariationsRequestSchema, request);
+  return backendFetch<ProductDetailDto>(`${CATALOG}/products/${encodeURIComponent(productId)}/variations`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  }).then(mapProductDetail);
 }
 export function deleteVariant({productId, id}: {productId: string; id: string}) {
   return backendFetch<null>(`${CATALOG}/products/${encodeURIComponent(productId)}/variants/${encodeURIComponent(id)}`, {method: "DELETE"});

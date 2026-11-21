@@ -1,133 +1,104 @@
 "use client";
 
 import {Tabs} from "@base-ui/react/tabs";
-import {IconCheck, IconChevronRight, IconPlus, IconSearch, IconFolderOpen} from "@tabler/icons-react";
+import {IconCheck, IconChevronDown, IconChevronRight, IconFolderOpen, IconPlus, IconRefresh, IconSparkles} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useLocale} from "next-intl";
 import {useState} from "react";
 
 import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
 import {Skeleton} from "@/components/ui/skeleton";
 import {formatMoney} from "@/lib/format";
 import {cn} from "@/lib/utils";
-import {getAccessories, getCandidates, getComponents, getQuote} from "./api";
-import {selectionSchema, coreSlots, optionalSlots, slotGroups, type Selection, type Slot} from "./contracts";
+import {getAccessories, getQuote} from "./api";
+import {coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
 import {copy} from "./copy";
 import {PartArt} from "./part-art";
+import {PartPickerDialog} from "./part-picker-dialog";
+import {PresetBuildsDialog} from "./preset-builds-dialog";
 import {SetupSummary} from "./setup-summary";
-import {PartCard} from "./part-card";
+import {SlotRow} from "./slot-row";
+import {getPrebuiltBuilds} from "./compatibility-api";
 
-const storageKey = "gearpc:demo-build:v1";
-const templates: {name: string; goal: "gaming" | "creator"; selection: Selection}[] = [
-  {
-    name: "AMD · AM5 / DDR5",
-    goal: "gaming",
-    selection: {
-      CPU: "cpu-amd",
-      MAINBOARD: "board-amd",
-      RAM: "ram-ddr5",
-      GPU: "gpu-radeon",
-      SSD: "ssd-1tb",
-      PSU: "psu-650",
-      CASE: "case-atx",
-      COOLER: "cooler-air",
-    },
-  },
-  {
-    name: "Intel · RTX 4060",
-    goal: "gaming",
-    selection: {
-      CPU: "cpu-intel",
-      MAINBOARD: "board-intel",
-      RAM: "ram-ddr5",
-      GPU: "gpu-rtx",
-      SSD: "ssd-1tb",
-      PSU: "psu-650",
-      CASE: "case-atx",
-      COOLER: "cooler-air",
-    },
-  },
-  {
-    name: "Ryzen 7 · RTX 4070 Super",
-    goal: "creator",
-    selection: {
-      CPU: "cpu-amd7",
-      MAINBOARD: "board-amd-atx",
-      RAM: "ram-ddr5-rgb",
-      GPU: "gpu-unknown",
-      SSD: "ssd-2tb",
-      PSU: "psu-750",
-      CASE: "case-atx",
-      COOLER: "cooler-liquid",
-    },
-  },
-];
+const storageKey = "gearpc:build:v1";
+
+function omitSlot<T>(record: Partial<Record<Slot, T>>, slot: Slot): Partial<Record<Slot, T>> {
+  const next = {...record};
+  delete next[slot];
+  return next;
+}
 
 export function BuilderPage({initialSelection = {}, invalidLink = false}: {initialSelection?: Selection; invalidLink?: boolean}) {
   const locale = useLocale();
   const t = copy[locale === "en" ? "en" : "vi"];
   const money = (value: number) => formatMoney(value, locale);
-  const [slot, setSlot] = useState<Slot>("CPU");
-  const [lastSlots, setLastSlots] = useState<{core: Slot; peripherals: Slot}>({core: "CPU", peripherals: "MONITOR"});
-  const activeGroup = coreSlots.includes(slot) ? "core" : "peripherals";
-  const activeSlots = activeGroup === "core" ? coreSlots : optionalSlots;
+
   const [selection, setSelection] = useState<Selection>(initialSelection);
-  const [search, setSearch] = useState("");
-  const [brand, setBrand] = useState("");
-  const [sort, setSort] = useState("ascending");
-  const [hideConflicts, setHideConflicts] = useState(false);
+  const [quantities, setQuantities] = useState<Partial<Record<Slot, number>>>({});
+  const [pickerSlot, setPickerSlot] = useState<Slot | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [allPresetsOpen, setAllPresetsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "core" | "peripherals">("core");
+  const [lastCoreSlot, setLastCoreSlot] = useState<Slot>("CPU");
+  const [lastPeripheralSlot, setLastPeripheralSlot] = useState<Slot>("MONITOR");
   const [budget, setBudget] = useState(0);
-  const [goal, setGoal] = useState<"gaming" | "creator">("gaming");
+  const [goal, setGoal] = useState<"gaming" | "creator" | "office">("gaming");
   const [notice, setNotice] = useState(invalidLink ? t.invalid : "");
   const [shareLink, setShareLink] = useState("");
 
-  const catalog = useQuery({
-    queryKey: ["pc-builder", "components", slot],
-    queryFn: ({signal}) => getComponents(slot, signal),
+  const accessories = useQuery({
+    queryKey: ["pc-builder", "accessories"],
+    queryFn: ({signal}) => getAccessories(signal),
     staleTime: 60_000,
   });
-  const accessories = useQuery({queryKey: ["pc-builder", "accessories"], queryFn: ({signal}) => getAccessories(signal), staleTime: 60_000});
-  const quote = useQuery({queryKey: ["pc-builder", "quote", selection], queryFn: ({signal}) => getQuote(selection, signal)});
-  // Candidate checks use the same server validator; do not duplicate compatibility rules in UI.
-  const candidates = useQuery({
-    queryKey: ["pc-builder", "candidates", selection, slot],
-    queryFn: ({signal}) => getCandidates(selection, slot, signal),
-    enabled: activeGroup === "core",
-    staleTime: 60_000,
-  });
-  const parts = (catalog.data ?? [])
-    .filter(
-      (part) =>
-        (!brand || part.brand === brand) &&
-        `${part.name} ${part.brand} ${part.sku}`.toLowerCase().includes(search.toLowerCase()) &&
-        (!hideConflicts || candidates.data?.[part.id] !== "INCOMPATIBLE"),
-    )
-    .sort((a, b) => (sort === "ascending" ? a.price - b.price : b.price - a.price));
 
-  function changeSlot(value: Slot) {
-    setSlot(value);
-    setLastSlots((current) => ({...current, [coreSlots.includes(value) ? "core" : "peripherals"]: value}));
-    setBrand("");
-    setSearch("");
-  }
-  function select(id: string, advance: boolean) {
-    setSelection((current) => ({...current, [slot]: id}));
-    setNotice("");
-    setShareLink("");
-    if (advance) {
-      const group = slotGroups.find((group) => group.slots.includes(slot))!;
-      changeSlot(group.slots[(group.slots.indexOf(slot) + 1) % group.slots.length]);
+  const quote = useQuery({
+    queryKey: ["pc-builder", "quote", selection],
+    queryFn: ({signal}) => getQuote(selection, signal),
+  });
+
+  const prebuiltQuery = useQuery({
+    queryKey: ["pc-builder", "prebuilt-builds"],
+    queryFn: ({signal}) => getPrebuiltBuilds(signal),
+    staleTime: 5 * 60_000,
+  });
+
+  const realTemplates = (prebuiltQuery.data || []).map((b) => ({
+    id: b.id,
+    name: b.name,
+    goal: b.goal,
+    price: b.total_price,
+    selection: b.selection as Selection,
+  }));
+
+  function openPicker(slot: Slot) {
+    setPickerSlot(slot);
+    setPickerOpen(true);
+    if (coreSlots.includes(slot)) {
+      setLastCoreSlot(slot);
+    } else {
+      setLastPeripheralSlot(slot);
     }
   }
-  function remove(value: Slot) {
-    setSelection((current) => {
-      const next = {...current};
-      delete next[value];
-      return next;
-    });
+
+  function handleSelect(slot: Slot, partId: string) {
+    setSelection((curr) => ({...curr, [slot]: partId}));
+    setQuantities((curr) => omitSlot(curr, slot));
+    setNotice("");
     setShareLink("");
   }
+
+  function remove(slot: Slot) {
+    setSelection((curr) => omitSlot(curr, slot));
+    setQuantities((curr) => omitSlot(curr, slot));
+    setShareLink("");
+  }
+
+  function resetBuild() {
+    setSelection({});
+    setQuantities({});
+  }
+
   function load() {
     try {
       const saved = localStorage.getItem(storageKey);
@@ -142,6 +113,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
       setNotice(t.invalid);
     }
   }
+
   function save() {
     try {
       localStorage.setItem(storageKey, JSON.stringify(selection));
@@ -150,6 +122,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
       setNotice(t.storageError);
     }
   }
+
   async function share() {
     const url = new URL(window.location.href);
     url.searchParams.set("build", JSON.stringify(selection));
@@ -161,297 +134,401 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
       setNotice(t.linkReady);
     }
   }
+
   const ready = !!quote.data && !quote.isFetching && !quote.isError;
   const coreCount = coreSlots.filter((value) => selection[value]).length;
   const extraCount = optionalSlots.filter((value) => selection[value]).length;
-  const total = quote.data?.total ?? 0;
+  const quantityOf = (slot: Slot) => quantities[slot] ?? 1;
+  const total = (quote.data?.parts ?? []).reduce((sum, part) => sum + part.price * quantityOf(part.slot), 0);
+
+  const displayedSlots: Slot[] = activeTab === "all" ? slots : activeTab === "core" ? coreSlots : optionalSlots;
 
   return (
-    <section aria-label={t.title} className="min-h-screen bg-muted/30 px-4 pb-24 pt-4 sm:px-5 lg:px-6 lg:pb-8">
-      <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="mb-2 text-xs font-bold tracking-[0.2em] text-primary">gearPC / PC BUILDER</p>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.title}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t.subtitle}</p>
-        </div>
-        <Button variant="outline" className="h-11" onClick={load}>
-          <IconFolderOpen />
-          {t.load}
-        </Button>
-      </header>
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-amber-300/60 bg-amber-50 px-3 py-2 text-amber-950 dark:bg-amber-950 dark:text-amber-100">
-        <span className="shrink-0 rounded-md bg-amber-200 px-2 py-1 text-xs font-bold text-amber-950">{t.demo}</span>
-        <p className="text-sm">{t.notice}</p>
-      </div>
-      <section className="mb-4 rounded-xl border bg-background px-4 py-3" aria-label={t.start}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="mr-2 font-semibold">{t.start}</h2>
-            {(["gaming", "creator"] as const).map((value) => (
-              <Button key={value} variant={goal === value ? "default" : "outline"} onClick={() => setGoal(value)}>
-                {t[value]}
-              </Button>
-            ))}
-          </div>
-          <label className="flex items-center gap-3 text-sm">
-            {t.budget}
-            <select
-              value={budget}
-              onChange={(e) => setBudget(Number(e.target.value))}
-              className="h-10 rounded-lg border bg-background px-3"
-            >
-              <option value={0}>{t.noBudget}</option>
-              {[15000000, 25000000, 35000000, 50000000].map((value) => (
-                <option key={value} value={value}>
-                  {money(value)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {templates
-            .filter((template) => template.goal === goal)
-            .map((template) => (
-              <button
-                key={template.name}
-                onClick={() => {
-                  setSelection(template.selection);
-                  setShareLink("");
-                  setNotice("");
-                }}
-                className="inline-flex h-9 items-center gap-2 rounded-lg border bg-muted/20 px-3 text-left text-sm transition hover:border-primary hover:bg-primary/5"
-              >
-                <span className="font-medium">{template.name}</span>
-                <IconChevronRight className="size-5 shrink-0 text-primary" />
-              </button>
-            ))}
-          <button
-            onClick={() => {
-              setSelection({});
-              changeSlot("CPU");
-              setShareLink("");
-            }}
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-dashed px-3 text-left text-sm text-muted-foreground hover:border-primary hover:text-primary"
-          >
-            <IconPlus className="size-6" />
-            {t.custom}
-          </button>
-        </div>
-      </section>
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_380px] 2xl:grid-cols-[minmax(0,1fr)_410px]">
-        <Tabs.Root
-          value={activeGroup}
-          onValueChange={(value: unknown) => {
-            if (value === "core" || value === "peripherals") changeSlot(lastSlots[value]);
-          }}
-          className="min-w-0 overflow-hidden rounded-2xl border bg-background shadow-sm"
-        >
-          <header className="border-b px-4 py-3">
-            <h2 className="text-xl font-semibold">{t.componentsTitle}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{t.componentsHint}</p>
-          </header>
-          <Tabs.List aria-label={t.componentsTitle} className="flex gap-6 border-b px-5 sm:px-6">
-            {slotGroups.map((group) => (
-              <Tabs.Tab
-                key={group.id}
-                value={group.id}
-                aria-label={t.tabs[group.id]}
-                className="relative flex items-center gap-2 border-b-2 border-transparent py-3 text-sm font-semibold text-muted-foreground outline-none data-[active]:border-primary data-[active]:text-primary focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {t.tabs[group.id]}
-                <span aria-hidden="true" className="rounded-full bg-muted px-2 py-0.5 text-xs">
-                  {group.slots.filter((value) => selection[value]).length}
-                </span>
-              </Tabs.Tab>
-            ))}
-          </Tabs.List>
-          <Tabs.Panel value={activeGroup}>
-            <nav aria-label={t.choose} className="flex flex-wrap gap-1.5 border-b bg-muted/15 px-4 py-3">
-              {activeSlots.map((value) => (
-                <button
-                  key={value}
-                  aria-pressed={slot === value}
-                  onClick={() => changeSlot(value)}
-                  className={cn(
-                    "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition",
-                    slot === value ? "border-primary bg-primary text-primary-foreground" : "bg-background hover:border-primary/40",
-                  )}
-                >
-                  {selection[value] ? <IconCheck className="size-4" /> : <IconPlus className="size-4 opacity-50" />}
-                  {t.slots[value]}
-                </button>
-              ))}
+    <section aria-label={t.title} className="min-h-screen bg-muted/30 px-4 pb-24 pt-4 sm:px-6 lg:px-8 lg:pb-8">
+      <div className="mx-auto w-full max-w-[90rem]">
+        {/* Breadcrumb & Header */}
+        <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <nav className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>Trang chủ</span>
+              <span>›</span>
+              <span className="font-semibold text-foreground">Build PC</span>
             </nav>
-            <section className="min-w-0 p-4" aria-labelledby="component-heading">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-primary">{slot}</p>
-                  <h2 id="component-heading" className="mt-1 text-xl font-semibold">
-                    {t.slots[slot]}
-                  </h2>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {parts.length} {t.results}
-                </span>
-              </div>
-              <div className="relative mt-3">
-                <IconSearch className="absolute left-3 top-3 size-5 text-muted-foreground" />
-                <Input
-                  aria-label={t.search}
-                  placeholder={t.search}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="h-11 pl-10 text-base"
-                />
-              </div>
-              <div className="my-3 grid grid-cols-2 gap-3">
-                <select
-                  aria-label={t.brand}
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  className="h-10 min-w-0 rounded-lg border bg-background px-3 text-sm"
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.title}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t.subtitle}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" className="h-10 text-xs font-semibold" onClick={load}>
+              <IconFolderOpen className="mr-1.5 size-4" />
+              {t.load}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-10 text-xs font-semibold text-muted-foreground hover:text-foreground"
+              onClick={() => {
+                resetBuild();
+                setShareLink("");
+              }}
+            >
+              <IconRefresh className="mr-1.5 size-4" />
+              {t.resetBuild || "Làm mới"}
+            </Button>
+          </div>
+        </header>
+
+        {/* Presets Toolbar (Phong Vũ Style) */}
+        <section className="mb-5 rounded-2xl border bg-card p-4 shadow-2xs" aria-label={t.start}>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.start}:</span>
+              {(["gaming", "creator", "office"] as const).map((value) => (
+                <Button
+                  key={value}
+                  size="sm"
+                  variant={goal === value ? "default" : "outline"}
+                  className="h-8 text-xs font-semibold"
+                  onClick={() => setGoal(value)}
                 >
-                  <option value="">{t.brand}</option>
-                  {[...new Set(catalog.data?.map((p) => p.brand))].map((value) => (
-                    <option key={value}>{value}</option>
+                  {t[value] || value}
+                </Button>
+              ))}
+            </div>
+
+            <label className="flex w-full items-center justify-between gap-3 text-sm sm:w-auto sm:justify-start">
+              <span className="shrink-0 text-xs font-medium text-muted-foreground">{t.budget}:</span>
+              <div className="relative">
+                <select
+                  id="builder-budget-select"
+                  name="budget"
+                  value={budget}
+                  onChange={(e) => setBudget(Number(e.target.value))}
+                  className="h-9 cursor-pointer appearance-none rounded-lg border bg-background pl-3 pr-8 text-xs font-medium transition hover:border-primary/50"
+                >
+                  <option value={0}>{t.noBudget}</option>
+                  {[15000000, 20000000, 30000000, 50000000, 80000000].map((value) => (
+                    <option key={value} value={value}>
+                      ≤ {money(value)}
+                    </option>
                   ))}
                 </select>
-                <select
-                  aria-label={t.sort}
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value)}
-                  className="h-10 min-w-0 rounded-lg border bg-background px-3 text-sm"
-                >
-                  <option value="ascending">{t.ascending}</option>
-                  <option value="descending">{t.descending}</option>
-                </select>
+                <IconChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               </div>
-              {activeGroup === "core" && (
-                <label className="mb-5 flex items-center gap-2 text-sm text-muted-foreground">
-                  <input type="checkbox" checked={hideConflicts} onChange={(e) => setHideConflicts(e.target.checked)} />
-                  {t.compatibleOnly}
-                </label>
-              )}
-              {(catalog.isError || candidates.isError) && (
-                <div role="alert" className="mb-4 rounded-xl bg-destructive/10 p-4">
-                  <p>{t.error}</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      void catalog.refetch();
-                      void candidates.refetch();
-                    }}
+            </label>
+          </div>
+
+          {/* Preset configuration Mini-Cards & See All button */}
+          {(() => {
+            const matchingTemplates = realTemplates.filter(
+              (template) => template.goal === goal && (budget === 0 || template.price <= budget),
+            );
+            // Select up to 4 representative templates spread across price range
+            const featuredCount = 4;
+            const featuredTemplates =
+              matchingTemplates.length <= featuredCount
+                ? matchingTemplates
+                : [
+                    matchingTemplates[0],
+                    matchingTemplates[Math.floor(matchingTemplates.length * 0.33)],
+                    matchingTemplates[Math.floor(matchingTemplates.length * 0.66)],
+                    matchingTemplates[matchingTemplates.length - 1],
+                  ];
+
+            return (
+              <div className="mt-3.5 border-t pt-3.5">
+                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                  {featuredTemplates.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => {
+                        setSelection(template.selection);
+                        setQuantities({});
+                        setShareLink("");
+                        setNotice("");
+                      }}
+                      className="group flex flex-col justify-between rounded-xl border border-border/80 bg-background p-3 text-left transition-all duration-150 hover:border-primary/50 hover:bg-primary/5 hover:shadow-2xs"
+                    >
+                      <div>
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            {t[template.goal] || template.goal}
+                          </span>
+                        </div>
+                        <h4 className="mt-1 line-clamp-2 text-xs font-bold text-foreground group-hover:text-primary transition-colors" title={template.name}>
+                          {template.name}
+                        </h4>
+                      </div>
+                      <div className="mt-2.5 flex items-center justify-between border-t border-border/50 pt-2">
+                        <span className="text-xs font-black text-primary">{money(template.price)}</span>
+                        <span className="inline-flex items-center text-[11px] font-semibold text-primary">
+                          Chọn <IconChevronRight className="ml-0.5 size-3.5 transition-transform group-hover:translate-x-0.5" />
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed pt-2.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAllPresetsOpen(true)}
+                      className="h-8 font-bold text-primary hover:bg-primary/10 hover:text-primary"
+                    >
+                      <IconSparkles className="mr-1.5 size-3.5" />
+                      Xem tất cả cấu hình mẫu ({matchingTemplates.length})
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetBuild();
+                        setShareLink("");
+                      }}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-dashed px-3 text-xs font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
+                    >
+                      <IconPlus className="size-3.5" />
+                      {t.custom}
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground">
+                    Đã kiểm tra 100% không xung đột phần cứng
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
+        </section>
+
+        {/* Main 2-Column Grid: Left Slot Rows List (Phong Vũ style) - Right Sticky Summary */}
+        <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_450px] 2xl:grid-cols-[minmax(0,1fr)_480px]">
+          {/* Left Column: Numbered Slots List */}
+          <div className="min-w-0 max-w-full space-y-4">
+            <Tabs.Root
+              value={activeTab}
+              onValueChange={(val) => {
+                if (val === "all" || val === "core" || val === "peripherals") {
+                  setActiveTab(val);
+                }
+              }}
+              className="rounded-2xl border bg-card shadow-2xs"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
+                <div>
+                  <h2 className="text-lg font-bold">{t.componentsTitle}</h2>
+                  <p className="text-xs text-muted-foreground">{t.componentsHint}</p>
+                </div>
+
+                {/* Tabs for Core / Peripherals / All */}
+                <Tabs.List aria-label={t.componentsTitle} className="flex gap-2">
+                  <Tabs.Tab
+                    value="core"
+                    aria-label={t.tabs.core}
+                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
                   >
+                    {t.tabs.core} (8)
+                  </Tabs.Tab>
+                  <Tabs.Tab
+                    value="peripherals"
+                    aria-label={t.tabs.peripherals}
+                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
+                  >
+                    {t.tabs.peripherals} (4)
+                  </Tabs.Tab>
+                  <Tabs.Tab
+                    value="all"
+                    aria-label={t.allSlots}
+                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
+                  >
+                    {t.allSlots} (12)
+                  </Tabs.Tab>
+                </Tabs.List>
+              </div>
+
+              {/* Slot Navigation Pills Bar */}
+              <nav aria-label={t.choose} className="flex max-w-full items-center gap-1.5 overflow-x-auto border-b bg-muted/15 px-4 py-2">
+                <span className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-muted-foreground mr-1">{t.choose}:</span>
+                {(activeTab === "peripherals" ? optionalSlots : activeTab === "all" ? slots : coreSlots).map((slotKey) => (
+                  <button
+                    key={slotKey}
+                    type="button"
+                    aria-pressed={
+                      activeTab === "core" ? lastCoreSlot === slotKey : activeTab === "peripherals" ? lastPeripheralSlot === slotKey : false
+                    }
+                    onClick={() => openPicker(slotKey)}
+                    className={cn(
+                      "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition",
+                      selection[slotKey]
+                        ? "border-primary/40 bg-primary/10 text-primary font-bold"
+                        : "bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                    )}
+                  >
+                    {selection[slotKey] && <IconCheck className="size-3.5 shrink-0" />}
+                    {t.slots[slotKey]}
+                  </button>
+                ))}
+              </nav>
+            </Tabs.Root>
+
+            {/* Vertical Numbered Slot Rows (Phong Vũ Core Pattern) */}
+            <section aria-label="Danh sách linh kiện máy tính" className="space-y-2">
+              {displayedSlots.map((slotKey) => {
+                const slotIdx = slots.indexOf(slotKey) + 1;
+                const selectedPart = quote.data?.parts.find((p) => p.slot === slotKey);
+                const check = quote.data?.checks.find((c) => c.slots.includes(slotKey));
+                return (
+                  <SlotRow
+                    key={slotKey}
+                    slot={slotKey}
+                    index={slotIdx}
+                    part={selectedPart}
+                    compatibilityCheck={check}
+                    onPick={() => openPicker(slotKey)}
+                    onRemove={() => remove(slotKey)}
+                    quantity={quantityOf(slotKey)}
+                    onQuantityChange={(next) => setQuantities((curr) => ({...curr, [slotKey]: Math.min(MAX_QUANTITY, Math.max(1, next))}))}
+                    t={t}
+                    money={money}
+                  />
+                );
+              })}
+            </section>
+
+            {/* Suggested Accessories Section (Bottom of Left Column) */}
+            <section className="mt-6 rounded-2xl border bg-card p-5 shadow-2xs" aria-label={t.accessoryTitle}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-foreground">{t.accessoryTitle}</h3>
+                  <p className="mt-0.5 text-xs text-muted-foreground">{t.accessoryHint}</p>
+                </div>
+              </div>
+
+              {accessories.isPending ? (
+                <Skeleton className="mt-4 h-28 rounded-xl" />
+              ) : accessories.isError ? (
+                <div role="alert" className="mt-4 text-xs text-destructive">
+                  {t.error}
+                  <Button variant="ghost" size="sm" onClick={() => void accessories.refetch()}>
                     {t.retry}
                   </Button>
                 </div>
-              )}
-              {catalog.isPending ? (
-                <div aria-label={t.loading} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                  {[1, 2, 3].map((value) => (
-                    <Skeleton key={value} className="h-40" />
-                  ))}
-                </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-                  {parts.map((part) => (
-                    <PartCard
-                      key={part.id}
-                      part={part}
-                      selected={selection[slot] === part.id}
-                      status={activeGroup === "core" ? candidates.data?.[part.id] : undefined}
-                      t={t}
-                      money={money}
-                      onSelect={() => select(part.id, false)}
-                    />
-                  ))}
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {optionalSlots.map((value) => {
+                    const part = accessories.data?.find((p) => p.slot === value);
+                    if (!part) return null;
+                    const isSelected = selection[value] === part.id;
+                    return (
+                      <article
+                        key={value}
+                        className="flex min-w-0 flex-col justify-between rounded-xl border bg-muted/20 p-3.5 transition hover:border-primary/40"
+                      >
+                        <div>
+                          <div className="flex items-start gap-3">
+                            <PartArt slot={value} compact />
+                            <div className="min-w-0 flex-1">
+                              <span className="text-[11px] font-medium text-muted-foreground">
+                                {t.slots[value]} · {t.optional}
+                              </span>
+                              <h4 className="mt-0.5 line-clamp-2 text-xs font-bold" title={part.name}>
+                                {part.name}
+                              </h4>
+                              <p className="mt-1 text-xs font-extrabold text-primary">{money(part.price)}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between gap-2 border-t pt-2.5">
+                          <Button
+                            variant={isSelected ? "secondary" : "default"}
+                            size="sm"
+                            className="h-8 min-w-0 flex-1 text-xs font-semibold"
+                            onClick={() => {
+                              setSelection((curr) => ({...curr, [value]: part.id}));
+                              setShareLink("");
+                            }}
+                          >
+                            <IconPlus className="mr-1 size-3.5" />
+                            {isSelected ? t.selected : t.addAccessory}
+                          </Button>
+                          <button
+                            type="button"
+                            className="flex h-8 shrink-0 items-center whitespace-nowrap px-1 text-xs font-semibold text-primary hover:underline"
+                            onClick={() => openPicker(value)}
+                          >
+                            {t.browseOptions}
+                            <IconChevronRight className="ml-0.5 size-3.5" />
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
-              )}
-              {!catalog.isPending && !catalog.isError && parts.length === 0 && (
-                <p className="py-16 text-center text-muted-foreground">{t.empty}</p>
               )}
             </section>
-          </Tabs.Panel>
-        </Tabs.Root>
-        <SetupSummary
-          t={t}
-          selection={selection}
-          quote={quote.data}
-          ready={ready}
-          error={quote.isError}
-          budget={budget}
-          notice={notice}
-          shareLink={shareLink}
-          money={money}
-          onEdit={changeSlot}
-          onRemove={remove}
-          onClear={() => {
-            setSelection({});
-            setShareLink("");
-          }}
-          onSave={save}
-          onShare={() => void share()}
-          onRetry={() => void quote.refetch()}
-        />
+          </div>
+
+          {/* Right Column: Sticky Summary & AI Consultation (Phong Vũ Style) */}
+          <SetupSummary
+            t={t}
+            selection={selection}
+            quantities={quantities}
+            quote={quote.data}
+            ready={ready}
+            error={quote.isError}
+            budget={budget}
+            notice={notice}
+            shareLink={shareLink}
+            money={money}
+            onEdit={(slotToEdit) => {
+              if (coreSlots.includes(slotToEdit)) {
+                setActiveTab("core");
+              } else {
+                setActiveTab("peripherals");
+              }
+              openPicker(slotToEdit);
+            }}
+            onRemove={remove}
+            onClear={() => {
+              resetBuild();
+              setShareLink("");
+            }}
+            onSave={save}
+            onShare={() => void share()}
+            onRetry={() => void quote.refetch()}
+          />
+        </div>
       </div>
-      <section className="mt-6 rounded-2xl border bg-background p-5" aria-label={t.accessoryTitle}>
-        <h2 className="text-xl font-semibold">{t.accessoryTitle}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{t.accessoryHint}</p>
-        {accessories.isPending ? (
-          <Skeleton className="mt-4 h-32" />
-        ) : accessories.isError ? (
-          <div role="alert" className="mt-4 text-sm">
-            {t.error}
-            <Button variant="ghost" onClick={() => void accessories.refetch()}>
-              {t.retry}
-            </Button>
-          </div>
-        ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
-            {optionalSlots.map((value) => {
-              const part = accessories.data?.find((part) => part.slot === value);
-              if (!part) return null;
-              return (
-                <article key={value} className="rounded-xl border bg-muted/20 p-4">
-                  <div className="flex items-start gap-3">
-                    <PartArt slot={value} compact />
-                    <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">
-                        {t.slots[value]} · {t.optional}
-                      </p>
-                      <h3 className="mt-1 font-semibold">{part.name}</h3>
-                      <p className="mt-1 font-semibold text-primary">{money(part.price)}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      className="h-9"
-                      onClick={() => {
-                        setSelection((current) => ({...current, [value]: part.id}));
-                        setShareLink("");
-                      }}
-                    >
-                      <IconPlus />
-                      {selection[value] === part.id ? t.selected : t.addAccessory}
-                    </Button>
-                    <a
-                      href="#component-heading"
-                      className="inline-flex items-center px-2 text-sm font-medium text-primary"
-                      onClick={() => changeSlot(value)}
-                    >
-                      {t.browseOptions}
-                      <IconChevronRight className="size-4" />
-                    </a>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        )}
-      </section>
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between border-t bg-background/95 px-4 py-3 backdrop-blur xl:hidden">
+
+      {/* Modal Dialog for Choosing Components (Phong Vũ Pattern) */}
+      <PartPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        slot={pickerSlot}
+        selection={selection}
+        onSelect={handleSelect}
+        t={t}
+        money={money}
+      />
+
+      {/* Modal Dialog for Exploring All 100 Prebuilt Conflict-Free Builds */}
+      <PresetBuildsDialog
+        open={allPresetsOpen}
+        onOpenChange={setAllPresetsOpen}
+        presets={realTemplates}
+        currentGoal={goal}
+        onSelect={(item) => {
+          setSelection(item.selection);
+          setQuantities({});
+          setShareLink("");
+          setNotice("");
+        }}
+        t={t}
+        money={money}
+      />
+
+      {/* Mobile Sticky Action Bar */}
+      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center justify-between border-t bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
         <div>
           <p className="text-xs text-muted-foreground">
             {coreCount}/{coreSlots.length}
@@ -459,9 +536,12 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
           </p>
           <p className="text-lg font-bold text-primary">{ready ? money(total) : t.updating}</p>
         </div>
-        <a href="#build-summary" className="rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">
+        <a
+          href="#build-summary"
+          className="inline-flex items-center rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-primary-foreground shadow-xs"
+        >
           {t.view}
-          <IconChevronRight className="ml-1 inline size-4" />
+          <IconChevronRight className="ml-1 size-4" />
         </a>
       </div>
     </section>
