@@ -1,6 +1,6 @@
 "use client";
 
-import {Bot, Sparkles, X} from "lucide-react";
+import {Bot, X} from "lucide-react";
 import {useTranslations} from "next-intl";
 import {useState} from "react";
 
@@ -54,10 +54,7 @@ export function AssistantFloatingWidget() {
           <X className="size-5" />
         ) : (
           <>
-            <span className="relative flex size-5 items-center justify-center">
-              <Bot className="size-5" />
-              <Sparkles className="absolute -right-1 -top-1 size-3 text-amber-200" />
-            </span>
+            <Bot className="size-5" />
             <span className="hidden sm:inline">{t("floatingOpen")}</span>
           </>
         )}
