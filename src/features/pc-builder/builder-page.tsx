@@ -151,7 +151,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
         <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <nav className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span>Trang chủ</span>
+              <span>{t.home}</span>
               <span>›</span>
               <span className="font-semibold text-foreground">Build PC</span>
             </nav>
@@ -172,7 +172,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
               }}
             >
               <IconRefresh className="mr-1.5 size-4" />
-              {t.resetBuild || "Làm mới"}
+              {t.resetBuild}
             </Button>
           </div>
         </header>
@@ -262,7 +262,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
                       <div className="mt-2.5 flex items-center justify-between border-t border-border/50 pt-2">
                         <span className="text-xs font-black text-primary">{money(template.price)}</span>
                         <span className="inline-flex items-center text-[11px] font-semibold text-primary">
-                          Chọn <IconChevronRight className="ml-0.5 size-3.5 transition-transform group-hover:translate-x-0.5" />
+                          {t.choosePart} <IconChevronRight className="ml-0.5 size-3.5 transition-transform group-hover:translate-x-0.5" />
                         </span>
                       </div>
                     </button>
@@ -279,7 +279,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
                       className="h-8 font-bold text-primary hover:bg-primary/10 hover:text-primary"
                     >
                       <IconSparkles className="mr-1.5 size-3.5" />
-                      Xem tất cả cấu hình mẫu ({matchingTemplates.length})
+                      {t.viewAllPresets} ({matchingTemplates.length})
                     </Button>
                     <button
                       type="button"
@@ -294,7 +294,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
                     </button>
                   </div>
                   <span className="text-[11px] text-muted-foreground">
-                    Đã kiểm tra 100% không xung đột phần cứng
+                    {t.verifiedNoConflict}
                   </span>
                 </div>
               </div>
@@ -361,7 +361,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
             </Tabs>
 
             {/* Vertical Numbered Slot Rows (Phong Vũ Core Pattern) */}
-            <section aria-label="Danh sách linh kiện máy tính" className="space-y-2">
+            <section aria-label={t.componentListLabel} className="space-y-2">
               {displayedSlots.map((slotKey) => {
                 const slotIdx = slots.indexOf(slotKey) + 1;
                 const selectedPart = quote.data?.parts.find((p) => p.slot === slotKey);

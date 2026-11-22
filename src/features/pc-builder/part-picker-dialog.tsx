@@ -135,7 +135,7 @@ export function PartPickerDialog({
                 <IconSearch className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   aria-label={t.search}
-                  placeholder="Nhập từ khóa cần tìm (i5, Ryzen 5, 14400F...)"
+                  placeholder={t.search}
                   value={search}
                   onChange={(e) => {
                     setSearch(e.target.value);
@@ -146,7 +146,7 @@ export function PartPickerDialog({
                 {search && (
                   <button
                     type="button"
-                    aria-label="Xóa tìm kiếm"
+                    aria-label={t.clearSearch}
                     onClick={() => {
                       setSearch("");
                       setPage(0);

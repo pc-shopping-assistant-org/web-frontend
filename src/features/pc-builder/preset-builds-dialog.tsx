@@ -52,7 +52,7 @@ export function PresetBuildsDialog({
   return (
     <DialogRoot open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        aria-label="Tất cả cấu hình PC mẫu"
+        aria-label={t.allPresetsLabel}
         className="flex max-h-[90vh] w-[95vw] max-w-4xl flex-col"
       >
         {/* Header */}
@@ -63,10 +63,10 @@ export function PresetBuildsDialog({
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-foreground sm:text-lg">
-                Cấu hình PC mẫu tương thích 100%
+                {t.allPresetsTitle}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Được tối ưu hóa tự động theo phân khúc và không xung đột phần cứng
+                {t.allPresetsSubtitle}
               </DialogDescription>
             </div>
           </div>
@@ -88,7 +88,7 @@ export function PresetBuildsDialog({
                 className="h-8 text-xs font-semibold"
                 onClick={() => setFilterGoal("all")}
               >
-                Tất cả ({presets.length})
+                {t.allLabel} ({presets.length})
               </Button>
               {(["gaming", "creator", "office"] as const).map((g) => (
                 <Button
@@ -125,7 +125,7 @@ export function PresetBuildsDialog({
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Tìm CPU, VGA..."
+                  placeholder={t.presetSearchPlaceholder}
                   className="h-8 pl-8 pr-3 text-xs"
                 />
               </div>
@@ -136,7 +136,7 @@ export function PresetBuildsDialog({
           <div className="flex-1 overflow-y-auto p-5 sm:p-6">
             {filtered.length === 0 ? (
               <div className="py-16 text-center text-sm text-muted-foreground">
-                Không tìm thấy cấu hình mẫu nào phù hợp với bộ lọc.
+                {t.noMatchingPresets}
               </div>
             ) : (
               <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
@@ -158,7 +158,7 @@ export function PresetBuildsDialog({
 
                     <div className="mt-4 flex items-center justify-between gap-2 border-t pt-3">
                       <div>
-                        <p className="text-[11px] text-muted-foreground">Giá trọn bộ</p>
+                        <p className="text-[11px] text-muted-foreground">{t.bundlePrice}</p>
                         <p className="text-sm font-extrabold text-primary">{money(item.price)}</p>
                       </div>
                       <Button
@@ -169,7 +169,7 @@ export function PresetBuildsDialog({
                           onOpenChange(false);
                         }}
                       >
-                        Chọn bộ này
+                        {t.chooseThisBuild}
                       </Button>
                     </div>
                   </article>

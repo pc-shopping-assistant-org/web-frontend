@@ -61,7 +61,7 @@ export function PartCard({
           onClick={onSelect}
         >
           {selected && <IconCheck className="mr-1 size-3.5" />}
-          {selected ? t.selected : "Chọn"}
+          {selected ? t.selected : t.choosePart}
         </Button>
       </div>
     </article>

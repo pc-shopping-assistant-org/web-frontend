@@ -39,7 +39,7 @@ function normalizeSpecs(raw?: Record<string, unknown> | null): Record<string, st
     if (typeof value === "string" || typeof value === "number") {
       result[key] = value;
     } else if (typeof value === "boolean") {
-      result[key] = value ? "Có" : "Không";
+      result[key] = value ? "✓" : "—";
     } else if (Array.isArray(value)) {
       result[key] = value.map(String).join(", ");
     }
@@ -56,7 +56,7 @@ export function mapSnapshotProductToParts(prod: ProductDetailDto, slot: Slot): P
       id: prod.id,
       name: prod.name,
       sku: prod.seoName || prod.id.slice(0, 8).toUpperCase(),
-      brand: prod.brandName || "Chính hãng",
+      brand: prod.brandName || "",
       slot,
       price: 0,
       inStock: true,
@@ -73,7 +73,7 @@ export function mapSnapshotProductToParts(prod: ProductDetailDto, slot: Slot): P
       id: v.id,
       name: prod.name + optionSuffix,
       sku: v.sku || prod.seoName,
-      brand: prod.brandName || "Chính hãng",
+      brand: prod.brandName || "",
       slot,
       price: v.price,
       inStock: v.quantity > 0,

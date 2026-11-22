@@ -114,7 +114,7 @@ export function SlotRow({
             type="button"
             className="px-2.5 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
             disabled={quantity <= 1}
-            aria-label={`Giảm số lượng ${t.slots[slot]}`}
+            aria-label={`${t.decreaseQuantity} ${t.slots[slot]}`}
             onClick={() => onQuantityChange(quantity - 1)}
           >
             -
@@ -126,7 +126,7 @@ export function SlotRow({
             type="button"
             className="px-2.5 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
             disabled={quantity >= MAX_QUANTITY}
-            aria-label={`Tăng số lượng ${t.slots[slot]}`}
+            aria-label={`${t.increaseQuantity} ${t.slots[slot]}`}
             onClick={() => onQuantityChange(quantity + 1)}
           >
             +
@@ -148,7 +148,7 @@ export function SlotRow({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`Xóa ${t.slots[slot]}`}
+            aria-label={`${t.deleteSlot} ${t.slots[slot]}`}
             onClick={onRemove}
             className="size-8 rounded-lg text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
           >

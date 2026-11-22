@@ -210,8 +210,8 @@ export function SetupSummary({
               </div>
               <p className="text-[11px] leading-relaxed text-muted-foreground">
                 {conflictCount > 0
-                  ? "Phát hiện linh kiện có thông số kỹ thuật không tương thích. Vui lòng thay đổi."
-                  : "Các thông số Socket, RAM, Form-factor và chuẩn kết nối hoàn toàn đồng bộ."}
+                  ? t.conflictSummaryHint
+                  : t.compatibleSummaryHint}
               </p>
             </div>
 
@@ -305,7 +305,7 @@ export function SetupSummary({
                     <IconInfoCircle className="size-4 shrink-0 text-muted-foreground" />
                   )}
                   <span>
-                    {t.compatibility} ({quote?.checks.length ?? 0} tiêu chí)
+                    {t.compatibility} ({quote?.checks.length ?? 0} {t.criteriaUnit})
                   </span>
                 </div>
                 <div className="flex items-center gap-1 text-muted-foreground">
