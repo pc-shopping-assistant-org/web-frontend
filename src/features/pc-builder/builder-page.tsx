@@ -15,7 +15,6 @@ import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group";
 import {Link} from "@/i18n/navigation";
 import {formatMoney} from "@/lib/format";
-import {cn} from "@/lib/utils";
 import {getAccessories, getQuote} from "./api";
 import {BuilderTab, BuildGoal, buildGoals, coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
 import {copy} from "./copy";
