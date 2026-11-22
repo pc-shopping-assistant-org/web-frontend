@@ -1,6 +1,6 @@
 import {z} from "zod";
 import {aiFetch} from "@/lib/api/client";
-import type {BuildGoal, BuildObjective, Selection, UseCaseProfile} from "./contracts";
+import {CheckVerdict, type BuildGoal, type BuildObjective, type Selection, type UseCaseProfile} from "./contracts";
 
 export const CompatibilityStatus = {
   OK: "OK",
@@ -76,10 +76,10 @@ export async function checkCompatibility(slots: Record<string, string>, signal?:
 /** The AI service rejects a request with more candidates than this (MAX_CANDIDATES in build_check.py). */
 const MAX_CANDIDATES_PER_CALL = 100;
 
-export type CandidateVerdict = "COMPATIBLE" | "INCOMPATIBLE" | "UNKNOWN";
+export type CandidateVerdict = CheckVerdict;
 
 const candidatesResponseSchema = z.object({
-  verdicts: z.record(z.string(), z.enum(["COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"])),
+  verdicts: z.record(z.string(), z.enum([CheckVerdict.COMPATIBLE, CheckVerdict.INCOMPATIBLE, CheckVerdict.UNKNOWN])),
 });
 
 /**

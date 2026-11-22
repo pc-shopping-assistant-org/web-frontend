@@ -40,6 +40,12 @@ import styles from "./assistant-page.module.css";
 
 type Result = ChatData | SearchData | ConsultData | CompareData | EvaluateData;
 
+const StreamState = {
+  STREAMING: "streaming",
+  RECONNECTING: "reconnecting",
+} as const;
+type StreamState = (typeof StreamState)[keyof typeof StreamState];
+
 export function AssistantPage({
   initialConversationId,
   initialProductIds = [],
@@ -83,7 +89,7 @@ export function AssistantPage({
   const [streamingPrompt, setStreamingPrompt] = useState("");
   const [streamingAnswer, setStreamingAnswer] = useState("");
   const [streamingProductIds, setStreamingProductIds] = useState<string[]>([]);
-  const [streamState, setStreamState] = useState<"streaming" | "reconnecting">("streaming");
+  const [streamState, setStreamState] = useState<StreamState>(StreamState.STREAMING);
   const [streamError, setStreamError] = useState<unknown>(null);
   const [pendingDelivery, setPendingDelivery] = useState<{conversationId: string; runId: string} | null>(null);
   const lastConfirmationRef = useRef<Confirmation | undefined>(undefined);
@@ -829,7 +835,7 @@ function StreamingChatTurn({
   prompt: string;
   answer: string;
   selectedProductIds: string[];
-  state: "streaming" | "reconnecting";
+  state: StreamState;
   error: unknown;
   onRetry: () => void;
   onDismiss: () => void;

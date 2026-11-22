@@ -1,4 +1,4 @@
-import type {Slot} from "./contracts";
+import type {CheckVerdict, Slot} from "./contracts";
 
 export type Part = {
   id: string;
@@ -15,7 +15,7 @@ export type BuildQuote = {
   total: number;
   parts: Part[];
   missing: Slot[];
-  checks: {code: string; status: "COMPATIBLE" | "INCOMPATIBLE" | "UNKNOWN"; slots: Slot[]; message?: string}[];
+  checks: {code: string; status: CheckVerdict; slots: Slot[]; message?: string}[];
   /** Estimated draw of the build and the supply it calls for, from the AI service; absent until there is a CPU or GPU. */
   power?: {
     estimatedWatts: number;

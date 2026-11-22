@@ -17,8 +17,10 @@ import {
 import {useState} from "react";
 
 import {Alert, AlertDescription} from "@/components/ui/alert";
+import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
+import {Progress} from "@/components/ui/progress";
 import {Input} from "@/components/ui/input";
 import {useAddToCart} from "@/features/cart/queries";
 import {cn} from "@/lib/utils";
@@ -134,10 +136,11 @@ export function SetupSummary({
           <IconDeviceDesktop className="size-8 text-primary sm:size-10" />
         </div>
 
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+        <Badge variant="outline" className="gap-1.5 border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
           <IconCheck className="size-3.5" />
           {coreSelectedCount}/8 {t.coreProgress}
-        </span>
+        </Badge>
+        <Progress value={(coreSelectedCount / coreSlots.length) * 100} className="mx-auto mt-2.5 max-w-[200px]" />
 
         <div className="mt-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t.total}</p>

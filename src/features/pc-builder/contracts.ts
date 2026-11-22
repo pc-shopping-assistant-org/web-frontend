@@ -51,5 +51,25 @@ export const BuildObjective = {
 export type BuildObjective = (typeof BuildObjective)[keyof typeof BuildObjective];
 export const buildObjectives: readonly BuildObjective[] = Object.values(BuildObjective);
 
+export const CheckVerdict = {
+  COMPATIBLE: "COMPATIBLE",
+  INCOMPATIBLE: "INCOMPATIBLE",
+  UNKNOWN: "UNKNOWN",
+} as const;
+export type CheckVerdict = (typeof CheckVerdict)[keyof typeof CheckVerdict];
+
+export const BuilderTab = {
+  CORE: "core",
+  PERIPHERALS: "peripherals",
+  ALL: "all",
+} as const;
+export type BuilderTab = (typeof BuilderTab)[keyof typeof BuilderTab];
+
+export const PickerSort = {
+  PRICE_ASC: "price_asc",
+  PRICE_DESC: "price_desc",
+} as const;
+export type PickerSort = (typeof PickerSort)[keyof typeof PickerSort];
+
 export const selectionSchema = z.partialRecord(z.enum(slots), z.uuid());
 export type Selection = z.infer<typeof selectionSchema>;

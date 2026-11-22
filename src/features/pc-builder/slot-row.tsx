@@ -3,7 +3,7 @@
 import {IconArrowsExchange, IconPlus, IconTrash} from "@tabler/icons-react";
 
 import {Button} from "@/components/ui/button";
-import {MAX_QUANTITY, type Slot} from "./contracts";
+import {CheckVerdict, MAX_QUANTITY, type Slot} from "./contracts";
 import type {BuilderCopy} from "./copy";
 import type {Part} from "./models";
 import {PartArt} from "./part-art";
@@ -23,7 +23,7 @@ export function SlotRow({
   slot: Slot;
   index: number;
   part?: Part;
-  compatibilityCheck?: {status: "COMPATIBLE" | "INCOMPATIBLE" | "UNKNOWN"; message?: string};
+  compatibilityCheck?: {status: CheckVerdict; message?: string};
   quantity: number;
   onQuantityChange: (quantity: number) => void;
   onPick: () => void;
@@ -110,27 +110,31 @@ export function SlotRow({
           <div className="whitespace-nowrap text-sm font-extrabold text-primary">{money(part.price * quantity)}</div>
         </div>
         <div className="flex h-8 items-center overflow-hidden rounded-lg border bg-muted/20 text-xs font-semibold">
-          <button
+          <Button
             type="button"
-            className="px-2.5 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+            variant="ghost"
+            size="icon-sm"
+            className="h-8 w-7 rounded-none text-muted-foreground hover:text-foreground"
             disabled={quantity <= 1}
             aria-label={`${t.decreaseQuantity} ${t.slots[slot]}`}
             onClick={() => onQuantityChange(quantity - 1)}
           >
             -
-          </button>
+          </Button>
           <span aria-live="polite" className="min-w-6 px-1.5 text-center font-bold text-foreground">
             {quantity}
           </span>
-          <button
+          <Button
             type="button"
-            className="px-2.5 py-1 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-40"
+            variant="ghost"
+            size="icon-sm"
+            className="h-8 w-7 rounded-none text-muted-foreground hover:text-foreground"
             disabled={quantity >= MAX_QUANTITY}
             aria-label={`${t.increaseQuantity} ${t.slots[slot]}`}
             onClick={() => onQuantityChange(quantity + 1)}
           >
             +
-          </button>
+          </Button>
         </div>
         <div className="flex items-center gap-1.5">
           <Button

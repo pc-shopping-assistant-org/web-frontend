@@ -36,4 +36,7 @@ if (typeof window !== "undefined") {
       }
     };
   }
+  if (typeof Element !== "undefined" && !Element.prototype.getAnimations) {
+    Element.prototype.getAnimations = () => [];
+  }
 }

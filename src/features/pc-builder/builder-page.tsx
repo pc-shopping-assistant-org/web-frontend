@@ -1,6 +1,6 @@
 "use client";
 
-import {IconCheck, IconChevronRight, IconFolderOpen, IconPlus, IconRefresh, IconSparkles} from "@tabler/icons-react";
+import {IconChevronRight, IconFolderOpen, IconPlus, IconRefresh, IconSparkles} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useLocale} from "next-intl";
 import {useMemo, useState} from "react";
@@ -17,13 +17,14 @@ import {Link} from "@/i18n/navigation";
 import {formatMoney} from "@/lib/format";
 import {cn} from "@/lib/utils";
 import {getAccessories, getQuote} from "./api";
-import {BuildGoal, buildGoals, coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
+import {BuilderTab, BuildGoal, buildGoals, coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
 import {copy} from "./copy";
 import {AutoOptimizeDialog} from "./auto-optimize-dialog";
 import {PartArt} from "./part-art";
 import {PartPickerDialog} from "./part-picker-dialog";
 import {PresetBuildsDialog} from "./preset-builds-dialog";
 import {SetupSummary} from "./setup-summary";
+import {SlotQuickBar} from "./slot-quick-bar";
 import {SlotRow} from "./slot-row";
 import {getPrebuiltBuilds} from "./compatibility-api";
 
@@ -46,7 +47,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allPresetsOpen, setAllPresetsOpen] = useState(false);
   const [autoOptimizeOpen, setAutoOptimizeOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "core" | "peripherals">("core");
+  const [activeTab, setActiveTab] = useState<BuilderTab>(BuilderTab.CORE);
   const [lastCoreSlot, setLastCoreSlot] = useState<Slot>("CPU");
   const [lastPeripheralSlot, setLastPeripheralSlot] = useState<Slot>("MONITOR");
   const [budget, setBudget] = useState(0);
@@ -169,7 +170,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const quantityOf = (slot: Slot) => quantities[slot] ?? 1;
   const total = (quote.data?.parts ?? []).reduce((sum, part) => sum + part.price * quantityOf(part.slot), 0);
 
-  const displayedSlots: Slot[] = activeTab === "all" ? slots : activeTab === "core" ? coreSlots : optionalSlots;
+  const displayedSlots: Slot[] = activeTab === BuilderTab.ALL ? slots : activeTab === BuilderTab.CORE ? coreSlots : optionalSlots;
 
   return (
     <section aria-label={t.title} className="min-h-screen bg-muted/30 px-4 pb-24 pt-4 sm:px-6 lg:px-8 lg:pb-8">
@@ -336,7 +337,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
             <Tabs
               value={activeTab}
               onValueChange={(val) => {
-                if (val === "all" || val === "core" || val === "peripherals") {
+                if (val === BuilderTab.ALL || val === BuilderTab.CORE || val === BuilderTab.PERIPHERALS) {
                   setActiveTab(val);
                 }
               }}
@@ -362,29 +363,14 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
                 </TabsList>
               </div>
 
-              {/* Slot Navigation Pills Bar */}
-              <nav aria-label={t.choose} className="flex max-w-full items-center gap-1.5 overflow-x-auto border-b bg-muted/15 px-4 py-2">
-                <span className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-muted-foreground mr-1">{t.choose}:</span>
-                {(activeTab === "peripherals" ? optionalSlots : activeTab === "all" ? slots : coreSlots).map((slotKey) => (
-                  <Button
-                    key={slotKey}
-                    type="button"
-                    size="sm"
-                    variant={selection[slotKey] ? "secondary" : "outline"}
-                    aria-pressed={
-                      activeTab === "core" ? lastCoreSlot === slotKey : activeTab === "peripherals" ? lastPeripheralSlot === slotKey : false
-                    }
-                    onClick={() => openPicker(slotKey)}
-                    className={cn(
-                      "h-7 shrink-0 gap-1.5 rounded-full px-2.5 text-xs font-medium",
-                      selection[slotKey] && "border border-primary/40 bg-primary/10 font-bold text-primary hover:bg-primary/15",
-                    )}
-                  >
-                    {selection[slotKey] && <IconCheck className="size-3.5 shrink-0" />}
-                    {t.slots[slotKey]}
-                  </Button>
-                ))}
-              </nav>
+              <SlotQuickBar
+                activeTab={activeTab}
+                lastCoreSlot={lastCoreSlot}
+                lastPeripheralSlot={lastPeripheralSlot}
+                selection={selection}
+                onSelectSlot={openPicker}
+                t={t}
+              />
             </Tabs>
 
             {/* Vertical Numbered Slot Rows (Phong Vũ Core Pattern) */}
