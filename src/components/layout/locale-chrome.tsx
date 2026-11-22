@@ -4,6 +4,7 @@ import type {ReactNode} from "react";
 import {usePathname} from "@/i18n/navigation";
 import type {Locale} from "@/i18n/routing";
 
+import {AssistantFloatingWidget} from "@/features/assistant/components/assistant-floating-widget";
 import {SiteFooter} from "./site-footer";
 import {SiteHeader} from "./site-header";
 
@@ -17,6 +18,7 @@ export function LocaleChrome({locale, children}: {locale: Locale; children: Reac
       {!isAdmin ? <SiteHeader locale={locale} /> : null}
       <main className={isAssistant ? "flex min-h-0 flex-1 overflow-hidden" : "flex-1"}>{children}</main>
       {!isAdmin && !isAssistant ? <SiteFooter /> : null}
+      {!isAdmin && !isAssistant ? <AssistantFloatingWidget /> : null}
     </div>
   );
 }

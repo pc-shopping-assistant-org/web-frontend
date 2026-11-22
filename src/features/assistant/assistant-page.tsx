@@ -1,12 +1,13 @@
 "use client";
 
-import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, PackageSearch, Plus, RotateCcw, Search, Sparkles, WifiOff, X} from "lucide-react";
+import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, Maximize2, PackageSearch, Plus, RotateCcw, Search, Sparkles, WifiOff, X} from "lucide-react";
 import {Popover} from "@base-ui/react/popover";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import {useEffect, useRef, useState, type FormEvent} from "react";
 
 import {Badge} from "@/components/ui/badge";
+import {Bubble, BubbleContent} from "@/components/ui/bubble";
 import {Button, buttonVariants} from "@/components/ui/button";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {ErrorMessage} from "@/components/ui/error-message";
@@ -27,7 +28,7 @@ import {streamChat, type ChatData, type CompareData, type ConsultData, type Eval
 import type {Confirmation} from "./contracts/stateful";
 import {ACTIVE_CONVERSATION_STORAGE_KEY, CHAT_FOLLOW_BOTTOM_DISTANCE_PX, MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
 import {AssistantMarkdown} from "./assistant-markdown";
-import {loadConversationHistory, setConversationUrl} from "./conversation-history";
+import {loadConversationHistory, setConversationUrl, setStoredConversationId} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import type {AssistantProduct, ChatTurn} from "./models";
 import {PcBuildSummary} from "./components/pc-build-summary";
@@ -43,12 +44,20 @@ export function AssistantPage({
   initialProductIds = [],
   initialPrompt = "",
   invalidBuild = false,
+  variant = "page",
+  onCloseWidget,
+  contextProduct,
 }: {
   initialConversationId?: string;
   initialProductIds?: string[];
   initialPrompt?: string;
   invalidBuild?: boolean;
+  variant?: "page" | "widget";
+  onCloseWidget?: () => void;
+  contextProduct?: {id: string; name: string};
 }) {
+  const isWidget = variant === "widget";
+  const persistConversation = isWidget ? setStoredConversationId : setConversationUrl;
   const t = useTranslations("assistant");
   const common = useTranslations("common");
   const locale = useLocale();
@@ -103,7 +112,7 @@ export function AssistantPage({
   useEffect(() => {
     const targetId = initialConversationId ?? initialTargetIdRef.current;
     if (!targetId) return;
-    setConversationUrl(targetId);
+    persistConversation(targetId);
     const controller = new AbortController();
     streamController.current = controller;
     void (async () => {
@@ -121,7 +130,7 @@ export function AssistantPage({
           if (cause instanceof ApiClientError && cause.status === 401) setSignInOpen(true);
           else if (!initialConversationId && cause instanceof ApiClientError && cause.status === 404) {
             setConversationId(undefined);
-            setConversationUrl();
+            persistConversation();
           } else setError(cause);
         }
       } finally {
@@ -130,7 +139,7 @@ export function AssistantPage({
       }
     })();
     return () => controller.abort();
-  }, [initialConversationId]);
+  }, [initialConversationId, persistConversation]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -179,7 +188,7 @@ export function AssistantPage({
           onStart: (id) => {
             if (!controller.signal.aborted) {
               setConversationId(id);
-              setConversationUrl(id);
+              persistConversation(id);
             }
           },
           onDelta: (delta, replace) => {
@@ -258,7 +267,7 @@ export function AssistantPage({
   }
 
   function newConversation() {
-    setConversationUrl();
+    persistConversation();
     setConversationId(undefined);
     setChatTurns([]);
     setProductIds([]);
@@ -266,6 +275,13 @@ export function AssistantPage({
     setPrompt("");
     dismissStreamError();
   }
+
+  const fullPageHref = conversationId
+    ? `/assistant?conversationId=${encodeURIComponent(conversationId)}`
+    : "/assistant";
+  const showContextProductChip = Boolean(
+    isWidget && contextProduct && !productIds.includes(contextProduct.id) && productIds.length < MAX_SELECTED_PRODUCTS
+  );
 
   return (
     <section className={styles.workspace}>
@@ -284,32 +300,60 @@ export function AssistantPage({
         <LoginForm onSuccess={() => setSignInOpen(false)} />
       </Dialog>
       <header className="shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+        <div className={isWidget ? "flex w-full items-center justify-between gap-2 px-3.5 py-2.5" : "mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6"}>
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15">
               <Bot className="size-4.5" />
             </span>
             <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-sm font-semibold tracking-tight sm:text-base">{t("chatTitle")}</h1>
-              <Badge variant="outline" className="hidden border-primary/25 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary sm:inline-flex">
-                <Sparkles className="mr-1 size-3" />
-                {t("catalogGrounded")}
-              </Badge>
+              {isWidget ? (
+                <p className="truncate text-sm font-semibold tracking-tight">{t("chatTitle")}</p>
+              ) : (
+                <>
+                  <h1 className="truncate text-sm font-semibold tracking-tight sm:text-base">{t("chatTitle")}</h1>
+                  <Badge variant="outline" className="hidden border-primary/25 bg-primary/5 px-2 py-0.5 text-[11px] font-medium text-primary sm:inline-flex">
+                    <Sparkles className="mr-1 size-3" />
+                    {t("catalogGrounded")}
+                  </Badge>
+                </>
+              )}
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-            <Link href="/products" className="hidden items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary lg:inline-flex">
-              {t("browseCatalog")}
-              <ArrowUpRight className="size-3.5 text-muted-foreground" />
-            </Link>
-            <Link href="/build-pc" className="hidden items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary lg:inline-flex">
-              {t("buildPc")}
-              <ArrowUpRight className="size-3.5 text-muted-foreground" />
-            </Link>
-            <Button size="sm" variant="outline" onClick={newConversation} disabled={loading} aria-label={t("newConversation")} className="h-8 gap-1.5 rounded-lg px-2.5 text-xs">
+            {!isWidget ? (
+              <>
+                <Link href="/products" className="hidden items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary lg:inline-flex">
+                  {t("browseCatalog")}
+                  <ArrowUpRight className="size-3.5 text-muted-foreground" />
+                </Link>
+                <Link href="/build-pc" className="hidden items-center gap-1 rounded-lg border border-border/70 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary lg:inline-flex">
+                  {t("buildPc")}
+                  <ArrowUpRight className="size-3.5 text-muted-foreground" />
+                </Link>
+              </>
+            ) : null}
+            <Button size="sm" variant="outline" onClick={newConversation} disabled={loading} aria-label={t("newConversation")} title={t("newConversation")} className={isWidget ? "size-8 rounded-lg p-0" : "h-8 gap-1.5 rounded-lg px-2.5 text-xs"}>
               <Plus className="size-3.5" />
-              <span className="hidden sm:inline">{t("newConversation")}</span>
+              {!isWidget ? <span className="hidden sm:inline">{t("newConversation")}</span> : null}
             </Button>
+            {isWidget ? (
+              <>
+                <Link
+                  href={fullPageHref}
+                  onClick={() => onCloseWidget?.()}
+                  aria-label={t("openFullPage")}
+                  title={t("openFullPage")}
+                  className="inline-flex size-8 items-center justify-center rounded-lg border border-border/70 bg-background text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                >
+                  <Maximize2 className="size-3.5" />
+                </Link>
+                {onCloseWidget ? (
+                  <Button size="sm" variant="ghost" onClick={onCloseWidget} aria-label={common("close")} title={common("close")} className="size-8 rounded-lg p-0 text-muted-foreground hover:text-foreground">
+                    <X className="size-4" />
+                  </Button>
+                ) : null}
+              </>
+            ) : null}
           </div>
         </div>
       </header>
@@ -322,24 +366,24 @@ export function AssistantPage({
         )}
         <div ref={scrollRef} className={styles.scroller} role="log" aria-label={t("conversation")}
           onScroll={(event) => {const element = event.currentTarget; followBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < CHAT_FOLLOW_BOTTOM_DISTANCE_PX;}}>
-          <div className={`mx-auto w-full max-w-4xl px-4 sm:px-6 ${!chatTurns.length && !streamingPrompt ? "my-auto py-6" : "space-y-5 py-4"}`}>
+          <div className={`${isWidget ? "w-full px-3.5" : "mx-auto w-full max-w-4xl px-4 sm:px-6"} ${!chatTurns.length && !streamingPrompt ? "my-auto py-5" : "space-y-4 py-4"}`}>
           {chatTurns.length ? (
             <ChatTranscript turns={chatTurns} locale={locale} onAskAboutProduct={handleAskAboutProduct} />
           ) : !streamingPrompt ? (
-            <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-4 text-center">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs ring-1 ring-primary/20">
-                <Sparkles className="size-6" />
+            <div className={`mx-auto flex flex-col items-center justify-center gap-3 text-center ${isWidget ? "max-w-full" : "max-w-2xl gap-4"}`}>
+              <div className={`flex items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs ring-1 ring-primary/20 ${isWidget ? "size-10" : "size-12"}`}>
+                <Sparkles className={isWidget ? "size-5" : "size-6"} />
               </div>
-              <div className="space-y-1.5">
-                <h2 className="text-xl font-bold tracking-tight [text-wrap:balance] sm:text-2xl">{t("chatWelcome")}</h2>
-                <p className="max-w-xl text-sm leading-6 text-muted-foreground [text-wrap:pretty]">{t("unifiedDescription")}</p>
+              <div className="space-y-1">
+                <h2 className={`font-bold tracking-tight [text-wrap:balance] ${isWidget ? "text-base" : "text-xl sm:text-2xl"}`}>{t("chatWelcome")}</h2>
+                <p className={`text-muted-foreground [text-wrap:pretty] ${isWidget ? "text-xs leading-5" : "max-w-xl text-sm leading-6"}`}>{t("unifiedDescription")}</p>
               </div>
-              <div className="mt-1 grid w-full gap-2 sm:grid-cols-3">
+              <div className={`mt-1 grid w-full gap-2 ${isWidget ? "grid-cols-1" : "sm:grid-cols-3"}`}>
                 {["suggestionLaptop", "suggestionBuild", "suggestionCompare"].map((key) => (
                   <button
                     key={key}
                     type="button"
-                    className="group flex items-center justify-between gap-2 rounded-xl border border-border/80 bg-card/80 px-3.5 py-3 text-left text-xs font-medium leading-snug text-foreground shadow-2xs transition hover:border-primary/40 hover:bg-primary/[0.04] sm:text-sm"
+                    className={`group flex items-center justify-between gap-2 rounded-xl border border-border/80 bg-card/80 text-left font-medium leading-snug text-foreground shadow-2xs transition hover:border-primary/40 hover:bg-primary/[0.04] ${isWidget ? "px-3 py-2.5 text-xs" : "px-3.5 py-3 text-xs sm:text-sm"}`}
                     onClick={() => {
                       setPrompt(t(key));
                       textareaRef.current?.focus();
@@ -350,22 +394,24 @@ export function AssistantPage({
                   </button>
                 ))}
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                <Link
-                  href="/products"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                >
-                  <Search className="size-3.5" />
-                  {t("browseCatalog")}
-                </Link>
-                <Link
-                  href="/build-pc"
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-                >
-                  <Sparkles className="size-3.5" />
-                  {t("buildPc")}
-                </Link>
-              </div>
+              {!isWidget ? (
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                  <Link
+                    href="/products"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  >
+                    <Search className="size-3.5" />
+                    {t("browseCatalog")}
+                  </Link>
+                  <Link
+                    href="/build-pc"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-border/80 bg-background px-3.5 py-1.5 text-xs font-medium text-muted-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+                  >
+                    <Sparkles className="size-3.5" />
+                    {t("buildPc")}
+                  </Link>
+                </div>
+              ) : null}
             </div>
           ) : null}
           {streamingPrompt ? (
@@ -428,7 +474,27 @@ export function AssistantPage({
           </div>
         </div>
 
-        <form onSubmit={(event) => void submit(event)} className="mx-auto w-full max-w-4xl shrink-0 px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 sm:px-6 sm:pb-2 sm:pt-1.5">
+        <form onSubmit={(event) => void submit(event)} className={isWidget ? "w-full shrink-0 px-3 pb-3 pt-1" : "mx-auto w-full max-w-4xl shrink-0 px-3 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-1 sm:px-6 sm:pb-2 sm:pt-1.5"}>
+          {showContextProductChip && contextProduct ? (
+            <div className="mb-1.5 flex items-center justify-between gap-2 rounded-xl border border-primary/20 bg-primary/[0.04] px-2.5 py-1.5 text-xs">
+              <p className="min-w-0 truncate text-muted-foreground">
+                <span className="font-medium text-foreground">{t("viewingProduct")}:</span> {contextProduct.name}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-6 shrink-0 gap-1 rounded-md border-primary/30 px-2 text-[11px] font-medium text-primary hover:bg-primary/10"
+                onClick={() => {
+                  setProductIds((current) => current.includes(contextProduct.id) ? current : [...current, contextProduct.id].slice(0, MAX_SELECTED_PRODUCTS));
+                  textareaRef.current?.focus();
+                }}
+              >
+                <Plus className="size-3" />
+                {t("attachCurrentProduct")}
+              </Button>
+            </div>
+          ) : null}
           <fieldset disabled={loading} className="min-w-0 rounded-2xl border border-border/80 bg-card px-2.5 py-2 shadow-sm transition focus-within:border-primary/50 focus-within:ring-3 focus-within:ring-primary/10">
             {productIds.length ? <MessageAttachments productIds={productIds} onRemove={(id) => setProductIds((current) => current.filter((item) => item !== id))} /> : null}
             <div className="flex min-w-0 items-end gap-1.5">
@@ -711,27 +777,31 @@ function ChatTranscript({
           const hasBuild = Boolean(turn.response && "stateful" in turn.response && turn.response.stateful?.build);
           const hasComparison = products.length > 1 && products.some((product) => Object.keys(product.specifications ?? {}).length > 0);
           return (
-            <div key={index} className="space-y-3">
-              <div className="ml-auto w-fit max-w-[90%] rounded-2xl rounded-tr-sm border border-primary/15 bg-primary/[0.07] px-4 py-2.5 text-sm leading-6 text-foreground shadow-2xs sm:max-w-[78%]">
-                <p className="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-primary/80">{t("you")}</p>
-                <p className="whitespace-pre-wrap">{turn.prompt}</p>
-                <MessageAttachments productIds={turn.selectedProductIds} />
-              </div>
+            <div key={index} className="flex flex-col space-y-3">
+              <Bubble variant="tinted" align="end" className="max-w-[90%] sm:max-w-[78%]">
+                <BubbleContent className="rounded-2xl rounded-tr-sm border-primary/15 px-4 py-2.5 leading-6 shadow-2xs">
+                  <p className="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-primary/80">{t("you")}</p>
+                  <p className="whitespace-pre-wrap">{turn.prompt}</p>
+                  <MessageAttachments productIds={turn.selectedProductIds} />
+                </BubbleContent>
+              </Bubble>
               {turn.response ? (
-                <div className="min-w-0 rounded-2xl border border-border/60 bg-card/85 px-4 py-3.5 text-sm leading-7 shadow-2xs">
-                  <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    <span className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary">
-                      <Bot className="size-3.5" />
-                    </span>
-                    {t("assistantLabel")}
-                    {"intent" in turn.response && turn.response.intent ? (
-                      <Badge variant="outline" className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
-                    ) : null}
-                  </div>
-                  <AssistantMarkdown products={products} onAskAboutProduct={onAskAboutProduct}>
-                    {"answer" in turn.response ? turn.response.answer : t("noAnswer")}
-                  </AssistantMarkdown>
-                </div>
+                <Bubble variant="outline" className="w-full max-w-full">
+                  <BubbleContent className="w-full rounded-2xl border-border/60 bg-card/85 px-4 py-3.5 leading-7 shadow-2xs">
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                      <span className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <Bot className="size-3.5" />
+                      </span>
+                      {t("assistantLabel")}
+                      {"intent" in turn.response && turn.response.intent ? (
+                        <Badge variant="outline" className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
+                      ) : null}
+                    </div>
+                    <AssistantMarkdown products={products} onAskAboutProduct={onAskAboutProduct}>
+                      {"answer" in turn.response ? turn.response.answer : t("noAnswer")}
+                    </AssistantMarkdown>
+                  </BubbleContent>
+                </Bubble>
               ) : null}
               {turn.response && (hasBuild || hasComparison) ? (
                 <div className="ml-0 sm:ml-2">
@@ -774,13 +844,16 @@ function StreamingChatTurn({
   const reason = error instanceof ApiClientError ? error.errors.find((entry) => Object.values(AssistantFailureReason).some((value) => value === entry.code))?.code : undefined;
   const description = reason === AssistantFailureReason.ModelTimeout ? "modelTimeout" : reason === AssistantFailureReason.ModelUnavailable ? "modelUnavailable" : terminal ? "processingFailed" : "networkFailed";
   return (
-    <div className="space-y-3">
-        <div className="ml-auto w-fit max-w-[90%] rounded-2xl rounded-tr-sm border border-primary/15 bg-primary/[0.07] px-4 py-2.5 text-sm leading-6 text-foreground shadow-2xs sm:max-w-[78%]">
+    <div className="flex flex-col space-y-3">
+      <Bubble variant="tinted" align="end" className="max-w-[90%] sm:max-w-[78%]">
+        <BubbleContent className="rounded-2xl rounded-tr-sm border-primary/15 px-4 py-2.5 leading-6 shadow-2xs">
           <p className="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-primary/80">{t("you")}</p>
           <p className="whitespace-pre-wrap">{prompt}</p>
           <MessageAttachments productIds={selectedProductIds} />
-        </div>
-        <div className="min-w-0 rounded-2xl border border-border/60 bg-card/85 px-4 py-3.5 text-sm leading-7 shadow-2xs">
+        </BubbleContent>
+      </Bubble>
+      <Bubble variant="outline" className="w-full max-w-full">
+        <BubbleContent className="w-full rounded-2xl border-border/60 bg-card/85 px-4 py-3.5 leading-7 shadow-2xs">
           <div className="mb-2 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             <span className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary">
               <Bot className="size-3.5" />
@@ -814,7 +887,8 @@ function StreamingChatTurn({
               </div>
             </div>
           ) : null}
-        </div>
+        </BubbleContent>
+      </Bubble>
     </div>
   );
 }

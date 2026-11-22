@@ -23,23 +23,26 @@ export function getStoredConversationId(): string | undefined {
   }
 }
 
+export function setStoredConversationId(conversationId?: string) {
+  try {
+    if (conversationId) {
+      window.sessionStorage.setItem(ACTIVE_CONVERSATION_STORAGE_KEY, conversationId);
+    } else {
+      window.sessionStorage.removeItem(ACTIVE_CONVERSATION_STORAGE_KEY);
+    }
+  } catch {
+    // ignore storage quota / privacy mode errors
+  }
+}
+
 export function setConversationUrl(conversationId?: string) {
   const url = new URL(window.location.href);
   if (conversationId) {
     url.searchParams.set(CONVERSATION_ID_PARAM, conversationId);
-    try {
-      window.sessionStorage.setItem(ACTIVE_CONVERSATION_STORAGE_KEY, conversationId);
-    } catch {
-      // ignore storage quota / privacy mode errors
-    }
   } else {
     url.searchParams.delete(CONVERSATION_ID_PARAM);
-    try {
-      window.sessionStorage.removeItem(ACTIVE_CONVERSATION_STORAGE_KEY);
-    } catch {
-      // ignore storage errors
-    }
   }
+  setStoredConversationId(conversationId);
   for (const key of ["build", "productId", "productIds"]) url.searchParams.delete(key);
   window.history.replaceState(window.history.state, "", url);
 }
