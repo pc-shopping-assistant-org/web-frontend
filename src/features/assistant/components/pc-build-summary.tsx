@@ -17,11 +17,20 @@ import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {Link} from "@/i18n/navigation";
 import {useAddToCart} from "@/features/cart/queries";
+import {Slot, slots as builderSlots, type Selection} from "@/features/pc-builder/contracts";
 import {formatMoney} from "@/lib/format";
 import type {AssistantProduct, ChatData} from "../models";
 import {ProductQuickViewDialog} from "./product-quick-view-dialog";
 
 type PcBuildData = NonNullable<NonNullable<ChatData["stateful"]>["build"]>;
+
+const AssistantBuildSlot = {
+  STORAGE: "STORAGE",
+} as const;
+
+const BUILDER_SLOT_ALIASES: Record<string, Slot> = {
+  [AssistantBuildSlot.STORAGE]: Slot.SSD,
+};
 
 
 export function PcBuildSummary({build, products = []}: {build: PcBuildData; products?: AssistantProduct[]}) {
@@ -36,6 +45,18 @@ export function PcBuildSummary({build, products = []}: {build: PcBuildData; prod
   const purchaseableParts = build.parts.filter(
     (part) => Boolean(part.variantId) && !part.owned
   );
+
+  const builderSelection: Selection = {};
+  for (const part of build.parts) {
+    if (!part.variantId) continue;
+    const mappedSlot = BUILDER_SLOT_ALIASES[part.slot] ?? part.slot;
+    if ((builderSlots as readonly string[]).includes(mappedSlot)) {
+      builderSelection[mappedSlot as Slot] = part.variantId;
+    }
+  }
+  const openBuilderHref = Object.keys(builderSelection).length
+    ? `/build-pc?build=${encodeURIComponent(JSON.stringify(builderSelection))}`
+    : "/build-pc";
 
   async function handleAddAllToCart() {
     if (purchaseableParts.length === 0 || addingAll) return;
@@ -170,7 +191,7 @@ export function PcBuildSummary({build, products = []}: {build: PcBuildData; prod
 
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href="/build-pc"
+              href={openBuilderHref}
               className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg border border-border/80 bg-background px-4 text-xs font-semibold text-foreground transition hover:border-primary/40 hover:bg-primary/5 hover:text-primary sm:text-sm"
             >
               <span>{t("openBuilder")}</span>
