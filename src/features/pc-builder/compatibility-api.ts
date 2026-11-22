@@ -1,6 +1,6 @@
 import {z} from "zod";
 import {aiFetch} from "@/lib/api/client";
-import type {BuildGoal} from "./contracts";
+import type {BuildGoal, BuildObjective, Selection, UseCaseProfile} from "./contracts";
 
 export const CompatibilityStatus = {
   OK: "OK",
@@ -130,5 +130,53 @@ export async function getPrebuiltBuilds(signal?: AbortSignal): Promise<PrebuiltB
   } catch {
     return [];
   }
+}
+
+const optimizeBuildResponseSchema = z.object({
+  selection: z.record(z.string(), z.string()),
+  total_price: z.number(),
+  score: z.number(),
+  use_case: z.string(),
+  objective: z.string(),
+  compatibility_status: z.string(),
+});
+
+export type OptimizeBuildResult = {
+  selection: Selection;
+  totalPrice: number;
+  score: number;
+  useCase: string;
+  objective: string;
+  compatibilityStatus: string;
+};
+
+export async function optimizeBuild(
+  payload: {
+    budgetVnd: number;
+    useCase: UseCaseProfile;
+    objective: BuildObjective;
+    pinnedSlots: Selection;
+  },
+  signal?: AbortSignal,
+): Promise<OptimizeBuildResult> {
+  const data = await aiFetch<unknown>("/compatibility/optimize", {
+    method: "POST",
+    body: JSON.stringify({
+      budget_vnd: payload.budgetVnd,
+      use_case: payload.useCase,
+      objective: payload.objective,
+      pinned_slots: payload.pinnedSlots,
+    }),
+    signal,
+  });
+  const parsed = optimizeBuildResponseSchema.parse(data);
+  return {
+    selection: parsed.selection as Selection,
+    totalPrice: parsed.total_price,
+    score: parsed.score,
+    useCase: parsed.use_case,
+    objective: parsed.objective,
+    compatibilityStatus: parsed.compatibility_status,
+  };
 }
 

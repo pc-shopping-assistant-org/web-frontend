@@ -32,5 +32,24 @@ export const BuildGoal = {
 export type BuildGoal = (typeof BuildGoal)[keyof typeof BuildGoal];
 export const buildGoals: readonly BuildGoal[] = Object.values(BuildGoal);
 
+export const UseCaseProfile = {
+  GAMING_1080P: "GAMING_1080P",
+  GAMING_1440P: "GAMING_1440P",
+  GAMING_4K: "GAMING_4K",
+  CONTENT_CREATION_3D: "CONTENT_CREATION_3D",
+  AI_DATA_SCIENCE: "AI_DATA_SCIENCE",
+  OFFICE_BUDGET: "OFFICE_BUDGET",
+} as const;
+export type UseCaseProfile = (typeof UseCaseProfile)[keyof typeof UseCaseProfile];
+export const useCaseProfiles: readonly UseCaseProfile[] = Object.values(UseCaseProfile);
+
+export const BuildObjective = {
+  PERFORMANCE: "PERFORMANCE",
+  BALANCED: "BALANCED",
+  UPGRADE_FRIENDLY: "UPGRADE_FRIENDLY",
+} as const;
+export type BuildObjective = (typeof BuildObjective)[keyof typeof BuildObjective];
+export const buildObjectives: readonly BuildObjective[] = Object.values(BuildObjective);
+
 export const selectionSchema = z.partialRecord(z.enum(slots), z.uuid());
 export type Selection = z.infer<typeof selectionSchema>;

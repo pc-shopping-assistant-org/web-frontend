@@ -19,6 +19,7 @@ import {cn} from "@/lib/utils";
 import {getAccessories, getQuote} from "./api";
 import {BuildGoal, buildGoals, coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
 import {copy} from "./copy";
+import {AutoOptimizeDialog} from "./auto-optimize-dialog";
 import {PartArt} from "./part-art";
 import {PartPickerDialog} from "./part-picker-dialog";
 import {PresetBuildsDialog} from "./preset-builds-dialog";
@@ -44,6 +45,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const [pickerSlot, setPickerSlot] = useState<Slot | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allPresetsOpen, setAllPresetsOpen] = useState(false);
+  const [autoOptimizeOpen, setAutoOptimizeOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "core" | "peripherals">("core");
   const [lastCoreSlot, setLastCoreSlot] = useState<Slot>("CPU");
   const [lastPeripheralSlot, setLastPeripheralSlot] = useState<Slot>("MONITOR");
@@ -189,7 +191,11 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.title}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{t.subtitle}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button className="h-10 text-xs font-semibold shadow-2xs" onClick={() => setAutoOptimizeOpen(true)}>
+              <IconSparkles className="mr-1.5 size-4" />
+              {t.autoOptimize}
+            </Button>
             <Button variant="outline" className="h-10 text-xs font-semibold" onClick={load}>
               <IconFolderOpen className="mr-1.5 size-4" />
               {t.load}
@@ -524,6 +530,20 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
       />
 
       {/* Modal Dialog for Exploring All 100 Prebuilt Conflict-Free Builds */}
+      <AutoOptimizeDialog
+        open={autoOptimizeOpen}
+        onOpenChange={setAutoOptimizeOpen}
+        currentSelection={selection}
+        defaultBudget={budget}
+        onOptimized={(nextSelection) => {
+          setSelection(nextSelection);
+          setQuantities({});
+          setShareLink("");
+          setNotice(t.autoOptimizeDone);
+        }}
+        t={t}
+      />
+
       <PresetBuildsDialog
         open={allPresetsOpen}
         onOpenChange={setAllPresetsOpen}
