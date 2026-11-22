@@ -24,5 +24,13 @@ export const slotGroups = [
   {id: "core", slots: coreSlots},
   {id: "peripherals", slots: optionalSlots},
 ] as const;
+export const BuildGoal = {
+  GAMING: "gaming",
+  CREATOR: "creator",
+  OFFICE: "office",
+} as const;
+export type BuildGoal = (typeof BuildGoal)[keyof typeof BuildGoal];
+export const buildGoals: readonly BuildGoal[] = Object.values(BuildGoal);
+
 export const selectionSchema = z.partialRecord(z.enum(slots), z.uuid());
 export type Selection = z.infer<typeof selectionSchema>;

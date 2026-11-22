@@ -7,12 +7,12 @@ import {Button} from "@/components/ui/button";
 import {DialogClose, DialogContent, DialogDescription, DialogRoot, DialogTitle} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
 import type {BuilderCopy} from "./copy";
-import type {Selection} from "./contracts";
+import {buildGoals, type BuildGoal, type Selection} from "./contracts";
 
 export type PresetBuildItem = {
   id: string;
   name: string;
-  goal: "gaming" | "creator" | "office";
+  goal: BuildGoal;
   price: number;
   selection: Selection;
 };
@@ -28,12 +28,12 @@ export function PresetBuildsDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   presets: PresetBuildItem[];
-  currentGoal?: "gaming" | "creator" | "office";
+  currentGoal?: BuildGoal;
   onSelect: (preset: PresetBuildItem) => void;
   t: BuilderCopy;
   money: (value: number) => string;
 }) {
-  const [filterGoal, setFilterGoal] = useState<"all" | "gaming" | "creator" | "office">("all");
+  const [filterGoal, setFilterGoal] = useState<"all" | BuildGoal>("all");
   const [search, setSearch] = useState("");
   const [budgetCap, setBudgetCap] = useState(0);
 
@@ -90,7 +90,7 @@ export function PresetBuildsDialog({
               >
                 {t.allLabel} ({presets.length})
               </Button>
-              {(["gaming", "creator", "office"] as const).map((g) => (
+              {buildGoals.map((g) => (
                 <Button
                   key={g}
                   size="sm"

@@ -12,7 +12,7 @@ import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {formatMoney} from "@/lib/format";
 import {cn} from "@/lib/utils";
 import {getAccessories, getQuote} from "./api";
-import {coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
+import {BuildGoal, buildGoals, coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
 import {copy} from "./copy";
 import {PartArt} from "./part-art";
 import {PartPickerDialog} from "./part-picker-dialog";
@@ -43,7 +43,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const [lastCoreSlot, setLastCoreSlot] = useState<Slot>("CPU");
   const [lastPeripheralSlot, setLastPeripheralSlot] = useState<Slot>("MONITOR");
   const [budget, setBudget] = useState(0);
-  const [goal, setGoal] = useState<"gaming" | "creator" | "office">("gaming");
+  const [goal, setGoal] = useState<BuildGoal>(BuildGoal.GAMING);
   const [notice, setNotice] = useState(invalidLink ? t.invalid : "");
   const [shareLink, setShareLink] = useState("");
 
@@ -182,7 +182,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.start}:</span>
-              {(["gaming", "creator", "office"] as const).map((value) => (
+              {buildGoals.map((value) => (
                 <Button
                   key={value}
                   size="sm"

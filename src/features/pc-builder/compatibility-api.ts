@@ -1,5 +1,6 @@
 import {z} from "zod";
 import {aiFetch} from "@/lib/api/client";
+import type {BuildGoal} from "./contracts";
 
 export const CompatibilityStatus = {
   OK: "OK",
@@ -113,7 +114,7 @@ export type PrebuiltBuildDto = {
   id: string;
   name: string;
   tier: string;
-  goal: "gaming" | "creator" | "office";
+  goal: BuildGoal;
   subtitle: string;
   total_price: number;
   selection: Record<string, string>;
