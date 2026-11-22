@@ -1,14 +1,15 @@
 "use client";
 
 import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, Maximize2, PackageSearch, Plus, RotateCcw, Search, Sparkles, WifiOff, X} from "lucide-react";
-import {Popover} from "@base-ui/react/popover";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import {useEffect, useRef, useState, type FormEvent} from "react";
 
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 import {Badge} from "@/components/ui/badge";
 import {Bubble, BubbleContent} from "@/components/ui/bubble";
 import {Button, buttonVariants} from "@/components/ui/button";
+import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from "@/components/ui/table";
 import {ErrorMessage} from "@/components/ui/error-message";
 import {Dialog} from "@/components/ui/dialog";
@@ -360,9 +361,9 @@ export function AssistantPage({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {invalidBuild && (
-          <p role="alert" className="mx-auto mt-3 w-full max-w-4xl rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
-            {t("invalidBuild")}
-          </p>
+          <Alert variant="destructive" className="mx-auto mt-3 w-full max-w-4xl rounded-xl border-destructive/20 bg-destructive/10 px-4 py-2.5">
+            <AlertDescription className="text-destructive">{t("invalidBuild")}</AlertDescription>
+          </Alert>
         )}
         <div ref={scrollRef} className={styles.scroller} role="log" aria-label={t("conversation")}
           onScroll={(event) => {const element = event.currentTarget; followBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < CHAT_FOLLOW_BOTTOM_DISTANCE_PX;}}>
@@ -498,20 +499,16 @@ export function AssistantPage({
           <fieldset disabled={loading} className="min-w-0 rounded-2xl border border-border/80 bg-card px-2.5 py-2 shadow-sm transition focus-within:border-primary/50 focus-within:ring-3 focus-within:ring-primary/10">
             {productIds.length ? <MessageAttachments productIds={productIds} onRemove={(id) => setProductIds((current) => current.filter((item) => item !== id))} /> : null}
             <div className="flex min-w-0 items-end gap-1.5">
-              <Popover.Root open={toolsOpen} onOpenChange={setToolsOpen}>
-                <Popover.Trigger type="button" disabled={loading} aria-label={t("addToChat")} className={buttonVariants({variant: "ghost", size: "icon", className: "size-9 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"})}>
+              <Popover open={toolsOpen} onOpenChange={setToolsOpen}>
+                <PopoverTrigger type="button" disabled={loading} aria-label={t("addToChat")} className={buttonVariants({variant: "ghost", size: "icon", className: "size-9 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"})}>
                   <Plus className="size-4.5" />
-                </Popover.Trigger>
-                <Popover.Portal>
-                  <Popover.Positioner side="top" align="start" sideOffset={8} className="z-50">
-                    <Popover.Popup className={`${styles.palette} min-w-56 rounded-xl border border-border/80 bg-popover p-1.5 shadow-lg`}>
-                      <button type="button" onClick={() => {setToolsOpen(false); setPickerOpen(true);}} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition hover:bg-muted">
-                        <PackageSearch className="size-4 text-primary" />{t("attachProducts")}
-                      </button>
-                    </Popover.Popup>
-                  </Popover.Positioner>
-                </Popover.Portal>
-              </Popover.Root>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="start" sideOffset={8} className={`${styles.palette} w-auto min-w-56 rounded-xl p-1.5 shadow-lg`}>
+                  <Button type="button" variant="ghost" onClick={() => {setToolsOpen(false); setPickerOpen(true);}} className="w-full justify-start gap-2.5 rounded-lg px-3 py-2 text-sm font-medium">
+                    <PackageSearch className="size-4 text-primary" />{t("attachProducts")}
+                  </Button>
+                </PopoverContent>
+              </Popover>
             <Textarea
               ref={textareaRef}
               aria-label={t("promptLabel")}
@@ -870,22 +867,22 @@ function StreamingChatTurn({
             </div>
           ) : null}
           {failed ? (
-            <div role="alert" className="mt-3 space-y-2 rounded-xl border border-destructive/20 bg-destructive/5 p-3">
-              <div className="flex items-center gap-2 text-xs font-medium text-destructive">
-                {terminal ? <Bot className="size-4" /> : <WifiOff className="size-4" />}
-                {t(terminal ? "responseFailed" : "connectionFailed")}
-              </div>
-              <p className="text-sm leading-6 text-muted-foreground">{t(description)}</p>
-              <div className="flex flex-wrap gap-2">
-                <Button size="sm" onClick={onRetry} className="gap-1.5">
-                  <RotateCcw className="size-3.5" />
-                  {t(onResume ? "checkResult" : "retry")}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={onDismiss}>
-                  {t("dismiss")}
-                </Button>
-              </div>
-            </div>
+            <Alert variant="destructive" className="mt-3 space-y-2 rounded-xl border-destructive/20 bg-destructive/5 p-3">
+              {terminal ? <Bot className="size-4" /> : <WifiOff className="size-4" />}
+              <AlertTitle className="text-xs font-medium">{t(terminal ? "responseFailed" : "connectionFailed")}</AlertTitle>
+              <AlertDescription className="space-y-2 text-sm leading-6 text-muted-foreground">
+                <p>{t(description)}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" onClick={onRetry} className="gap-1.5">
+                    <RotateCcw className="size-3.5" />
+                    {t(onResume ? "checkResult" : "retry")}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={onDismiss}>
+                    {t("dismiss")}
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
           ) : null}
         </BubbleContent>
       </Bubble>

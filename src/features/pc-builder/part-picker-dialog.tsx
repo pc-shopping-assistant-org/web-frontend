@@ -1,11 +1,12 @@
 "use client";
 
-import {Dialog} from "@base-ui/react/dialog";
 import {IconChevronLeft, IconChevronRight, IconSearch, IconX} from "@tabler/icons-react";
 import {keepPreviousData, useQuery} from "@tanstack/react-query";
 import {useEffect, useMemo, useState} from "react";
 
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
+import {DialogClose, DialogContent, DialogRoot, DialogTitle} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
 import {Skeleton} from "@/components/ui/skeleton";
 import {getBrands, getCandidates, getComponentPage} from "./api";
@@ -103,7 +104,7 @@ export function PartPickerDialog({
   if (!slot) return null;
 
   return (
-    <Dialog.Root
+    <DialogRoot
       modal={false}
       open={open}
       onOpenChange={(next) => {
@@ -115,18 +116,16 @@ export function PartPickerDialog({
         onOpenChange(next);
       }}
     >
-      <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity" />
-        <Dialog.Popup
-          aria-labelledby="dialog-slot-title"
-          className="fixed left-1/2 top-1/2 z-50 flex h-[92vh] w-[calc(100%-2rem)] max-w-[90rem] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl"
-        >
-          {/* Header (Phong Vũ Modal Style) */}
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card px-5 py-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Dialog.Title id="dialog-slot-title" className="text-lg font-bold sm:text-xl">
-                {t.choose}: {t.slots[slot]}
-              </Dialog.Title>
+      <DialogContent
+        aria-labelledby="dialog-slot-title"
+        className="flex h-[92vh] w-[calc(100%-2rem)] max-w-[90rem] flex-col overflow-hidden"
+      >
+        {/* Header (Phong Vũ Modal Style) */}
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b bg-card px-5 py-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <DialogTitle id="dialog-slot-title" className="text-lg font-bold sm:text-xl">
+              {t.choose}: {t.slots[slot]}
+            </DialogTitle>
               <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                 {total} {t.results}
               </span>
@@ -158,12 +157,12 @@ export function PartPickerDialog({
                   </button>
                 )}
               </div>
-              <Dialog.Close
+              <DialogClose
                 aria-label={t.close}
                 className="flex size-10 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
               >
                 <IconX className="size-5" />
-              </Dialog.Close>
+              </DialogClose>
             </div>
           </div>
 
@@ -264,20 +263,22 @@ export function PartPickerDialog({
               {/* Grid or Empty / Loading state */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-5">
                 {(catalog.isError || candidates.isError) && (
-                  <div role="alert" className="mb-4 rounded-xl bg-destructive/10 p-4 text-xs">
-                    <p className="font-semibold text-destructive">{t.error}</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => {
-                        void catalog.refetch();
-                        void candidates.refetch();
-                      }}
-                    >
-                      {t.retry}
-                    </Button>
-                  </div>
+                  <Alert variant="destructive" className="mb-4 rounded-xl border-destructive/20 bg-destructive/10 p-4">
+                    <AlertTitle className="text-xs font-semibold">{t.error}</AlertTitle>
+                    <AlertDescription>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => {
+                          void catalog.refetch();
+                          void candidates.refetch();
+                        }}
+                      >
+                        {t.retry}
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
                 )}
 
                 {catalog.isPending ? (
@@ -355,8 +356,7 @@ export function PartPickerDialog({
               )}
             </main>
           </div>
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </DialogContent>
+    </DialogRoot>
   );
 }

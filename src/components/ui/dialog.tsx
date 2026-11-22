@@ -1,11 +1,56 @@
 "use client";
 
+import {Dialog as DialogPrimitive} from "@base-ui/react/dialog";
 import {X} from "lucide-react";
 import {useEffect, useId, useRef, type ReactNode} from "react";
 import {createPortal} from "react-dom";
 
 import {Button} from "@/components/ui/button";
 import {cn} from "@/lib/utils";
+
+export function DialogRoot({...props}: DialogPrimitive.Root.Props) {
+  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+}
+
+export function DialogTrigger({...props}: DialogPrimitive.Trigger.Props) {
+  return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+}
+
+export function DialogClose({...props}: DialogPrimitive.Close.Props) {
+  return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
+}
+
+export function DialogTitle({className, ...props}: DialogPrimitive.Title.Props) {
+  return <DialogPrimitive.Title data-slot="dialog-title" className={cn("font-semibold", className)} {...props} />;
+}
+
+export function DialogDescription({className, ...props}: DialogPrimitive.Description.Props) {
+  return (
+    <DialogPrimitive.Description
+      data-slot="dialog-description"
+      className={cn("text-sm text-muted-foreground", className)}
+      {...props}
+    />
+  );
+}
+
+export function DialogContent({className, children, ...props}: DialogPrimitive.Popup.Props) {
+  return (
+    <DialogPrimitive.Portal>
+      <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/55 backdrop-blur-xs transition-opacity data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+      <DialogPrimitive.Popup
+        data-slot="dialog-content"
+        className={cn(
+          "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-2xl border bg-background shadow-2xl outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Popup>
+    </DialogPrimitive.Portal>
+  );
+}
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';

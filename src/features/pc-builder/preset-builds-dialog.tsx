@@ -1,10 +1,10 @@
 "use client";
 
-import {Dialog} from "@base-ui/react/dialog";
 import {IconChevronDown, IconSearch, IconSparkles, IconX} from "@tabler/icons-react";
 import {useMemo, useState} from "react";
 
 import {Button} from "@/components/ui/button";
+import {DialogClose, DialogContent, DialogDescription, DialogRoot, DialogTitle} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
 import type {BuilderCopy} from "./copy";
 import type {Selection} from "./contracts";
@@ -50,36 +50,34 @@ export function PresetBuildsDialog({
   }, [presets, filterGoal, budgetCap, search]);
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs transition-opacity" />
-        <Dialog.Popup
-          aria-label="Tất cả cấu hình PC mẫu"
-          className="fixed left-1/2 top-1/2 z-50 flex max-h-[90vh] w-[95vw] max-w-4xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border bg-background shadow-2xl focus:outline-none"
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b px-5 py-4 sm:px-6">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <IconSparkles className="size-5" />
-              </div>
-              <div>
-                <Dialog.Title className="text-base font-bold text-foreground sm:text-lg">
-                  Cấu hình PC mẫu tương thích 100%
-                </Dialog.Title>
-                <Dialog.Description className="text-xs text-muted-foreground">
-                  Được tối ưu hóa tự động theo phân khúc và không xung đột phần cứng
-                </Dialog.Description>
-              </div>
+    <DialogRoot open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        aria-label="Tất cả cấu hình PC mẫu"
+        className="flex max-h-[90vh] w-[95vw] max-w-4xl flex-col"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-5 py-4 sm:px-6">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <IconSparkles className="size-5" />
             </div>
-            <Dialog.Close
-              render={
-                <Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-foreground">
-                  <IconX className="size-4" />
-                </Button>
-              }
-            />
+            <div>
+              <DialogTitle className="text-base font-bold text-foreground sm:text-lg">
+                Cấu hình PC mẫu tương thích 100%
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground">
+                Được tối ưu hóa tự động theo phân khúc và không xung đột phần cứng
+              </DialogDescription>
+            </div>
           </div>
+          <DialogClose
+            render={
+              <Button variant="ghost" size="icon" className="size-8 rounded-lg text-muted-foreground hover:text-foreground">
+                <IconX className="size-4" />
+              </Button>
+            }
+          />
+        </div>
 
           {/* Filter Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-5 py-3 sm:px-6">
@@ -178,9 +176,8 @@ export function PresetBuildsDialog({
                 ))}
               </div>
             )}
-          </div>
-        </Dialog.Popup>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </div>
+      </DialogContent>
+    </DialogRoot>
   );
 }

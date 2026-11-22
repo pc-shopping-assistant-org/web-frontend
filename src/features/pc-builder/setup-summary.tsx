@@ -16,7 +16,9 @@ import {
 } from "@tabler/icons-react";
 import {useState} from "react";
 
+import {Alert, AlertDescription} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
+import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {Input} from "@/components/ui/input";
 import {useAddToCart} from "@/features/cart/queries";
 import {cn} from "@/lib/utils";
@@ -294,8 +296,8 @@ export function SetupSummary({
             </div>
 
             {/* Expandable compatibility rule checks details */}
-            <details className="group rounded-xl border bg-muted/10 p-3 text-xs transition-colors">
-              <summary className="flex cursor-pointer list-none items-center justify-between font-semibold select-none [&::-webkit-details-marker]:hidden">
+            <Collapsible className="group rounded-xl border bg-muted/10 p-3 text-xs transition-colors">
+              <CollapsibleTrigger className="flex w-full cursor-pointer items-center justify-between text-left font-semibold select-none">
                 <div className="flex items-center gap-2">
                   {conflictCount ? (
                     <IconAlertTriangle className="size-4 shrink-0 text-destructive" />
@@ -308,33 +310,35 @@ export function SetupSummary({
                 </div>
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <span className="text-[11px]">{unknownCount > 0 ? `${unknownCount} ${t.unknownChecks}` : ""}</span>
-                  <IconChevronDown className="size-4 transition-transform duration-200 group-open:rotate-180" />
+                  <IconChevronDown className="size-4 transition-transform duration-200 group-data-[open]:rotate-180" />
                 </div>
-              </summary>
-              <ul className="mt-3 space-y-2.5 border-t pt-3">
-                {quote?.checks.map((check) => (
-                  <li key={check.code} className="text-xs">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-foreground">{t.checks[check.code as keyof typeof t.checks] ?? check.code}</span>
-                      <span
-                        className={cn(
-                          "shrink-0 font-medium",
-                          check.status === "INCOMPATIBLE"
-                            ? "text-destructive"
-                            : check.status === "COMPATIBLE"
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : "text-muted-foreground",
-                        )}
-                      >
-                        {t.statuses[check.status]}
-                      </span>
-                    </div>
-                    {check.message && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{check.message}</p>}
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 text-[11px] leading-5 text-muted-foreground">{t.limited}</p>
-            </details>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ul className="mt-3 space-y-2.5 border-t pt-3">
+                  {quote?.checks.map((check) => (
+                    <li key={check.code} className="text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium text-foreground">{t.checks[check.code as keyof typeof t.checks] ?? check.code}</span>
+                        <span
+                          className={cn(
+                            "shrink-0 font-medium",
+                            check.status === "INCOMPATIBLE"
+                              ? "text-destructive"
+                              : check.status === "COMPATIBLE"
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : "text-muted-foreground",
+                          )}
+                        >
+                          {t.statuses[check.status]}
+                        </span>
+                      </div>
+                      {check.message && <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground">{check.message}</p>}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 text-[11px] leading-5 text-muted-foreground">{t.limited}</p>
+              </CollapsibleContent>
+            </Collapsible>
 
             {/* Subtotal breakdown */}
             <dl className="space-y-1.5 border-t pt-3 text-xs">
@@ -351,12 +355,14 @@ export function SetupSummary({
         )}
 
         {error && (
-          <div role="alert" className="text-xs text-destructive">
-            {t.error}
-            <Button variant="ghost" size="sm" onClick={onRetry}>
-              {t.retry}
-            </Button>
-          </div>
+          <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5">
+            <AlertDescription className="flex items-center justify-between gap-2 text-xs text-destructive">
+              <span>{t.error}</span>
+              <Button variant="ghost" size="sm" onClick={onRetry}>
+                {t.retry}
+              </Button>
+            </AlertDescription>
+          </Alert>
         )}
       </div>
 

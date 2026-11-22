@@ -1,13 +1,14 @@
 "use client";
 
-import {Tabs} from "@base-ui/react/tabs";
 import {IconCheck, IconChevronDown, IconChevronRight, IconFolderOpen, IconPlus, IconRefresh, IconSparkles} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useLocale} from "next-intl";
 import {useState} from "react";
 
+import {Alert, AlertDescription} from "@/components/ui/alert";
 import {Button} from "@/components/ui/button";
 import {Skeleton} from "@/components/ui/skeleton";
+import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {formatMoney} from "@/lib/format";
 import {cn} from "@/lib/utils";
 import {getAccessories, getQuote} from "./api";
@@ -305,14 +306,14 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
         <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_450px] 2xl:grid-cols-[minmax(0,1fr)_480px]">
           {/* Left Column: Numbered Slots List */}
           <div className="min-w-0 max-w-full space-y-4">
-            <Tabs.Root
+            <Tabs
               value={activeTab}
               onValueChange={(val) => {
                 if (val === "all" || val === "core" || val === "peripherals") {
                   setActiveTab(val);
                 }
               }}
-              className="rounded-2xl border bg-card shadow-2xs"
+              className="gap-0 rounded-2xl border bg-card shadow-2xs"
             >
               <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
                 <div>
@@ -321,29 +322,17 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
                 </div>
 
                 {/* Tabs for Core / Peripherals / All */}
-                <Tabs.List aria-label={t.componentsTitle} className="flex gap-2">
-                  <Tabs.Tab
-                    value="core"
-                    aria-label={t.tabs.core}
-                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
-                  >
+                <TabsList aria-label={t.componentsTitle}>
+                  <TabsTrigger value="core" aria-label={t.tabs.core} className="px-3 text-xs font-semibold">
                     {t.tabs.core} (8)
-                  </Tabs.Tab>
-                  <Tabs.Tab
-                    value="peripherals"
-                    aria-label={t.tabs.peripherals}
-                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
-                  >
+                  </TabsTrigger>
+                  <TabsTrigger value="peripherals" aria-label={t.tabs.peripherals} className="px-3 text-xs font-semibold">
                     {t.tabs.peripherals} (4)
-                  </Tabs.Tab>
-                  <Tabs.Tab
-                    value="all"
-                    aria-label={t.allSlots}
-                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
-                  >
+                  </TabsTrigger>
+                  <TabsTrigger value="all" aria-label={t.allSlots} className="px-3 text-xs font-semibold">
                     {t.allSlots} (12)
-                  </Tabs.Tab>
-                </Tabs.List>
+                  </TabsTrigger>
+                </TabsList>
               </div>
 
               {/* Slot Navigation Pills Bar */}
@@ -369,7 +358,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
                   </button>
                 ))}
               </nav>
-            </Tabs.Root>
+            </Tabs>
 
             {/* Vertical Numbered Slot Rows (Phong Vũ Core Pattern) */}
             <section aria-label="Danh sách linh kiện máy tính" className="space-y-2">
@@ -407,12 +396,14 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
               {accessories.isPending ? (
                 <Skeleton className="mt-4 h-28 rounded-xl" />
               ) : accessories.isError ? (
-                <div role="alert" className="mt-4 text-xs text-destructive">
-                  {t.error}
-                  <Button variant="ghost" size="sm" onClick={() => void accessories.refetch()}>
-                    {t.retry}
-                  </Button>
-                </div>
+                <Alert variant="destructive" className="mt-4 rounded-xl border-destructive/20 bg-destructive/5">
+                  <AlertDescription className="flex items-center justify-between gap-2 text-xs text-destructive">
+                    <span>{t.error}</span>
+                    <Button variant="ghost" size="sm" onClick={() => void accessories.refetch()}>
+                      {t.retry}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {optionalSlots.map((value) => {
