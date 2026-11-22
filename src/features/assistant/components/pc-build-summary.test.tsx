@@ -46,7 +46,7 @@ it("pre-fills the /build-pc link with variant IDs and maps STORAGE to SSD", () =
       >
         <PcBuildSummary
           build={{
-            compatibilityStatus: "COMPATIBLE",
+            stale: false,
             totalSpending: 10000000,
             parts: [
               {slot: "CPU", name: "Intel Core i5-14600K", variantId: cpuVariantId, spending: 7000000, owned: false, pinned: false},
