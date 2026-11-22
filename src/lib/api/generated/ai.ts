@@ -1351,7 +1351,7 @@ export type components = {
          * @description Calibrated use-case profiles for hardware weighting and envelope calculation.
          * @enum {string}
          */
-        UseCaseProfile: "GAMING_1080P" | "GAMING_1440P" | "GAMING_4K" | "CONTENT_CREATION_3D" | "AI_DATA_SCIENCE" | "OFFICE_BUDGET";
+        UseCaseProfile: "GAMING_1080P" | "GAMING_1440P" | "GAMING_4K" | "GAMING_ESPORTS" | "STREAMING_GAMING" | "CONTENT_CREATION_3D" | "VIDEO_EDITING" | "GRAPHIC_DESIGN_2D" | "AI_DATA_SCIENCE" | "SOFTWARE_DEV" | "WORKSTATION_SILENT" | "OFFICE_BUDGET";
         /** ValidationError */
         ValidationError: {
             /** Context */
