@@ -1,11 +1,12 @@
 "use client";
 
-import {IconChevronDown, IconSearch, IconSparkles, IconX} from "@tabler/icons-react";
+import {IconSearch, IconSparkles, IconX} from "@tabler/icons-react";
 import {useMemo, useState} from "react";
 
 import {Button} from "@/components/ui/button";
 import {DialogClose, DialogContent, DialogDescription, DialogRoot, DialogTitle} from "@/components/ui/dialog";
 import {Input} from "@/components/ui/input";
+import {Select} from "@/components/ui/select";
 import type {BuilderCopy} from "./copy";
 import {buildGoals, type BuildGoal, type Selection} from "./contracts";
 
@@ -104,21 +105,18 @@ export function PresetBuildsDialog({
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="relative">
-                <select
-                  value={budgetCap}
-                  onChange={(e) => setBudgetCap(Number(e.target.value))}
-                  className="h-8 cursor-pointer appearance-none rounded-lg border bg-background pl-3 pr-7 text-xs font-medium transition hover:border-primary/50"
-                >
-                  <option value={0}>{t.noBudget}</option>
-                  {[15000000, 20000000, 30000000, 50000000, 80000000, 150000000].map((v) => (
-                    <option key={v} value={v}>
-                      ≤ {money(v)}
-                    </option>
-                  ))}
-                </select>
-                <IconChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              </div>
+              <Select
+                value={budgetCap}
+                onChange={(e) => setBudgetCap(Number(e.target.value))}
+                className="h-8 w-auto min-w-32 cursor-pointer text-xs font-medium"
+              >
+                <option value={0}>{t.noBudget}</option>
+                {[15000000, 20000000, 30000000, 50000000, 80000000, 150000000].map((v) => (
+                  <option key={v} value={v}>
+                    ≤ {money(v)}
+                  </option>
+                ))}
+              </Select>
 
               <div className="relative w-44 sm:w-56">
                 <IconSearch className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
