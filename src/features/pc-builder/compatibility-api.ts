@@ -1,5 +1,6 @@
 import {z} from "zod";
 import {aiFetch} from "@/lib/api/client";
+import {CheckVerdict, type BuildGoal, type BuildObjective, type Selection, type UseCaseProfile} from "./contracts";
 
 export const CompatibilityStatus = {
   OK: "OK",
@@ -75,10 +76,10 @@ export async function checkCompatibility(slots: Record<string, string>, signal?:
 /** The AI service rejects a request with more candidates than this (MAX_CANDIDATES in build_check.py). */
 const MAX_CANDIDATES_PER_CALL = 100;
 
-export type CandidateVerdict = "COMPATIBLE" | "INCOMPATIBLE" | "UNKNOWN";
+export type CandidateVerdict = CheckVerdict;
 
 const candidatesResponseSchema = z.object({
-  verdicts: z.record(z.string(), z.enum(["COMPATIBLE", "INCOMPATIBLE", "UNKNOWN"])),
+  verdicts: z.record(z.string(), z.enum([CheckVerdict.COMPATIBLE, CheckVerdict.INCOMPATIBLE, CheckVerdict.UNKNOWN])),
 });
 
 /**
@@ -113,7 +114,7 @@ export type PrebuiltBuildDto = {
   id: string;
   name: string;
   tier: string;
-  goal: "gaming" | "creator" | "office";
+  goal: BuildGoal;
   subtitle: string;
   total_price: number;
   selection: Record<string, string>;
@@ -129,5 +130,53 @@ export async function getPrebuiltBuilds(signal?: AbortSignal): Promise<PrebuiltB
   } catch {
     return [];
   }
+}
+
+const optimizeBuildResponseSchema = z.object({
+  selection: z.record(z.string(), z.string()),
+  total_price: z.number(),
+  score: z.number(),
+  use_case: z.string(),
+  objective: z.string(),
+  compatibility_status: z.string(),
+});
+
+export type OptimizeBuildResult = {
+  selection: Selection;
+  totalPrice: number;
+  score: number;
+  useCase: string;
+  objective: string;
+  compatibilityStatus: string;
+};
+
+export async function optimizeBuild(
+  payload: {
+    budgetVnd: number;
+    useCase: UseCaseProfile;
+    objective: BuildObjective;
+    pinnedSlots: Selection;
+  },
+  signal?: AbortSignal,
+): Promise<OptimizeBuildResult> {
+  const data = await aiFetch<unknown>("/compatibility/optimize", {
+    method: "POST",
+    body: JSON.stringify({
+      budget_vnd: payload.budgetVnd,
+      use_case: payload.useCase,
+      objective: payload.objective,
+      pinned_slots: payload.pinnedSlots,
+    }),
+    signal,
+  });
+  const parsed = optimizeBuildResponseSchema.parse(data);
+  return {
+    selection: parsed.selection as Selection,
+    totalPrice: parsed.total_price,
+    score: parsed.score,
+    useCase: parsed.use_case,
+    objective: parsed.objective,
+    compatibilityStatus: parsed.compatibility_status,
+  };
 }
 

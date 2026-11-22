@@ -2,6 +2,7 @@ import {IconCheck} from "@tabler/icons-react";
 
 import {Button} from "@/components/ui/button";
 import {cn} from "@/lib/utils";
+import type {CheckVerdict} from "./contracts";
 import type {BuilderCopy} from "./copy";
 import type {Part} from "./models";
 import {PartDetails} from "./part-details";
@@ -16,7 +17,7 @@ export function PartCard({
 }: {
   part: Part;
   selected: boolean;
-  status?: "COMPATIBLE" | "INCOMPATIBLE" | "UNKNOWN";
+  status?: CheckVerdict;
   t: BuilderCopy;
   money: (value: number) => string;
   onSelect: () => void;
@@ -61,7 +62,7 @@ export function PartCard({
           onClick={onSelect}
         >
           {selected && <IconCheck className="mr-1 size-3.5" />}
-          {selected ? t.selected : "Chọn"}
+          {selected ? t.selected : t.choosePart}
         </Button>
       </div>
     </article>

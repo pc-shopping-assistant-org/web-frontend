@@ -1,22 +1,29 @@
 "use client";
 
-import {Tabs} from "@base-ui/react/tabs";
-import {IconCheck, IconChevronDown, IconChevronRight, IconFolderOpen, IconPlus, IconRefresh, IconSparkles} from "@tabler/icons-react";
+import {IconChevronRight, IconFolderOpen, IconPlus, IconRefresh, IconSparkles} from "@tabler/icons-react";
 import {useQuery} from "@tanstack/react-query";
 import {useLocale} from "next-intl";
-import {useState} from "react";
+import {useMemo, useState} from "react";
 
+import {Alert, AlertDescription} from "@/components/ui/alert";
+import {Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator} from "@/components/ui/breadcrumb";
 import {Button} from "@/components/ui/button";
+import {Card} from "@/components/ui/card";
+import {Select} from "@/components/ui/select";
 import {Skeleton} from "@/components/ui/skeleton";
+import {Tabs, TabsList, TabsTrigger} from "@/components/ui/tabs";
+import {ToggleGroup, ToggleGroupItem} from "@/components/ui/toggle-group";
+import {Link} from "@/i18n/navigation";
 import {formatMoney} from "@/lib/format";
-import {cn} from "@/lib/utils";
 import {getAccessories, getQuote} from "./api";
-import {coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
+import {BuilderTab, BuildGoal, buildGoals, coreSlots, MAX_QUANTITY, optionalSlots, selectionSchema, slots, type Selection, type Slot} from "./contracts";
 import {copy} from "./copy";
+import {AutoOptimizeDialog} from "./auto-optimize-dialog";
 import {PartArt} from "./part-art";
 import {PartPickerDialog} from "./part-picker-dialog";
 import {PresetBuildsDialog} from "./preset-builds-dialog";
 import {SetupSummary} from "./setup-summary";
+import {SlotQuickBar} from "./slot-quick-bar";
 import {SlotRow} from "./slot-row";
 import {getPrebuiltBuilds} from "./compatibility-api";
 
@@ -38,11 +45,12 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const [pickerSlot, setPickerSlot] = useState<Slot | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allPresetsOpen, setAllPresetsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"all" | "core" | "peripherals">("core");
+  const [autoOptimizeOpen, setAutoOptimizeOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<BuilderTab>(BuilderTab.CORE);
   const [lastCoreSlot, setLastCoreSlot] = useState<Slot>("CPU");
   const [lastPeripheralSlot, setLastPeripheralSlot] = useState<Slot>("MONITOR");
   const [budget, setBudget] = useState(0);
-  const [goal, setGoal] = useState<"gaming" | "creator" | "office">("gaming");
+  const [goal, setGoal] = useState<BuildGoal>(BuildGoal.GAMING);
   const [notice, setNotice] = useState(invalidLink ? t.invalid : "");
   const [shareLink, setShareLink] = useState("");
 
@@ -63,13 +71,33 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
     staleTime: 5 * 60_000,
   });
 
-  const realTemplates = (prebuiltQuery.data || []).map((b) => ({
-    id: b.id,
-    name: b.name,
-    goal: b.goal,
-    price: b.total_price,
-    selection: b.selection as Selection,
-  }));
+  const realTemplates = useMemo(
+    () =>
+      (prebuiltQuery.data || []).map((b) => ({
+        id: b.id,
+        name: b.name,
+        goal: b.goal,
+        price: b.total_price,
+        selection: b.selection as Selection,
+      })),
+    [prebuiltQuery.data],
+  );
+
+  const matchingTemplates = useMemo(
+    () => realTemplates.filter((template) => template.goal === goal && (budget === 0 || template.price <= budget)),
+    [realTemplates, goal, budget],
+  );
+
+  const featuredTemplates = useMemo(() => {
+    const featuredCount = 4;
+    if (matchingTemplates.length <= featuredCount) return matchingTemplates;
+    return [
+      matchingTemplates[0],
+      matchingTemplates[Math.floor(matchingTemplates.length * 0.33)],
+      matchingTemplates[Math.floor(matchingTemplates.length * 0.66)],
+      matchingTemplates[matchingTemplates.length - 1],
+    ];
+  }, [matchingTemplates]);
 
   function openPicker(slot: Slot) {
     setPickerSlot(slot);
@@ -141,7 +169,7 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
   const quantityOf = (slot: Slot) => quantities[slot] ?? 1;
   const total = (quote.data?.parts ?? []).reduce((sum, part) => sum + part.price * quantityOf(part.slot), 0);
 
-  const displayedSlots: Slot[] = activeTab === "all" ? slots : activeTab === "core" ? coreSlots : optionalSlots;
+  const displayedSlots: Slot[] = activeTab === BuilderTab.ALL ? slots : activeTab === BuilderTab.CORE ? coreSlots : optionalSlots;
 
   return (
     <section aria-label={t.title} className="min-h-screen bg-muted/30 px-4 pb-24 pt-4 sm:px-6 lg:px-8 lg:pb-8">
@@ -149,15 +177,25 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
         {/* Breadcrumb & Header */}
         <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <nav className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <span>Trang chủ</span>
-              <span>›</span>
-              <span className="font-semibold text-foreground">Build PC</span>
-            </nav>
+            <Breadcrumb className="mb-1">
+              <BreadcrumbList className="text-xs">
+                <BreadcrumbItem>
+                  <BreadcrumbLink render={<Link href="/" />}>{t.home}</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="font-semibold">Build PC</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
             <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t.title}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{t.subtitle}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button className="h-10 text-xs font-semibold shadow-2xs" onClick={() => setAutoOptimizeOpen(true)}>
+              <IconSparkles className="mr-1.5 size-4" />
+              {t.autoOptimize}
+            </Button>
             <Button variant="outline" className="h-10 text-xs font-semibold" onClick={load}>
               <IconFolderOpen className="mr-1.5 size-4" />
               {t.load}
@@ -171,148 +209,138 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
               }}
             >
               <IconRefresh className="mr-1.5 size-4" />
-              {t.resetBuild || "Làm mới"}
+              {t.resetBuild}
             </Button>
           </div>
         </header>
 
-        {/* Presets Toolbar (Phong Vũ Style) */}
-        <section className="mb-5 rounded-2xl border bg-card p-4 shadow-2xs" aria-label={t.start}>
+        {/* Presets Toolbar */}
+        <Card className="mb-5 rounded-2xl p-4 shadow-2xs" aria-label={t.start}>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t.start}:</span>
-              {(["gaming", "creator", "office"] as const).map((value) => (
-                <Button
-                  key={value}
-                  size="sm"
-                  variant={goal === value ? "default" : "outline"}
-                  className="h-8 text-xs font-semibold"
-                  onClick={() => setGoal(value)}
-                >
-                  {t[value] || value}
-                </Button>
-              ))}
+              <ToggleGroup
+                variant="outline"
+                size="sm"
+                value={[goal]}
+                onValueChange={(next) => {
+                  const first = next[0];
+                  if (first && (buildGoals as readonly string[]).includes(first)) {
+                    setGoal(first as BuildGoal);
+                  }
+                }}
+              >
+                {buildGoals.map((value) => (
+                  <ToggleGroupItem
+                    key={value}
+                    value={value}
+                    className="h-8 px-3 text-xs font-semibold aria-pressed:border-primary aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                  >
+                    {t[value] || value}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
 
             <label className="flex w-full items-center justify-between gap-3 text-sm sm:w-auto sm:justify-start">
               <span className="shrink-0 text-xs font-medium text-muted-foreground">{t.budget}:</span>
-              <div className="relative">
-                <select
-                  id="builder-budget-select"
-                  name="budget"
-                  value={budget}
-                  onChange={(e) => setBudget(Number(e.target.value))}
-                  className="h-9 cursor-pointer appearance-none rounded-lg border bg-background pl-3 pr-8 text-xs font-medium transition hover:border-primary/50"
-                >
-                  <option value={0}>{t.noBudget}</option>
-                  {[15000000, 20000000, 30000000, 50000000, 80000000].map((value) => (
-                    <option key={value} value={value}>
-                      ≤ {money(value)}
-                    </option>
-                  ))}
-                </select>
-                <IconChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              </div>
+              <Select
+                id="builder-budget-select"
+                name="budget"
+                value={budget}
+                onChange={(e) => setBudget(Number(e.target.value))}
+                className="h-9 w-auto min-w-36 cursor-pointer text-xs font-medium"
+              >
+                <option value={0}>{t.noBudget}</option>
+                {[15000000, 20000000, 30000000, 50000000, 80000000].map((value) => (
+                  <option key={value} value={value}>
+                    ≤ {money(value)}
+                  </option>
+                ))}
+              </Select>
             </label>
           </div>
 
           {/* Preset configuration Mini-Cards & See All button */}
-          {(() => {
-            const matchingTemplates = realTemplates.filter(
-              (template) => template.goal === goal && (budget === 0 || template.price <= budget),
-            );
-            // Select up to 4 representative templates spread across price range
-            const featuredCount = 4;
-            const featuredTemplates =
-              matchingTemplates.length <= featuredCount
-                ? matchingTemplates
-                : [
-                    matchingTemplates[0],
-                    matchingTemplates[Math.floor(matchingTemplates.length * 0.33)],
-                    matchingTemplates[Math.floor(matchingTemplates.length * 0.66)],
-                    matchingTemplates[matchingTemplates.length - 1],
-                  ];
-
-            return (
-              <div className="mt-3.5 border-t pt-3.5">
-                <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-                  {featuredTemplates.map((template) => (
-                    <button
-                      key={template.id}
-                      type="button"
-                      onClick={() => {
-                        setSelection(template.selection);
-                        setQuantities({});
-                        setShareLink("");
-                        setNotice("");
-                      }}
-                      className="group flex flex-col justify-between rounded-xl border border-border/80 bg-background p-3 text-left transition-all duration-150 hover:border-primary/50 hover:bg-primary/5 hover:shadow-2xs"
-                    >
-                      <div>
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                            {t[template.goal] || template.goal}
-                          </span>
-                        </div>
-                        <h4 className="mt-1 line-clamp-2 text-xs font-bold text-foreground group-hover:text-primary transition-colors" title={template.name}>
-                          {template.name}
-                        </h4>
-                      </div>
-                      <div className="mt-2.5 flex items-center justify-between border-t border-border/50 pt-2">
-                        <span className="text-xs font-black text-primary">{money(template.price)}</span>
-                        <span className="inline-flex items-center text-[11px] font-semibold text-primary">
-                          Chọn <IconChevronRight className="ml-0.5 size-3.5 transition-transform group-hover:translate-x-0.5" />
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed pt-2.5 text-xs">
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setAllPresetsOpen(true)}
-                      className="h-8 font-bold text-primary hover:bg-primary/10 hover:text-primary"
-                    >
-                      <IconSparkles className="mr-1.5 size-3.5" />
-                      Xem tất cả cấu hình mẫu ({matchingTemplates.length})
-                    </Button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        resetBuild();
-                        setShareLink("");
-                      }}
-                      className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-dashed px-3 text-xs font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
-                    >
-                      <IconPlus className="size-3.5" />
-                      {t.custom}
-                    </button>
+          <div className="mt-3.5 border-t pt-3.5">
+            <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+              {featuredTemplates.map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => {
+                    setSelection(template.selection);
+                    setQuantities({});
+                    setShareLink("");
+                    setNotice("");
+                  }}
+                  className="group flex flex-col justify-between rounded-xl border border-border/80 bg-background p-3 text-left transition-all duration-150 hover:border-primary/50 hover:bg-primary/5 hover:shadow-2xs"
+                >
+                  <div>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                        {t[template.goal] || template.goal}
+                      </span>
+                    </div>
+                    <h4 className="mt-1 line-clamp-2 text-xs font-bold text-foreground transition-colors group-hover:text-primary" title={template.name}>
+                      {template.name}
+                    </h4>
                   </div>
-                  <span className="text-[11px] text-muted-foreground">
-                    Đã kiểm tra 100% không xung đột phần cứng
-                  </span>
-                </div>
+                  <div className="mt-2.5 flex items-center justify-between border-t border-border/50 pt-2">
+                    <span className="text-xs font-black text-primary">{money(template.price)}</span>
+                    <span className="inline-flex items-center text-[11px] font-semibold text-primary">
+                      {t.choosePart} <IconChevronRight className="ml-0.5 size-3.5 transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-dashed pt-2.5 text-xs">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setAllPresetsOpen(true)}
+                  className="h-8 font-bold text-primary hover:bg-primary/10 hover:text-primary"
+                >
+                  <IconSparkles className="mr-1.5 size-3.5" />
+                  {t.viewAllPresets} ({matchingTemplates.length})
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    resetBuild();
+                    setShareLink("");
+                  }}
+                  className="h-8 gap-1.5 border-dashed text-xs font-medium text-muted-foreground hover:border-primary hover:text-primary"
+                >
+                  <IconPlus className="size-3.5" />
+                  {t.custom}
+                </Button>
               </div>
-            );
-          })()}
-        </section>
+              <span className="text-[11px] text-muted-foreground">
+                {t.verifiedNoConflict}
+              </span>
+            </div>
+          </div>
+        </Card>
 
         {/* Main 2-Column Grid: Left Slot Rows List (Phong Vũ style) - Right Sticky Summary */}
         <div className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_450px] 2xl:grid-cols-[minmax(0,1fr)_480px]">
           {/* Left Column: Numbered Slots List */}
           <div className="min-w-0 max-w-full space-y-4">
-            <Tabs.Root
+            <Tabs
               value={activeTab}
               onValueChange={(val) => {
-                if (val === "all" || val === "core" || val === "peripherals") {
+                if (val === BuilderTab.ALL || val === BuilderTab.CORE || val === BuilderTab.PERIPHERALS) {
                   setActiveTab(val);
                 }
               }}
-              className="rounded-2xl border bg-card shadow-2xs"
+              className="gap-0 rounded-2xl border bg-card shadow-2xs"
             >
               <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3.5">
                 <div>
@@ -321,58 +349,31 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
                 </div>
 
                 {/* Tabs for Core / Peripherals / All */}
-                <Tabs.List aria-label={t.componentsTitle} className="flex gap-2">
-                  <Tabs.Tab
-                    value="core"
-                    aria-label={t.tabs.core}
-                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
-                  >
+                <TabsList aria-label={t.componentsTitle}>
+                  <TabsTrigger value="core" aria-label={t.tabs.core} className="px-3 text-xs font-semibold">
                     {t.tabs.core} (8)
-                  </Tabs.Tab>
-                  <Tabs.Tab
-                    value="peripherals"
-                    aria-label={t.tabs.peripherals}
-                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
-                  >
+                  </TabsTrigger>
+                  <TabsTrigger value="peripherals" aria-label={t.tabs.peripherals} className="px-3 text-xs font-semibold">
                     {t.tabs.peripherals} (4)
-                  </Tabs.Tab>
-                  <Tabs.Tab
-                    value="all"
-                    aria-label={t.allSlots}
-                    className="rounded-lg border px-3 py-1.5 text-xs font-semibold transition data-[active]:border-primary data-[active]:bg-primary data-[active]:text-primary-foreground text-muted-foreground hover:text-foreground"
-                  >
+                  </TabsTrigger>
+                  <TabsTrigger value="all" aria-label={t.allSlots} className="px-3 text-xs font-semibold">
                     {t.allSlots} (12)
-                  </Tabs.Tab>
-                </Tabs.List>
+                  </TabsTrigger>
+                </TabsList>
               </div>
 
-              {/* Slot Navigation Pills Bar */}
-              <nav aria-label={t.choose} className="flex max-w-full items-center gap-1.5 overflow-x-auto border-b bg-muted/15 px-4 py-2">
-                <span className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-muted-foreground mr-1">{t.choose}:</span>
-                {(activeTab === "peripherals" ? optionalSlots : activeTab === "all" ? slots : coreSlots).map((slotKey) => (
-                  <button
-                    key={slotKey}
-                    type="button"
-                    aria-pressed={
-                      activeTab === "core" ? lastCoreSlot === slotKey : activeTab === "peripherals" ? lastPeripheralSlot === slotKey : false
-                    }
-                    onClick={() => openPicker(slotKey)}
-                    className={cn(
-                      "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition",
-                      selection[slotKey]
-                        ? "border-primary/40 bg-primary/10 text-primary font-bold"
-                        : "bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
-                    )}
-                  >
-                    {selection[slotKey] && <IconCheck className="size-3.5 shrink-0" />}
-                    {t.slots[slotKey]}
-                  </button>
-                ))}
-              </nav>
-            </Tabs.Root>
+              <SlotQuickBar
+                activeTab={activeTab}
+                lastCoreSlot={lastCoreSlot}
+                lastPeripheralSlot={lastPeripheralSlot}
+                selection={selection}
+                onSelectSlot={openPicker}
+                t={t}
+              />
+            </Tabs>
 
             {/* Vertical Numbered Slot Rows (Phong Vũ Core Pattern) */}
-            <section aria-label="Danh sách linh kiện máy tính" className="space-y-2">
+            <section aria-label={t.componentListLabel} className="space-y-2">
               {displayedSlots.map((slotKey) => {
                 const slotIdx = slots.indexOf(slotKey) + 1;
                 const selectedPart = quote.data?.parts.find((p) => p.slot === slotKey);
@@ -407,12 +408,14 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
               {accessories.isPending ? (
                 <Skeleton className="mt-4 h-28 rounded-xl" />
               ) : accessories.isError ? (
-                <div role="alert" className="mt-4 text-xs text-destructive">
-                  {t.error}
-                  <Button variant="ghost" size="sm" onClick={() => void accessories.refetch()}>
-                    {t.retry}
-                  </Button>
-                </div>
+                <Alert variant="destructive" className="mt-4 rounded-xl border-destructive/20 bg-destructive/5">
+                  <AlertDescription className="flex items-center justify-between gap-2 text-xs text-destructive">
+                    <span>{t.error}</span>
+                    <Button variant="ghost" size="sm" onClick={() => void accessories.refetch()}>
+                      {t.retry}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {optionalSlots.map((value) => {
@@ -512,6 +515,20 @@ export function BuilderPage({initialSelection = {}, invalidLink = false}: {initi
       />
 
       {/* Modal Dialog for Exploring All 100 Prebuilt Conflict-Free Builds */}
+      <AutoOptimizeDialog
+        open={autoOptimizeOpen}
+        onOpenChange={setAutoOptimizeOpen}
+        currentSelection={selection}
+        defaultBudget={budget}
+        onOptimized={(nextSelection) => {
+          setSelection(nextSelection);
+          setQuantities({});
+          setShareLink("");
+          setNotice(t.autoOptimizeDone);
+        }}
+        t={t}
+      />
+
       <PresetBuildsDialog
         open={allPresetsOpen}
         onOpenChange={setAllPresetsOpen}

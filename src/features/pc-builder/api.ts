@@ -1,5 +1,5 @@
 import {backendFetch} from "@/lib/api/client";
-import {coreSlots, optionalSlots, type Selection, type Slot} from "./contracts";
+import {CheckVerdict, coreSlots, optionalSlots, type PickerSort, type Selection, type Slot} from "./contracts";
 import type {BuildQuote, Part} from "./models";
 import {checkCandidates, checkCompatibility} from "./compatibility-api";
 import type {ProductDetailDto} from "@/features/catalog/contracts/dto";
@@ -39,7 +39,7 @@ function normalizeSpecs(raw?: Record<string, unknown> | null): Record<string, st
     if (typeof value === "string" || typeof value === "number") {
       result[key] = value;
     } else if (typeof value === "boolean") {
-      result[key] = value ? "Có" : "Không";
+      result[key] = value ? "✓" : "—";
     } else if (Array.isArray(value)) {
       result[key] = value.map(String).join(", ");
     }
@@ -56,7 +56,7 @@ export function mapSnapshotProductToParts(prod: ProductDetailDto, slot: Slot): P
       id: prod.id,
       name: prod.name,
       sku: prod.seoName || prod.id.slice(0, 8).toUpperCase(),
-      brand: prod.brandName || "Chính hãng",
+      brand: prod.brandName || "",
       slot,
       price: 0,
       inStock: true,
@@ -73,7 +73,7 @@ export function mapSnapshotProductToParts(prod: ProductDetailDto, slot: Slot): P
       id: v.id,
       name: prod.name + optionSuffix,
       sku: v.sku || prod.seoName,
-      brand: prod.brandName || "Chính hãng",
+      brand: prod.brandName || "",
       slot,
       price: v.price,
       inStock: v.quantity > 0,
@@ -96,7 +96,7 @@ type SnapshotPageResponse = {
   totalPages?: number | null;
 };
 
-export type PickerSort = "price_asc" | "price_desc";
+export type {PickerSort};
 export type PickerQuery = {page: number; keyword?: string; brandId?: string; sort: PickerSort};
 export type PickerPage = {parts: Part[]; totalPages: number; totalElements: number};
 export type PickerBrand = {id: string; name: string};
@@ -154,7 +154,7 @@ export async function getCandidates(
   slot: Slot,
   candidateIds: string[],
   signal?: AbortSignal,
-): Promise<Record<string, "COMPATIBLE" | "INCOMPATIBLE" | "UNKNOWN">> {
+): Promise<Record<string, CheckVerdict>> {
   const selectedEntries = Object.entries(selection).filter(([, id]) => Boolean(id));
   const chosen: Record<string, string> = {};
   for (const [chosenSlot, id] of selectedEntries) {
