@@ -18,6 +18,7 @@ export type ChatData = {
   products: AssistantProduct[];
   stateful?: {
     revision: number;
+    taskKinds?: string[];
     proposal: {proposalId: string; proposalHash: string; targetRevision: number; baseRequirementsHash: string; changes: string[]} | null;
     clarificationOptions: string[];
     build: {

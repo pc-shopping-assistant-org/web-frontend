@@ -33,7 +33,15 @@ const BUILDER_SLOT_ALIASES: Record<string, Slot> = {
 };
 
 
-export function PcBuildSummary({build, products = []}: {build: PcBuildData; products?: AssistantProduct[]}) {
+export function PcBuildSummary({
+  build,
+  products = [],
+  compact = false,
+}: {
+  build: PcBuildData;
+  products?: AssistantProduct[];
+  compact?: boolean;
+}) {
   const t = useTranslations("assistant.build");
   const locale = useLocale();
   const addToCart = useAddToCart();
@@ -106,13 +114,13 @@ export function PcBuildSummary({build, products = []}: {build: PcBuildData; prod
 
       <CardContent className="space-y-4 pt-4">
         {/* Parts Table */}
-        <div className="overflow-hidden rounded-xl border bg-background">
+        <div className="overflow-x-auto rounded-xl border bg-background">
           <Table>
             <TableHeader className="bg-muted/40 text-xs font-semibold text-muted-foreground">
               <TableRow>
-                <TableHead className="px-4 py-2.5 h-9">{t("colSlot")}</TableHead>
-                <TableHead className="px-4 py-2.5 h-9">{t("colProduct")}</TableHead>
-                <TableHead className="px-4 py-2.5 h-9 text-right">{t("colPrice")}</TableHead>
+                <TableHead className={compact ? "h-8 px-2.5 py-2" : "h-9 px-4 py-2.5"}>{t("colSlot")}</TableHead>
+                <TableHead className={compact ? "h-8 px-2.5 py-2" : "h-9 px-4 py-2.5"}>{t("colProduct")}</TableHead>
+                <TableHead className={compact ? "h-8 px-2.5 py-2 text-right" : "h-9 px-4 py-2.5 text-right"}>{t("colPrice")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -39,6 +39,13 @@ export enum FlexibleTurnStatus {
   Discarded = "DISCARDED",
 }
 
+export enum AssistantTaskKind {
+  Build = "BUILD",
+  Compare = "COMPARE",
+  Answer = "ANSWER",
+  ExplainSavedBuild = "EXPLAIN_SAVED_BUILD",
+}
+
 export enum RequirementOperation {
   Set = "SET",
   Clear = "CLEAR",

@@ -53,6 +53,14 @@ export const publicBuildSchema = z.object({
 export const flexibleSchema = z.object({
   status: z.enum(FlexibleTurnStatus),
   answer: z.string(),
+  task_outcomes: z
+    .array(
+      z.object({
+        kind: z.string(),
+        status: z.string(),
+      }),
+    )
+    .default([]),
   proposal: proposalSchema.nullable().optional(),
   clarification: z
     .object({

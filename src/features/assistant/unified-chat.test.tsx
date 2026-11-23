@@ -4,7 +4,7 @@ import {afterEach, expect, it, vi} from "vitest";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {AssistantPage} from "./assistant-page";
 import {ApiClientError} from "@/lib/api/envelope";
-import {AiMode} from "@/lib/domain/assistant-enums";
+import {AiMode, AssistantTaskKind} from "@/lib/domain/assistant-enums";
 import {loadConversationHistory} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import {getProductById} from "@/features/catalog/api";
@@ -97,13 +97,20 @@ it("restores URL conversation history on reload and continues using its original
   expect(streamChat).toHaveBeenCalledWith("25 triệu", "saved", expect.any(Object), expect.any(AbortSignal), {selectedProductIds: []});
 });
 
-it("compares V2 product cards without inventing availability", async () => {
+it("compares V2 product cards without inventing availability when task kind is COMPARE", async () => {
   vi.mocked(streamChat).mockResolvedValueOnce({
     conversation_id: "test", intent: AiMode.Chat, answer: "So sánh từ catalog",
     products: [
       {id: "p1", name: "GPU A", specifications: {memory_gb: 8}},
       {id: "p2", name: "GPU B", specifications: {memory_gb: 12}},
     ],
+    stateful: {
+      revision: 1,
+      taskKinds: [AssistantTaskKind.Compare],
+      proposal: null,
+      clarificationOptions: [],
+      build: null,
+    },
   });
   const user = userEvent.setup();
   render(<AssistantPage initialPrompt="So sánh hai GPU" />);
@@ -111,6 +118,58 @@ it("compares V2 product cards without inventing availability", async () => {
   expect(await screen.findByRole("table", {name: "comparisonTable"})).toBeInTheDocument();
   expect(screen.queryByText("inStock")).not.toBeInTheDocument();
   expect(screen.getAllByRole("button", {name: "productDetails"})).toHaveLength(2);
+});
+
+it("does not render a comparison table for normal multi-product search answers", async () => {
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "test", intent: AiMode.Chat, answer: "Gợi ý 2 mẫu GPU phù hợp nhu cầu chơi game 2K.",
+    products: [
+      {id: "p1", name: "GPU A", specifications: {memory_gb: 8}},
+      {id: "p2", name: "GPU B", specifications: {memory_gb: 12}},
+    ],
+    stateful: {
+      revision: 1,
+      taskKinds: [AssistantTaskKind.Answer],
+      proposal: null,
+      clarificationOptions: [],
+      build: null,
+    },
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Gợi ý GPU chơi game 2K" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("Gợi ý 2 mẫu GPU phù hợp nhu cầu chơi game 2K.")).toBeInTheDocument();
+  expect(screen.queryByRole("table", {name: "comparisonTable"})).not.toBeInTheDocument();
+  expect(screen.getAllByRole("button", {name: "productDetails"})).toHaveLength(2);
+});
+
+it("hides duplicate product cards that are already listed inside PcBuildSummary", async () => {
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "test", intent: AiMode.Chat, answer: "Cấu hình tối ưu cho ngân sách 25 triệu.",
+    products: [
+      {id: "p1", name: "Ryzen 5 7600", specifications: {}},
+      {id: "p2", name: "RTX 4070 Super", specifications: {}},
+    ],
+    stateful: {
+      revision: 1,
+      taskKinds: [AssistantTaskKind.Build],
+      proposal: null,
+      clarificationOptions: [],
+      build: {
+        totalSpending: 24500000,
+        stale: false,
+        parts: [
+          {slot: "CPU", name: "Ryzen 5 7600", variantId: "v1", spending: 5500000, owned: false, pinned: false},
+          {slot: "GPU", name: "RTX 4070 Super", variantId: "v2", spending: 19000000, owned: false, pinned: false},
+        ],
+      },
+    },
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Build PC 25 triệu" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("Cấu hình tối ưu cho ngân sách 25 triệu.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", {name: "productDetails"})).not.toBeInTheDocument();
 });
 
 it("shows a readable error when product quick view cannot load catalog details", async () => {

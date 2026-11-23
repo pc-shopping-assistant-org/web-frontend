@@ -24,11 +24,12 @@ import {useProfile} from "@/features/auth/queries";
 import {LoginForm} from "@/features/auth/login-form";
 import {ApiClientError} from "@/lib/api/envelope";
 import {STATIC_MESSAGE_KEYS} from "@/lib/api/contracts/common";
-import {AssistantFailureReason} from "@/lib/domain/assistant-enums";
+import {AssistantFailureReason, AssistantTaskKind} from "@/lib/domain/assistant-enums";
 import {streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
 import type {Confirmation} from "./contracts/stateful";
 import {ACTIVE_CONVERSATION_STORAGE_KEY, CHAT_FOLLOW_BOTTOM_DISTANCE_PX, MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
 import {AssistantMarkdown} from "./assistant-markdown";
+import {AssistantProductCarousel} from "./components/assistant-product-carousel";
 import {loadConversationHistory, setConversationUrl, setStoredConversationId} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import type {AssistantProduct, ChatTurn} from "./models";
@@ -375,7 +376,7 @@ export function AssistantPage({
           onScroll={(event) => {const element = event.currentTarget; followBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < CHAT_FOLLOW_BOTTOM_DISTANCE_PX;}}>
           <div className={`${isWidget ? "w-full px-3.5" : "mx-auto w-full max-w-4xl px-4 sm:px-6"} ${!chatTurns.length && !streamingPrompt ? "my-auto py-5" : "space-y-4 py-4"}`}>
           {chatTurns.length ? (
-            <ChatTranscript turns={chatTurns} locale={locale} onAskAboutProduct={handleAskAboutProduct} />
+            <ChatTranscript turns={chatTurns} locale={locale} compact={isWidget} onAskAboutProduct={handleAskAboutProduct} />
           ) : !streamingPrompt ? (
             <div className={`mx-auto flex flex-col items-center justify-center gap-3 text-center ${isWidget ? "max-w-full" : "max-w-2xl gap-4"}`}>
               <div className={`flex items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs ring-1 ring-primary/20 ${isWidget ? "size-10" : "size-12"}`}>
@@ -679,31 +680,40 @@ function ProductPicker({value, onChange, locale}: {value: string[]; onChange: (v
   );
 }
 
+function isComparisonResult(result: Result): boolean {
+  if ("stateful" in result && result.stateful?.taskKinds?.length) {
+    return result.stateful.taskKinds.includes(AssistantTaskKind.Compare);
+  }
+  return !("intent" in result) && "answer" in result && "products" in result && !("query" in result);
+}
+
 function AssistantResult({
   result,
   hideAnswer = false,
+  compact = false,
 }: {
   result: Result;
   locale?: string;
   hideAnswer?: boolean;
+  compact?: boolean;
 }) {
   const t = useTranslations("assistant");
   const [quickViewProduct, setQuickViewProduct] = useState<AssistantProduct | null>(null);
   const answer = "answer" in result ? result.answer : undefined;
   const products = "products" in result ? (result.products ?? []) : "product" in result && result.product ? [result.product] : [];
   const build = "stateful" in result ? result.stateful?.build : null;
-  const isComparison = products.length > 1;
+  const isComparison = isComparisonResult(result) && products.length > 1;
   const comparisonKeys = isComparison
     ? Array.from(new Set(products.flatMap((product) => Object.keys(product.specifications ?? {})))).slice(0, 12)
     : [];
   const hasComparisonTable = isComparison && comparisonKeys.length > 0;
   if (hideAnswer && !build && !hasComparisonTable) return null;
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-3">
         {!hideAnswer ? <AssistantMarkdown>{answer ?? t("noAnswer")}</AssistantMarkdown> : null}
-        {build ? <PcBuildSummary build={build} products={products} /> : null}
+        {build ? <PcBuildSummary build={build} products={products} compact={compact} /> : null}
         {hasComparisonTable ? (
-          <div className="overflow-hidden rounded-xl border border-border/80 bg-card shadow-xs">
+          <div className="overflow-x-auto rounded-xl border border-border/80 bg-card shadow-xs">
             <Table>
               <caption className="sr-only">{t("comparisonTable")}</caption>
               <TableHeader className="bg-muted/50">
@@ -712,7 +722,7 @@ function AssistantResult({
                   {products.map((product, index) => {
                     const canQuickView = Boolean(product.id || product.product_id || product.seo_name);
                     return (
-                      <TableHead key={"product_id" in product ? (product.product_id ?? index) : index} className="min-w-44 px-4 py-3 font-semibold text-foreground">
+                      <TableHead key={"product_id" in product ? (product.product_id ?? index) : index} className={compact ? "min-w-36 px-3 py-2.5 font-semibold text-foreground" : "min-w-44 px-4 py-3 font-semibold text-foreground"}>
                         {canQuickView ? (
                           <button
                             type="button"
@@ -760,10 +770,12 @@ function AssistantResult({
 function ChatTranscript({
   turns,
   locale,
+  compact = false,
   onAskAboutProduct,
 }: {
   turns: ChatTurn[];
   locale: string;
+  compact?: boolean;
   onAskAboutProduct?: (productId: string) => void;
 }) {
   const t = useTranslations("assistant");
@@ -777,8 +789,20 @@ function ChatTranscript({
                 ? [turn.response.product]
                 : []
             : [];
-          const hasBuild = Boolean(turn.response && "stateful" in turn.response && turn.response.stateful?.build);
-          const hasComparison = products.length > 1 && products.some((product) => Object.keys(product.specifications ?? {}).length > 0);
+          const build = turn.response && "stateful" in turn.response ? turn.response.stateful?.build : null;
+          const hasBuild = Boolean(build);
+          const hasComparison = Boolean(
+            turn.response &&
+              isComparisonResult(turn.response) &&
+              products.length > 1 &&
+              products.some((product) => Object.keys(product.specifications ?? {}).length > 0),
+          );
+          const buildPartNames = build
+            ? new Set(build.parts.map((part) => part.name.trim().toLowerCase()))
+            : null;
+          const shelfProducts = buildPartNames
+            ? products.filter((product) => !buildPartNames.has(product.name.trim().toLowerCase()))
+            : products;
           return (
             <div key={index} className="flex flex-col space-y-3">
               <Bubble variant="tinted" align="end" className="max-w-[90%] sm:max-w-[78%]">
@@ -791,29 +815,32 @@ function ChatTranscript({
               {turn.response ? (
                 <Bubble variant="outline" className="w-full max-w-full">
                   <BubbleContent className="w-full rounded-2xl border-border/60 bg-card/85 px-4 py-3.5 leading-7 shadow-2xs">
-                    <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    <div className="mb-2 flex items-center gap-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                       <span className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary">
                         <Bot className="size-3.5" />
                       </span>
                       {t("assistantLabel")}
-                      {"intent" in turn.response && turn.response.intent ? (
-                        <Badge variant="outline" className="px-1.5 py-0 text-[0.62rem] normal-case tracking-normal">{turn.response.intent}</Badge>
-                      ) : null}
                     </div>
-                    <AssistantMarkdown products={products} onAskAboutProduct={onAskAboutProduct}>
+                    <AssistantMarkdown products={products}>
                       {"answer" in turn.response ? turn.response.answer : t("noAnswer")}
                     </AssistantMarkdown>
                   </BubbleContent>
                 </Bubble>
               ) : null}
               {turn.response && (hasBuild || hasComparison) ? (
-                <div className="ml-0 sm:ml-2">
-                  <AssistantResult
-                    result={turn.response}
-                    locale={locale}
-                    hideAnswer
-                  />
-                </div>
+                <AssistantResult
+                  result={turn.response}
+                  locale={locale}
+                  compact={compact}
+                  hideAnswer
+                />
+              ) : null}
+              {turn.response && shelfProducts.length > 0 ? (
+                <AssistantProductCarousel
+                  products={shelfProducts}
+                  compact={compact}
+                  onAskAboutProduct={onAskAboutProduct}
+                />
               ) : null}
             </div>
           );

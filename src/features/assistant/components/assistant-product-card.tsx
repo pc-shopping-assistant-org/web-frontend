@@ -26,9 +26,11 @@ import {ProductQuickViewDialog} from "./product-quick-view-dialog";
 export function AssistantProductCard({
   product,
   onAskAboutProduct,
+  compact = false,
 }: {
   product: AssistantProduct;
   onAskAboutProduct?: (productId: string) => void;
+  compact?: boolean;
 }) {
   const t = useTranslations("assistant");
   const catalogT = useTranslations("catalog");
@@ -43,7 +45,7 @@ export function AssistantProductCard({
 
   const id = product.id || product.product_id;
   const slug = product.seo_name;
-  const specs = Object.entries(product.specifications ?? {}).slice(0, 3);
+  const specs = Object.entries(product.specifications ?? {}).slice(0, compact ? 2 : 3);
 
   async function handleQuickAdd() {
     if ((!slug && !id) || addToCart.isPending || quickAddLoading) return;
@@ -158,11 +160,12 @@ export function AssistantProductCard({
             variant="outline"
             size="sm"
             onClick={() => setQuickViewOpen(true)}
+            aria-label={catalogT("productDetails")}
             title={catalogT("productDetails")}
             className="h-8 gap-1 rounded-lg px-2.5 text-xs"
           >
             <IconEye className="size-3.5" />
-            <span className="hidden sm:inline">{catalogT("productDetails")}</span>
+            {!compact ? <span className="hidden sm:inline">{catalogT("productDetails")}</span> : null}
           </Button>
 
           {/* External Detail Page Link (New tab) */}
@@ -171,10 +174,11 @@ export function AssistantProductCard({
               href={`/products/${encodeURIComponent(slug)}`}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={t("viewProduct")}
               title={t("viewProduct")}
               className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-border/80 bg-background px-2.5 text-xs font-medium text-muted-foreground no-underline transition hover:border-primary/40 hover:text-primary"
             >
-              <span>{t("viewProduct")}</span>
+              {!compact ? <span>{t("viewProduct")}</span> : null}
               <IconArrowUpRight className="size-3.5" />
             </Link>
           )}
