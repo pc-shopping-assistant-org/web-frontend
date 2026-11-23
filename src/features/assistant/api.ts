@@ -1,6 +1,6 @@
 import {aiFetch} from "@/lib/api/client";
 import {streamChat} from "./stateful-api";
-export {streamChat} from "./stateful-api";
+export {getAssistantModels, streamChat} from "./stateful-api";
 import type {CompareDataDto, ConsultDataDto, EvaluateDataDto, SearchDataDto} from "@/features/assistant/contracts/dto";
 import {mapCompareData, mapConsultData, mapEvaluateData, mapSearchData} from "@/features/assistant/mappers";
 import {
@@ -11,11 +11,13 @@ import {
 } from "@/features/assistant/contracts/requests";
 import type {ChatData} from "@/features/assistant/contracts/responses";
 export type {ChatData, CompareData, ConsultData, EvaluateData, SearchData} from "@/features/assistant/contracts/responses";
+import type {AgentActivityEvent} from "./contracts/stateful";
 import {parseRequest} from "@/lib/api/parse-request";
 
 export type ChatStreamHandlers = {
   onRunAdmitted?: (conversationId: string, runId: string) => void;
   onStart?: (conversationId: string) => void;
+  onStatus?: (status: AgentActivityEvent) => void;
   onDelta?: (delta: string, replace?: boolean) => void;
   /** Called when the SSE stream is interrupted and the client falls back to polling the saved result. */
   onReconnecting?: () => void;

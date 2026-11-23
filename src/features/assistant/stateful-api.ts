@@ -4,14 +4,33 @@ import {STATIC_MESSAGE_KEYS} from "@/lib/api/contracts/common";
 import type {AiSchema} from "@/lib/api/generated/types";
 import {parseSse} from "@/lib/api/sse";
 import {parseRequest} from "@/lib/api/parse-request";
-import {ChatStreamEventType} from "@/lib/domain/assistant-enums";
+import {ChatStreamEventType, type ThinkingMode} from "@/lib/domain/assistant-enums";
 import {RUN_RESULT_POLL_INTERVAL_MS, RUN_RESULT_TRANSIENT_HTTP_STATUSES, STATEFUL_SCHEMA_VERSION} from "./constants";
 import type {ChatData} from "./models";
 import {mapStatefulTurn} from "./mappers";
 import type {ChatStreamHandlers} from "./api";
-import {conversationSchema, runSchema, statefulEventSchema, turnRequestSchema, type Confirmation, type StatefulTurnResult} from "./contracts/stateful";
+import {
+  conversationSchema,
+  publicModelsCatalogSchema,
+  runSchema,
+  statefulEventSchema,
+  turnRequestSchema,
+  type Confirmation,
+  type PublicModelsCatalog,
+  type StatefulTurnResult,
+} from "./contracts/stateful";
 
-export type ChatTurnOptions = {selectedProductIds?: string[]; confirmation?: Confirmation};
+export type ChatTurnOptions = {
+  selectedProductIds?: string[];
+  confirmation?: Confirmation;
+  modelId?: string;
+  thinkingMode?: ThinkingMode;
+};
+
+export async function getAssistantModels(signal?: AbortSignal): Promise<PublicModelsCatalog> {
+  const data = await aiFetch<AiSchema["PublicModelsCatalog"]>("/models", {signal});
+  return publicModelsCatalogSchema.parse(data);
+}
 
 const invalidStream = () =>
   new ApiClientError(502, STATIC_MESSAGE_KEYS.AI_CHAT_STREAM_FAILED, [
@@ -37,6 +56,8 @@ export async function streamChat(
     request_id: crypto.randomUUID(),
     expected_revision: conversation.revision,
     message,
+    ...(options.modelId ? {model_id: options.modelId} : {}),
+    ...(options.thinkingMode ? {thinking_mode: options.thinkingMode} : {}),
     ...(options.selectedProductIds?.length ? {selected_product_ids: options.selectedProductIds} : {}),
     ...(options.confirmation ? {confirmation: options.confirmation} : {}),
   }) satisfies AiSchema["TurnRequestV2Body"];
@@ -120,7 +141,13 @@ async function readStream(
     const parsed = statefulEventSchema.safeParse(envelope.data);
     if (!parsed.success) throw invalidStream();
     const event = parsed.data;
-    if (event.conversation_id !== conversationId || event.run_id !== runId || event.sequence !== sequence + 1)
+    if (event.conversation_id !== conversationId || event.run_id !== runId)
+      throw invalidStream();
+    if (event.event === ChatStreamEventType.Status) {
+      handlers.onStatus?.(event);
+      continue;
+    }
+    if (event.sequence !== sequence + 1)
       throw invalidStream();
     sequence = event.sequence;
     if (event.event === ChatStreamEventType.Error)

@@ -46,6 +46,7 @@ it("creates a V2 run and consumes one SSE connection without reconnect", async (
   };
   const frames = [
     {event: "START", sequence: 1, run},
+    {event: "STATUS", stage: "SEARCHING_CATALOG", tool: "search_catalog", detail: "RTX 4070"},
     {event: "DELTA", sequence: 2, delta: "Cấu hình phù hợp"},
     {event: "COMPLETED", sequence: 3, result},
   ]
@@ -61,11 +62,19 @@ it("creates a V2 run and consumes one SSE connection without reconnect", async (
     .mockResolvedValueOnce(new Response(frames, {headers: {"content-type": "text/event-stream"}}));
   vi.stubGlobal("fetch", fetch);
   const deltas: string[] = [];
+  const statuses: string[] = [];
   const onReconnecting = vi.fn();
-  const answer = await streamChat("Build PC", undefined, {onDelta: (text) => deltas.push(text), onReconnecting}, undefined, {selectedProductIds: [cid]});
+  const answer = await streamChat(
+    "Build PC",
+    undefined,
+    {onStatus: (status) => statuses.push(`${status.stage}:${status.detail ?? ""}`), onDelta: (text) => deltas.push(text), onReconnecting},
+    undefined,
+    {selectedProductIds: [cid]},
+  );
   expect(onReconnecting).not.toHaveBeenCalled();
   expect(answer.answer).toBe(result.answer);
   expect(answer.products[0]).toMatchObject({id: cid, name: "Canonical GPU", list_price: 8000000});
+  expect(statuses).toEqual(["SEARCHING_CATALOG:RTX 4070"]);
   expect(deltas).toEqual([result.answer]);
   expect(fetch.mock.calls.map((call) => call[0])).toEqual([
     "/api/ai/conversations",

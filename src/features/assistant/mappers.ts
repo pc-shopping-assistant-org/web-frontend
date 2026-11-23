@@ -19,6 +19,7 @@ export function mapStatefulTurn(dto: StatefulTurnResult): ChatData {
     products: dto.products.map(mapProductCard),
     stateful: {
       revision: dto.revision,
+      taskKinds: dto.flexible?.task_outcomes.map((outcome) => outcome.kind) ?? [],
       proposal: proposal
         ? {
             proposalId: proposal.proposal_id,

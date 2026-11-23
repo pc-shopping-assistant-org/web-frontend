@@ -11,7 +11,7 @@ type MarkdownNode = {
 const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function linkifyMentions(node: MarkdownNode, linkables: {name: string; href: string; pattern: RegExp}[]) {
-  if (!node.children?.length || node.type === "link" || node.type === "code" || node.type === "inlineCode") return;
+  if (!node.children?.length || node.type === "link" || node.type === "code" || node.type === "inlineCode" || node.type === "heading") return;
   const nextChildren: MarkdownNode[] = [];
   for (const child of node.children) {
     if (child.type === "text" && child.value) {

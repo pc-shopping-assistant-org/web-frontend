@@ -11,8 +11,20 @@ export enum AiMode {
 export enum ChatStreamEventType {
   Start = "START",
   Delta = "DELTA",
+  Status = "STATUS",
   Completed = "COMPLETED",
   Error = "ERROR",
+}
+
+export enum AgentActivityStage {
+  Thinking = "THINKING",
+  SearchingCatalog = "SEARCHING_CATALOG",
+  LoadingDetails = "LOADING_DETAILS",
+  Comparing = "COMPARING",
+  CheckingCompatibility = "CHECKING_COMPATIBILITY",
+  BuildingPc = "BUILDING_PC",
+  SearchingWeb = "SEARCHING_WEB",
+  Verifying = "VERIFYING",
 }
 
 export enum AssistantFailureReason {
@@ -37,6 +49,22 @@ export enum FlexibleTurnStatus {
   Unresolved = "UNRESOLVED",
   WaitingInput = "WAITING_INPUT",
   Discarded = "DISCARDED",
+}
+
+export enum AssistantTaskKind {
+  Build = "BUILD",
+  Compare = "COMPARE",
+  Answer = "ANSWER",
+  ExplainSavedBuild = "EXPLAIN_SAVED_BUILD",
+}
+
+export enum ThinkingMode {
+  Off = "off",
+  Minimal = "minimal",
+  Low = "low",
+  Medium = "medium",
+  High = "high",
+  On = "on",
 }
 
 export enum RequirementOperation {

@@ -4,7 +4,7 @@ import {afterEach, expect, it, vi} from "vitest";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {AssistantPage} from "./assistant-page";
 import {ApiClientError} from "@/lib/api/envelope";
-import {AiMode} from "@/lib/domain/assistant-enums";
+import {AgentActivityStage, AiMode, AssistantTaskKind, ChatStreamEventType, ThinkingMode} from "@/lib/domain/assistant-enums";
 import {loadConversationHistory} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import {getProductById} from "@/features/catalog/api";
@@ -55,14 +55,16 @@ vi.mock("@/features/cart/queries", () => ({
 }));
 vi.mock("@/features/catalog/api", () => ({getProductById: vi.fn(), getProductBySlug: vi.fn()}));
 vi.mock("./api", () => ({
+  getAssistantModels: vi.fn(async () => null),
   streamChat: vi.fn(async () => ({conversation_id: "test", answer: "chat answer", products: []})),
   compare: vi.fn(async () => ({answer: "comparison answer", products: []})),
   evaluate: vi.fn(async () => ({answer: "evaluation answer"})),
 }));
-import {streamChat, compare, evaluate} from "./api";
+import {getAssistantModels, streamChat, compare, evaluate} from "./api";
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  window.localStorage.clear();
   productQueryFilters.length = 0;
   profile.data = {id: "user"};
   profile.error = null;
@@ -97,13 +99,20 @@ it("restores URL conversation history on reload and continues using its original
   expect(streamChat).toHaveBeenCalledWith("25 triệu", "saved", expect.any(Object), expect.any(AbortSignal), {selectedProductIds: []});
 });
 
-it("compares V2 product cards without inventing availability", async () => {
+it("compares V2 product cards without inventing availability when task kind is COMPARE", async () => {
   vi.mocked(streamChat).mockResolvedValueOnce({
     conversation_id: "test", intent: AiMode.Chat, answer: "So sánh từ catalog",
     products: [
       {id: "p1", name: "GPU A", specifications: {memory_gb: 8}},
       {id: "p2", name: "GPU B", specifications: {memory_gb: 12}},
     ],
+    stateful: {
+      revision: 1,
+      taskKinds: [AssistantTaskKind.Compare],
+      proposal: null,
+      clarificationOptions: [],
+      build: null,
+    },
   });
   const user = userEvent.setup();
   render(<AssistantPage initialPrompt="So sánh hai GPU" />);
@@ -111,6 +120,58 @@ it("compares V2 product cards without inventing availability", async () => {
   expect(await screen.findByRole("table", {name: "comparisonTable"})).toBeInTheDocument();
   expect(screen.queryByText("inStock")).not.toBeInTheDocument();
   expect(screen.getAllByRole("button", {name: "productDetails"})).toHaveLength(2);
+});
+
+it("does not render a comparison table for normal multi-product search answers", async () => {
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "test", intent: AiMode.Chat, answer: "Gợi ý 2 mẫu GPU phù hợp nhu cầu chơi game 2K.",
+    products: [
+      {id: "p1", name: "GPU A", specifications: {memory_gb: 8}},
+      {id: "p2", name: "GPU B", specifications: {memory_gb: 12}},
+    ],
+    stateful: {
+      revision: 1,
+      taskKinds: [AssistantTaskKind.Answer],
+      proposal: null,
+      clarificationOptions: [],
+      build: null,
+    },
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Gợi ý GPU chơi game 2K" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("Gợi ý 2 mẫu GPU phù hợp nhu cầu chơi game 2K.")).toBeInTheDocument();
+  expect(screen.queryByRole("table", {name: "comparisonTable"})).not.toBeInTheDocument();
+  expect(screen.getAllByRole("button", {name: "productDetails"})).toHaveLength(2);
+});
+
+it("hides duplicate product cards that are already listed inside PcBuildSummary", async () => {
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "test", intent: AiMode.Chat, answer: "Cấu hình tối ưu cho ngân sách 25 triệu.",
+    products: [
+      {id: "p1", name: "Ryzen 5 7600", specifications: {}},
+      {id: "p2", name: "RTX 4070 Super", specifications: {}},
+    ],
+    stateful: {
+      revision: 1,
+      taskKinds: [AssistantTaskKind.Build],
+      proposal: null,
+      clarificationOptions: [],
+      build: {
+        totalSpending: 24500000,
+        stale: false,
+        parts: [
+          {slot: "CPU", name: "Ryzen 5 7600", variantId: "v1", spending: 5500000, owned: false, pinned: false},
+          {slot: "GPU", name: "RTX 4070 Super", variantId: "v2", spending: 19000000, owned: false, pinned: false},
+        ],
+      },
+    },
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Build PC 25 triệu" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("Cấu hình tối ưu cho ngân sách 25 triệu.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", {name: "productDetails"})).not.toBeInTheDocument();
 });
 
 it("shows a readable error when product quick view cannot load catalog details", async () => {
@@ -381,4 +442,82 @@ it("uses the comparison adapter without a separate compare page", async () => {
     selectedProductIds: ["a", "b"],
   });
   expect(compare).not.toHaveBeenCalled();
+});
+
+it("lets users switch models and thinking modes from the YAML catalog and sends them with the turn", async () => {
+  vi.mocked(getAssistantModels).mockResolvedValueOnce({
+    default_model_id: "gemini-2.5-flash",
+    models: [
+      {
+        id: "gemini-2.5-flash",
+        label: "Gemini 2.5 Flash",
+        provider: "gemini",
+        supported_thinking_modes: [ThinkingMode.Off, ThinkingMode.Low, ThinkingMode.High],
+        default_thinking_mode: ThinkingMode.Low,
+        is_default: true,
+      },
+      {
+        id: "qwen3.5-ollama",
+        label: "Qwen 3.5 9B (Ollama)",
+        provider: "openai",
+        supported_thinking_modes: [ThinkingMode.Off, ThinkingMode.On],
+        default_thinking_mode: ThinkingMode.On,
+        is_default: false,
+      },
+    ],
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Tư vấn GPU 2K" />);
+  const modelButton = await screen.findByRole("button", {name: "selectModel"});
+  expect(modelButton).toHaveTextContent("Gemini 2.5 Flash");
+
+  await user.click(modelButton);
+  await user.click(await screen.findByRole("button", {name: "Qwen 3.5 9B (Ollama)"}));
+  expect(screen.getByRole("button", {name: "selectModel"})).toHaveTextContent("Qwen 3.5 9B (Ollama)");
+
+  const thinkingButton = screen.getByRole("button", {name: "selectThinking"});
+  await user.click(thinkingButton);
+  await user.click(await screen.findByRole("button", {name: "thinkingModes.off"}));
+
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("chat answer")).toBeInTheDocument();
+  expect(streamChat).toHaveBeenCalledWith("Tư vấn GPU 2K", undefined, expect.any(Object), expect.any(AbortSignal), {
+    selectedProductIds: [],
+    modelId: "qwen3.5-ollama",
+    thinkingMode: ThinkingMode.Off,
+  });
+});
+
+it("displays live agent activity steps while streaming and clears them on completion", async () => {
+  let handlers!: Parameters<typeof streamChat>[2];
+  let finish!: (value: Awaited<ReturnType<typeof streamChat>>) => void;
+  vi.mocked(streamChat).mockImplementationOnce(async (_message, _conversation, nextHandlers) => {
+    handlers = nextHandlers;
+    return new Promise((resolve) => {finish = resolve;});
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Tìm VGA 2K" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  await act(async () => {
+    handlers?.onStatus?.({
+      conversation_id: "00000000-0000-4000-8000-000000000001",
+      run_id: "00000000-0000-4000-8000-000000000002",
+      event: ChatStreamEventType.Status,
+      stage: AgentActivityStage.Thinking,
+    });
+    handlers?.onStatus?.({
+      conversation_id: "00000000-0000-4000-8000-000000000001",
+      run_id: "00000000-0000-4000-8000-000000000002",
+      event: ChatStreamEventType.Status,
+      stage: AgentActivityStage.SearchingCatalog,
+      tool: "search_catalog",
+      detail: "RTX 4070",
+    });
+  });
+  expect(screen.getByText("activity.THINKING")).toBeInTheDocument();
+  expect(screen.getByText("activity.SEARCHING_CATALOG")).toBeInTheDocument();
+  expect(screen.getByText("RTX 4070")).toBeInTheDocument();
+  await act(async () => finish({conversation_id: "test", intent: AiMode.Chat, answer: "Đã tìm xong.", products: []}));
+  expect(await screen.findByText("Đã tìm xong.")).toBeInTheDocument();
+  expect(screen.queryByText("activity.SEARCHING_CATALOG")).not.toBeInTheDocument();
 });

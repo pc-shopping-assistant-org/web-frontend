@@ -4,6 +4,7 @@ import {afterEach, expect, it, vi} from "vitest";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 
 import {AssistantMarkdown} from "./assistant-markdown";
+import {AssistantProductCarousel} from "./components/assistant-product-carousel";
 import type {AssistantProduct} from "./models";
 
 vi.mock("@/i18n/navigation", () => ({
@@ -72,31 +73,34 @@ it("handles an unfinished streamed code fence and renders the completed answer o
   expect(screen.getByText("Ready.")).toBeInTheDocument();
 });
 
-it("links mentioned catalog products inline in the same tab without altering code blocks", () => {
+it("links mentioned catalog products inline in prose without altering code blocks or headings", () => {
   const products: AssistantProduct[] = [
     {id: "p1", name: "HyperX Cloud III", seo_name: "hyperx-cloud-iii", list_price: 2190000, specifications: {}},
   ];
-  render(
+  const {container} = render(
     <Answer
       products={products}
-      text={"Bạn nên chọn **HyperX Cloud III** cho FPS.\n\n`HyperX Cloud III`"}
+      text={"## HyperX Cloud III\n\nBạn nên chọn **HyperX Cloud III** cho FPS.\n\n`HyperX Cloud III`"}
     />,
   );
-  const inlineLink = screen.getByRole("link", {name: "HyperX Cloud III"});
-  expect(inlineLink).toHaveAttribute("href", "/products/hyperx-cloud-iii");
-  expect(inlineLink).not.toHaveAttribute("target");
+  const links = screen.getAllByRole("link", {name: "HyperX Cloud III"});
+  expect(links).toHaveLength(1);
+  expect(links[0]).toHaveAttribute("href", "/products/hyperx-cloud-iii");
+  expect(links[0]).not.toHaveAttribute("target");
+  expect(container.querySelector("[data-product-cards]")).toBeNull();
 });
 
-it("renders multiple products in a single horizontal carousel at the bottom with navigation buttons", () => {
+it("renders multiple products in a standalone horizontal carousel with navigation buttons", () => {
   const products: AssistantProduct[] = [
     {id: "p1", name: "HyperX Cloud III", seo_name: "hyperx-cloud-iii", list_price: 2190000, specifications: {}},
     {id: "p2", name: "Logitech G Pro X", seo_name: "logitech-g-pro-x", list_price: 2990000, specifications: {}},
   ];
   const {container} = render(
-    <Answer
-      products={products}
-      text={"Đoạn 1 nhắc HyperX Cloud III.\n\nĐoạn 2 nhắc Logitech G Pro X."}
-    />,
+    <QueryClientProvider client={testQueryClient}>
+      <NextIntlClientProvider locale="en" messages={{assistant: {answerTable: "AI answer table", viewProduct: "View product", relatedProducts: "Related products", scrollLeft: "Scroll left", scrollRight: "Scroll right", askAboutProduct: "Ask"}, catalog: {quickAdd: "Add", productDetails: "Details", addingToCart: "Adding"}, common: {saved: "Saved"}}}>
+        <AssistantProductCarousel products={products} />
+      </NextIntlClientProvider>
+    </QueryClientProvider>,
   );
   expect(container.querySelectorAll("[data-product-cards]")).toHaveLength(1);
   expect(container.querySelectorAll("[data-product-card]")).toHaveLength(2);
