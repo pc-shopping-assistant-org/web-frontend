@@ -46,6 +46,15 @@ export enum AssistantTaskKind {
   ExplainSavedBuild = "EXPLAIN_SAVED_BUILD",
 }
 
+export enum ThinkingMode {
+  Off = "off",
+  Minimal = "minimal",
+  Low = "low",
+  Medium = "medium",
+  High = "high",
+  On = "on",
+}
+
 export enum RequirementOperation {
   Set = "SET",
   Clear = "CLEAR",

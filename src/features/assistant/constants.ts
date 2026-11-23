@@ -2,6 +2,8 @@
 export const STATEFUL_SCHEMA_VERSION = 2;
 export const CONVERSATION_ID_PARAM = "conversationId";
 export const ACTIVE_CONVERSATION_STORAGE_KEY = "gearpc:active-conversation-id";
+export const SELECTED_MODEL_STORAGE_KEY = "gearpc:assistant-model-id";
+export const SELECTED_THINKING_MODE_STORAGE_KEY = "gearpc:assistant-thinking-mode";
 export const CONVERSATION_HISTORY_PAGE_SIZE = 100;
 export const RUN_RESULT_POLL_INTERVAL_MS = 1_000;
 export const RUN_RESULT_TRANSIENT_HTTP_STATUSES = [502, 503, 504] as const;

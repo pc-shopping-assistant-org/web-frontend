@@ -1,6 +1,6 @@
 import {aiFetch} from "@/lib/api/client";
 import {streamChat} from "./stateful-api";
-export {streamChat} from "./stateful-api";
+export {getAssistantModels, streamChat} from "./stateful-api";
 import type {CompareDataDto, ConsultDataDto, EvaluateDataDto, SearchDataDto} from "@/features/assistant/contracts/dto";
 import {mapCompareData, mapConsultData, mapEvaluateData, mapSearchData} from "@/features/assistant/mappers";
 import {

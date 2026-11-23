@@ -1,5 +1,6 @@
 "use client";
 
+import {useQuery} from "@tanstack/react-query";
 import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, Maximize2, PackageSearch, Plus, RotateCcw, Search, Sparkles, WifiOff, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
@@ -24,12 +25,22 @@ import {useProfile} from "@/features/auth/queries";
 import {LoginForm} from "@/features/auth/login-form";
 import {ApiClientError} from "@/lib/api/envelope";
 import {STATIC_MESSAGE_KEYS} from "@/lib/api/contracts/common";
-import {AssistantFailureReason, AssistantTaskKind} from "@/lib/domain/assistant-enums";
-import {streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
+import {AssistantFailureReason, AssistantTaskKind, ThinkingMode} from "@/lib/domain/assistant-enums";
+import {getAssistantModels, streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
 import type {Confirmation} from "./contracts/stateful";
-import {ACTIVE_CONVERSATION_STORAGE_KEY, CHAT_FOLLOW_BOTTOM_DISTANCE_PX, MAX_PRODUCT_QUESTION_CHARS, MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, PRODUCT_PICKER_PAGE_SIZE} from "./constants";
+import {
+  ACTIVE_CONVERSATION_STORAGE_KEY,
+  CHAT_FOLLOW_BOTTOM_DISTANCE_PX,
+  MAX_PRODUCT_QUESTION_CHARS,
+  MAX_SELECTED_PRODUCTS,
+  MAX_TURN_MESSAGE_CHARS,
+  PRODUCT_PICKER_PAGE_SIZE,
+  SELECTED_MODEL_STORAGE_KEY,
+  SELECTED_THINKING_MODE_STORAGE_KEY,
+} from "./constants";
 import {AssistantMarkdown} from "./assistant-markdown";
 import {AssistantProductCarousel} from "./components/assistant-product-carousel";
+import {ModelSelector, resolveModelSelection} from "./components/model-selector";
 import {loadConversationHistory, setConversationUrl, setStoredConversationId} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import type {AssistantProduct, ChatTurn} from "./models";
@@ -75,6 +86,60 @@ export function AssistantPage({
   const [toolsOpen, setToolsOpen] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [productIds, setProductIds] = useState<string[]>(initialProductIds);
+  const [selectedModelId, setSelectedModelId] = useState<string | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    try {
+      return window.localStorage.getItem(SELECTED_MODEL_STORAGE_KEY) || undefined;
+    } catch {
+      return undefined;
+    }
+  });
+  const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode | undefined>(() => {
+    if (typeof window === "undefined") return undefined;
+    try {
+      const stored = window.localStorage.getItem(SELECTED_THINKING_MODE_STORAGE_KEY);
+      return stored && Object.values(ThinkingMode).includes(stored as ThinkingMode)
+        ? (stored as ThinkingMode)
+        : undefined;
+    } catch {
+      return undefined;
+    }
+  });
+  const modelsQuery = useQuery({
+    queryKey: ["assistant", "models"],
+    queryFn: ({signal}) => getAssistantModels(signal),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const resolvedModel = resolveModelSelection(modelsQuery.data, selectedModelId, selectedThinkingMode);
+
+  function handleSelectModel(nextModelId: string, defaultThinkingMode?: ThinkingMode) {
+    setSelectedModelId(nextModelId);
+    setSelectedThinkingMode(defaultThinkingMode);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(SELECTED_MODEL_STORAGE_KEY, nextModelId);
+        if (defaultThinkingMode) {
+          window.localStorage.setItem(SELECTED_THINKING_MODE_STORAGE_KEY, defaultThinkingMode);
+        } else {
+          window.localStorage.removeItem(SELECTED_THINKING_MODE_STORAGE_KEY);
+        }
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }
+
+  function handleSelectThinkingMode(nextMode: ThinkingMode) {
+    setSelectedThinkingMode(nextMode);
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(SELECTED_THINKING_MODE_STORAGE_KEY, nextMode);
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }
   const [chatTurns, setChatTurns] = useState<ChatTurn[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>(() => {
     if (initialConversationId) return initialConversationId;
@@ -207,7 +272,11 @@ export function AssistantPage({
           },
         },
         controller.signal,
-        confirmation ? {confirmation} : {selectedProductIds: submittedProductIds},
+        {
+          ...(confirmation ? {confirmation} : {selectedProductIds: submittedProductIds}),
+          ...(resolvedModel.modelId ? {modelId: resolvedModel.modelId} : {}),
+          ...(resolvedModel.thinkingMode ? {thinkingMode: resolvedModel.thinkingMode} : {}),
+        },
       );
       if (controller.signal.aborted) return;
       completeTurn(submittedPrompt, submittedProductIds, data);
@@ -537,6 +606,19 @@ export function AssistantPage({
                 {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
               </Button>
             </div>
+            {modelsQuery.data?.models.length ? (
+              <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-border/50 pt-1.5">
+                <ModelSelector
+                  catalog={modelsQuery.data}
+                  modelId={resolvedModel.modelId}
+                  thinkingMode={resolvedModel.thinkingMode}
+                  disabled={loading}
+                  compact={isWidget}
+                  onSelectModel={handleSelectModel}
+                  onSelectThinkingMode={handleSelectThinkingMode}
+                />
+              </div>
+            ) : null}
           </fieldset>
           <p className="mt-1 hidden text-center text-[11px] text-muted-foreground/80 sm:block">{t("catalogGroundedHint")}</p>
         </form>

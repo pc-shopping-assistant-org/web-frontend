@@ -4,7 +4,7 @@ import {afterEach, expect, it, vi} from "vitest";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {AssistantPage} from "./assistant-page";
 import {ApiClientError} from "@/lib/api/envelope";
-import {AiMode, AssistantTaskKind} from "@/lib/domain/assistant-enums";
+import {AiMode, AssistantTaskKind, ThinkingMode} from "@/lib/domain/assistant-enums";
 import {loadConversationHistory} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import {getProductById} from "@/features/catalog/api";
@@ -55,14 +55,16 @@ vi.mock("@/features/cart/queries", () => ({
 }));
 vi.mock("@/features/catalog/api", () => ({getProductById: vi.fn(), getProductBySlug: vi.fn()}));
 vi.mock("./api", () => ({
+  getAssistantModels: vi.fn(async () => null),
   streamChat: vi.fn(async () => ({conversation_id: "test", answer: "chat answer", products: []})),
   compare: vi.fn(async () => ({answer: "comparison answer", products: []})),
   evaluate: vi.fn(async () => ({answer: "evaluation answer"})),
 }));
-import {streamChat, compare, evaluate} from "./api";
+import {getAssistantModels, streamChat, compare, evaluate} from "./api";
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  window.localStorage.clear();
   productQueryFilters.length = 0;
   profile.data = {id: "user"};
   profile.error = null;
@@ -440,4 +442,48 @@ it("uses the comparison adapter without a separate compare page", async () => {
     selectedProductIds: ["a", "b"],
   });
   expect(compare).not.toHaveBeenCalled();
+});
+
+it("lets users switch models and thinking modes from the YAML catalog and sends them with the turn", async () => {
+  vi.mocked(getAssistantModels).mockResolvedValueOnce({
+    default_model_id: "gemini-2.5-flash",
+    models: [
+      {
+        id: "gemini-2.5-flash",
+        label: "Gemini 2.5 Flash",
+        provider: "gemini",
+        supported_thinking_modes: [ThinkingMode.Off, ThinkingMode.Low, ThinkingMode.High],
+        default_thinking_mode: ThinkingMode.Low,
+        is_default: true,
+      },
+      {
+        id: "qwen3.5-ollama",
+        label: "Qwen 3.5 9B (Ollama)",
+        provider: "openai",
+        supported_thinking_modes: [ThinkingMode.Off, ThinkingMode.On],
+        default_thinking_mode: ThinkingMode.On,
+        is_default: false,
+      },
+    ],
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Tư vấn GPU 2K" />);
+  const modelButton = await screen.findByRole("button", {name: "selectModel"});
+  expect(modelButton).toHaveTextContent("Gemini 2.5 Flash");
+
+  await user.click(modelButton);
+  await user.click(await screen.findByRole("button", {name: "Qwen 3.5 9B (Ollama)"}));
+  expect(screen.getByRole("button", {name: "selectModel"})).toHaveTextContent("Qwen 3.5 9B (Ollama)");
+
+  const thinkingButton = screen.getByRole("button", {name: "selectThinking"});
+  await user.click(thinkingButton);
+  await user.click(await screen.findByRole("button", {name: "thinkingModes.off"}));
+
+  await user.click(screen.getByRole("button", {name: /send/}));
+  expect(await screen.findByText("chat answer")).toBeInTheDocument();
+  expect(streamChat).toHaveBeenCalledWith("Tư vấn GPU 2K", undefined, expect.any(Object), expect.any(AbortSignal), {
+    selectedProductIds: [],
+    modelId: "qwen3.5-ollama",
+    thinkingMode: ThinkingMode.Off,
+  });
 });

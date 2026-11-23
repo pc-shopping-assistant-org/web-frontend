@@ -21,6 +21,86 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/compatibility/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Candidates
+         * @description Tells, for each variant on offer for one slot, whether it fits the parts already chosen for the others.
+         */
+        post: operations["check_candidates_api_v1_compatibility_candidates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compatibility/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check Compatibility
+         * @description Checks the parts chosen for a build against each other. Needs no sign-in, like the stateless search.
+         */
+        post: operations["check_compatibility_api_v1_compatibility_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compatibility/optimize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Optimize Build
+         * @description Runs the deterministic PC optimizer live against the active catalog, honoring pinned slots.
+         */
+        post: operations["optimize_build_api_v1_compatibility_optimize_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/compatibility/prebuilt-builds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Prebuilt Builds
+         * @description Returns prebuilt conflict-free PC configurations generated from catalog_db.
+         */
+        get: operations["get_prebuilt_builds_api_v1_compatibility_prebuilt_builds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/consult": {
         parameters: {
             query?: never;
@@ -261,6 +341,23 @@ export type paths = {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Models */
+        get: operations["list_models_api_v1_models_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search": {
         parameters: {
             query?: never;
@@ -353,6 +450,21 @@ export type components = {
              */
             message: components["schemas"]["ResponseMessage"];
         };
+        /** ApiResponse[list[dict[str, Any]]] */
+        ApiResponse_list_dict_str__Any___: {
+            /** Data */
+            data?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
         /** ApiResponse[list[MemoryEntry]] */
         ApiResponse_list_MemoryEntry__: {
             /** Data */
@@ -415,6 +527,18 @@ export type components = {
              */
             message: components["schemas"]["ResponseMessage"];
         };
+        /** ApiResponse[PublicModelsCatalog] */
+        ApiResponse_PublicModelsCatalog_: {
+            data?: components["schemas"]["PublicModelsCatalog"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
         /** ApiResponse[RunViewV1] */
         ApiResponse_RunViewV1_: {
             data?: components["schemas"]["RunViewV1"] | null;
@@ -430,6 +554,30 @@ export type components = {
         /** ApiResponse[SearchData] */
         ApiResponse_SearchData_: {
             data?: components["schemas"]["SearchData"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
+        /** ApiResponse[Union[BuildCheck, NoneType]] */
+        ApiResponse_Union_BuildCheck__NoneType__: {
+            data?: components["schemas"]["BuildCheck"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
+        /** ApiResponse[Union[CandidateVerdicts, NoneType]] */
+        ApiResponse_Union_CandidateVerdicts__NoneType__: {
+            data?: components["schemas"]["CandidateVerdicts"] | null;
             /** Errors */
             errors?: components["schemas"]["ErrorDetail"][];
             /**
@@ -463,6 +611,18 @@ export type components = {
              */
             message: components["schemas"]["ResponseMessage"];
         };
+        /** ApiResponse[Union[OptimizeBuildResponse, NoneType]] */
+        ApiResponse_Union_OptimizeBuildResponse__NoneType__: {
+            data?: components["schemas"]["OptimizeBuildResponse"] | null;
+            /** Errors */
+            errors?: components["schemas"]["ErrorDetail"][];
+            /**
+             * @description Static frontend mapping key; request-specific details belong in errors
+             * @default SUCCESS
+             * @example SUCCESS
+             */
+            message: components["schemas"]["ResponseMessage"];
+        };
         /** ApiResponse[Union[RunCompletedV2, RunErrorV1]] */
         ApiResponse_Union_RunCompletedV2__RunErrorV1__: {
             /** Data */
@@ -481,12 +641,50 @@ export type components = {
          * @enum {string}
          */
         BudgetScope: "BUILD_PC" | "FULL_SETUP";
+        /** BuildCheck */
+        BuildCheck: {
+            overall: components["schemas"]["CheckStatus"];
+            power?: components["schemas"]["WattageReport"] | null;
+            /** Results */
+            results: components["schemas"]["RuleResult"][];
+        };
         /**
          * BuildObjective
          * @description Specific optimization objectives yielding distinct build variations.
          * @enum {string}
          */
         BuildObjective: "PERFORMANCE" | "BALANCED" | "UPGRADE_FRIENDLY";
+        /**
+         * CandidateCheckRequest
+         * @description The parts already chosen, the slot being picked for, and the variants on offer for it.
+         */
+        CandidateCheckRequest: {
+            /** Candidates */
+            candidates: string[];
+            /** Slot */
+            slot: string;
+            /** Slots */
+            slots: {
+                [key: string]: string;
+            };
+        };
+        /**
+         * CandidateStatus
+         * @enum {string}
+         */
+        CandidateStatus: "COMPATIBLE" | "INCOMPATIBLE" | "UNKNOWN";
+        /** CandidateVerdicts */
+        CandidateVerdicts: {
+            /** Verdicts */
+            verdicts: {
+                [key: string]: components["schemas"]["CandidateStatus"];
+            };
+        };
+        /**
+         * CheckStatus
+         * @enum {string}
+         */
+        CheckStatus: "OK" | "WARNING" | "UNKNOWN" | "INCOMPATIBLE";
         /** ClarificationItemV1 */
         ClarificationItemV1: {
             /** Item Index */
@@ -545,6 +743,16 @@ export type components = {
             product_ids: string[];
             /** Question */
             question?: string | null;
+        };
+        /**
+         * CompatibilityCheckRequest
+         * @description The variant chosen for each slot; slots that are not hardware (monitor, mouse...) have nothing to check.
+         */
+        CompatibilityCheckRequest: {
+            /** Slots */
+            slots: {
+                [key: string]: string;
+            };
         };
         /**
          * ComponentCategory
@@ -770,6 +978,40 @@ export type components = {
             selected_product_ids?: string[];
             /** Sequence */
             sequence: number;
+        };
+        /** OptimizeBuildRequest */
+        OptimizeBuildRequest: {
+            /** Budget Vnd */
+            budget_vnd: number;
+            /** @default BALANCED */
+            objective: components["schemas"]["BuildObjective"];
+            /** Pinned Slots */
+            pinned_slots?: {
+                [key: string]: string;
+            };
+            secondary_use_case?: components["schemas"]["UseCaseProfile"] | null;
+            /**
+             * Secondary Use Case Weight
+             * @default 0.3
+             */
+            secondary_use_case_weight: number;
+            /** @default GAMING_1440P */
+            use_case: components["schemas"]["UseCaseProfile"];
+        };
+        /** OptimizeBuildResponse */
+        OptimizeBuildResponse: {
+            /** Compatibility Status */
+            compatibility_status: string;
+            objective: components["schemas"]["BuildObjective"];
+            /** Score */
+            score: number;
+            /** Selection */
+            selection: {
+                [key: string]: string;
+            };
+            /** Total Price */
+            total_price: number;
+            use_case: components["schemas"]["UseCaseProfile"];
         };
         /** OwnedPartRefV1 */
         OwnedPartRefV1: {
@@ -1001,6 +1243,36 @@ export type components = {
             /** Task Outcomes */
             task_outcomes: components["schemas"]["PublicTaskOutcomeV2"][];
         };
+        /**
+         * PublicModelInfo
+         * @description Public UI-safe projection of an enabled model.
+         */
+        PublicModelInfo: {
+            default_thinking_mode?: components["schemas"]["ThinkingMode"] | null;
+            /** Id */
+            id: string;
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+            /** Label */
+            label: string;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "gemini" | "openai" | "qwen";
+            /** Supported Thinking Modes */
+            supported_thinking_modes?: components["schemas"]["ThinkingMode"][];
+        };
+        /** PublicModelsCatalog */
+        PublicModelsCatalog: {
+            /** Default Model Id */
+            default_model_id: string;
+            /** Models */
+            models: components["schemas"]["PublicModelInfo"][];
+        };
         /** PublicProposalChangeV2 */
         PublicProposalChangeV2: {
             /**
@@ -1117,7 +1389,23 @@ export type components = {
          * @description Stable top-level keys that the frontend maps to localized messages.
          * @enum {string}
          */
-        ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_CHAT_STREAM_STARTED" | "AI_CHAT_STREAM_DELTA" | "AI_CHAT_STREAM_COMPLETED" | "AI_CHAT_STREAM_FAILED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND" | "AI_CONVERSATION_CREATED" | "AI_CONVERSATION_RETRIEVED" | "AI_CONVERSATIONS_LISTED" | "AI_CONVERSATION_DELETED" | "AI_MESSAGES_LISTED" | "AI_RUN_ACCEPTED" | "AI_RUN_RETRIEVED" | "AI_RUN_CANCEL_REQUESTED" | "AI_RUN_FAILED" | "AI_STREAM_INTERRUPTED" | "AI_UNAUTHENTICATED" | "AI_CONVERSATION_NOT_FOUND" | "AI_REVISION_CONFLICT" | "AI_REQUEST_CONFLICT" | "AI_REQUEST_VERSION_UNSUPPORTED" | "AI_CONVERSATION_BUSY" | "AI_CONVERSATION_NOT_READY" | "AI_INPUT_REQUIRED" | "AI_MEMORIES_LISTED" | "AI_MEMORY_SAVED" | "AI_MEMORY_DELETED" | "AI_MEMORY_LIMIT_REACHED";
+        ResponseMessage: "SUCCESS" | "HEALTH_OK" | "VALIDATION_ERROR" | "ENDPOINT_NOT_FOUND" | "METHOD_NOT_ALLOWED" | "HTTP_ERROR" | "INTERNAL_SERVER_ERROR" | "AI_CHAT_COMPLETED" | "AI_CHAT_STREAM_STARTED" | "AI_CHAT_STREAM_DELTA" | "AI_CHAT_STREAM_COMPLETED" | "AI_CHAT_STREAM_FAILED" | "AI_SEARCH_COMPLETED" | "AI_SEARCH_NO_RESULTS" | "AI_CONSULT_COMPLETED" | "AI_COMPARE_COMPLETED" | "AI_COMPARE_PARTIAL" | "AI_EVALUATION_COMPLETED" | "AI_BACKEND_UNAVAILABLE" | "AI_PRODUCT_NOT_FOUND" | "AI_CONVERSATION_CREATED" | "AI_CONVERSATION_RETRIEVED" | "AI_CONVERSATIONS_LISTED" | "AI_CONVERSATION_DELETED" | "AI_MESSAGES_LISTED" | "AI_RUN_ACCEPTED" | "AI_RUN_RETRIEVED" | "AI_RUN_CANCEL_REQUESTED" | "AI_RUN_FAILED" | "AI_STREAM_INTERRUPTED" | "AI_UNAUTHENTICATED" | "AI_CONVERSATION_NOT_FOUND" | "AI_REVISION_CONFLICT" | "AI_REQUEST_CONFLICT" | "AI_REQUEST_VERSION_UNSUPPORTED" | "AI_CONVERSATION_BUSY" | "AI_CONVERSATION_NOT_READY" | "AI_INPUT_REQUIRED" | "AI_MEMORIES_LISTED" | "AI_MEMORY_SAVED" | "AI_MEMORY_DELETED" | "AI_MEMORY_LIMIT_REACHED" | "AI_MODELS_LISTED";
+        /** RuleResult */
+        RuleResult: {
+            /** Message */
+            message?: string | null;
+            /** Missing Attributes */
+            missing_attributes?: string[];
+            /** Rule */
+            rule: string;
+            /** Slot A */
+            slot_a: string;
+            /** Slot B */
+            slot_b?: string | null;
+            status: components["schemas"]["CheckStatus"];
+            /** Suggestion */
+            suggestion?: string | null;
+        };
         /** RunCompletedV2 */
         RunCompletedV2: {
             /**
@@ -1273,6 +1561,12 @@ export type components = {
             /** Text */
             text: string;
         };
+        /**
+         * ThinkingMode
+         * @description Unified reasoning/thinking control selectable per turn from the UI.
+         * @enum {string}
+         */
+        ThinkingMode: "off" | "minimal" | "low" | "medium" | "high" | "on";
         /** TurnRequestV2Body */
         TurnRequestV2Body: {
             confirmation?: components["schemas"]["ProposalConfirmation"] | null;
@@ -1285,6 +1579,8 @@ export type components = {
             expected_revision: number;
             /** Message */
             message: string;
+            /** Model Id */
+            model_id?: string | null;
             pending_action?: components["schemas"]["PendingCommandV2"] | null;
             reference_reply?: components["schemas"]["ClarificationReplyV1"] | null;
             /**
@@ -1297,6 +1593,7 @@ export type components = {
             /** Selected Product Ids */
             selected_product_ids?: string[];
             task_reply?: components["schemas"]["TaskClarificationReplyV1"] | null;
+            thinking_mode?: components["schemas"]["ThinkingMode"] | null;
             unit_reply?: components["schemas"]["UnitClarificationReplyV1"] | null;
         };
         /** TurnResultV2 */
@@ -1365,6 +1662,26 @@ export type components = {
             /** Error Type */
             type: string;
         };
+        /** WattageReport */
+        WattageReport: {
+            /**
+             * Efficiency Rating Recommended
+             * @default 80 Plus Bronze / Gold
+             */
+            efficiency_rating_recommended: string;
+            /** Estimated Tdp Watts */
+            estimated_tdp_watts: number;
+            /** Headroom Watts */
+            headroom_watts?: number | null;
+            /** Is Sufficient */
+            is_sufficient?: boolean | null;
+            /** Note */
+            note: string;
+            /** Recommended Psu Watts */
+            recommended_psu_watts: number;
+            /** Selected Psu Watts */
+            selected_psu_watts?: number | null;
+        };
     };
     responses: never;
     parameters: never;
@@ -1403,6 +1720,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_candidates_api_v1_compatibility_candidates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CandidateCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Union_CandidateVerdicts__NoneType__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_compatibility_api_v1_compatibility_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompatibilityCheckRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Union_BuildCheck__NoneType__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    optimize_build_api_v1_compatibility_optimize_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OptimizeBuildRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_Union_OptimizeBuildResponse__NoneType__"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_prebuilt_builds_api_v1_compatibility_prebuilt_builds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_list_dict_str__Any___"];
                 };
             };
         };
@@ -2252,6 +2688,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    list_models_api_v1_models_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiResponse_PublicModelsCatalog_"];
                 };
             };
         };

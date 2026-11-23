@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {ChatStreamEventType, FlexibleTurnStatus, RequirementOperation, RequirementValueKind} from "@/lib/domain/assistant-enums";
+import {ChatStreamEventType, FlexibleTurnStatus, RequirementOperation, RequirementValueKind, ThinkingMode} from "@/lib/domain/assistant-enums";
 import {MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, STATEFUL_SCHEMA_VERSION} from "../constants";
 import {productCardStreamSchema} from "./stream";
 
@@ -105,6 +105,20 @@ export const runSchema = z.object({
   base_revision: z.number().int().nonnegative(),
 });
 
+export const publicModelInfoSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  provider: z.enum(["gemini", "openai", "qwen"]),
+  supported_thinking_modes: z.array(z.enum(ThinkingMode)).default([]),
+  default_thinking_mode: z.enum(ThinkingMode).nullable().optional(),
+  is_default: z.boolean().default(false),
+});
+
+export const publicModelsCatalogSchema = z.object({
+  default_model_id: z.string().min(1),
+  models: z.array(publicModelInfoSchema).min(1),
+});
+
 export const turnRequestSchema = z
   .object({
     schema_version: z.literal(STATEFUL_SCHEMA_VERSION),
@@ -112,6 +126,8 @@ export const turnRequestSchema = z
     request_id: z.uuid(),
     expected_revision: z.number().int().nonnegative(),
     message: z.string().trim().min(1).max(MAX_TURN_MESSAGE_CHARS),
+    model_id: z.string().trim().min(1).max(64).optional(),
+    thinking_mode: z.enum(ThinkingMode).optional(),
     selected_product_ids: z.array(z.uuid()).max(MAX_SELECTED_PRODUCTS).optional(),
     confirmation: confirmationSchema.optional(),
   })
@@ -133,3 +149,5 @@ export const statefulEventSchema = z.discriminatedUnion("event", [
 
 export type Confirmation = z.infer<typeof confirmationSchema>;
 export type StatefulTurnResult = z.infer<typeof turnResultSchema>;
+export type PublicModelInfo = z.infer<typeof publicModelInfoSchema>;
+export type PublicModelsCatalog = z.infer<typeof publicModelsCatalogSchema>;

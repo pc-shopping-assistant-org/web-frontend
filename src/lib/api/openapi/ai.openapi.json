@@ -232,6 +232,175 @@
         }
       }
     },
+    "/api/v1/models": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "List Models",
+        "operationId": "list_models_api_v1_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_PublicModelsCatalog_"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compatibility/check": {
+      "post": {
+        "tags": [
+          "compatibility"
+        ],
+        "summary": "Check Compatibility",
+        "description": "Checks the parts chosen for a build against each other. Needs no sign-in, like the stateless search.",
+        "operationId": "check_compatibility_api_v1_compatibility_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompatibilityCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Union_BuildCheck__NoneType__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compatibility/candidates": {
+      "post": {
+        "tags": [
+          "compatibility"
+        ],
+        "summary": "Check Candidates",
+        "description": "Tells, for each variant on offer for one slot, whether it fits the parts already chosen for the others.",
+        "operationId": "check_candidates_api_v1_compatibility_candidates_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CandidateCheckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Union_CandidateVerdicts__NoneType__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compatibility/prebuilt-builds": {
+      "get": {
+        "tags": [
+          "compatibility"
+        ],
+        "summary": "Get Prebuilt Builds",
+        "description": "Returns prebuilt conflict-free PC configurations generated from catalog_db.",
+        "operationId": "get_prebuilt_builds_api_v1_compatibility_prebuilt_builds_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_dict_str__Any___"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/compatibility/optimize": {
+      "post": {
+        "tags": [
+          "compatibility"
+        ],
+        "summary": "Optimize Build",
+        "description": "Runs the deterministic PC optimizer live against the active catalog, honoring pinned slots.",
+        "operationId": "optimize_build_api_v1_compatibility_optimize_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OptimizeBuildRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Union_OptimizeBuildResponse__NoneType__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/conversations": {
       "post": {
         "tags": [
@@ -1582,6 +1751,37 @@
         "type": "object",
         "title": "ApiResponse[PageV1[MessageViewV1]]"
       },
+      "ApiResponse_PublicModelsCatalog_": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicModelsCatalog"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[PublicModelsCatalog]"
+      },
       "ApiResponse_RunViewV1_": {
         "properties": {
           "data": {
@@ -1644,6 +1844,68 @@
         "type": "object",
         "title": "ApiResponse[SearchData]"
       },
+      "ApiResponse_Union_BuildCheck__NoneType__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BuildCheck"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[Union[BuildCheck, NoneType]]"
+      },
+      "ApiResponse_Union_CandidateVerdicts__NoneType__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CandidateVerdicts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[Union[CandidateVerdicts, NoneType]]"
+      },
       "ApiResponse_Union_CompareData__NoneType__": {
         "properties": {
           "data": {
@@ -1705,6 +1967,37 @@
         },
         "type": "object",
         "title": "ApiResponse[Union[EvaluateData, NoneType]]"
+      },
+      "ApiResponse_Union_OptimizeBuildResponse__NoneType__": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OptimizeBuildResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[Union[OptimizeBuildResponse, NoneType]]"
       },
       "ApiResponse_Union_RunCompletedV2__RunErrorV1__": {
         "properties": {
@@ -1776,6 +2069,42 @@
         "type": "object",
         "title": "ApiResponse[list[MemoryEntry]]"
       },
+      "ApiResponse_list_dict_str__Any___": {
+        "properties": {
+          "data": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
+          "message": {
+            "$ref": "#/components/schemas/ResponseMessage",
+            "description": "Static frontend mapping key; request-specific details belong in errors",
+            "default": "SUCCESS",
+            "examples": [
+              "SUCCESS"
+            ]
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ErrorDetail"
+            },
+            "type": "array",
+            "title": "Errors"
+          }
+        },
+        "type": "object",
+        "title": "ApiResponse[list[dict[str, Any]]]"
+      },
       "BudgetScope": {
         "type": "string",
         "enum": [
@@ -1783,6 +2112,36 @@
           "FULL_SETUP"
         ],
         "title": "BudgetScope"
+      },
+      "BuildCheck": {
+        "properties": {
+          "overall": {
+            "$ref": "#/components/schemas/CheckStatus"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/RuleResult"
+            },
+            "type": "array",
+            "title": "Results"
+          },
+          "power": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WattageReport"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "overall",
+          "results"
+        ],
+        "title": "BuildCheck"
       },
       "BuildObjective": {
         "type": "string",
@@ -1793,6 +2152,78 @@
         ],
         "title": "BuildObjective",
         "description": "Specific optimization objectives yielding distinct build variations."
+      },
+      "CandidateCheckRequest": {
+        "properties": {
+          "slots": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "object",
+            "maxProperties": 16,
+            "title": "Slots"
+          },
+          "slot": {
+            "type": "string",
+            "title": "Slot"
+          },
+          "candidates": {
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Candidates"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slots",
+          "slot",
+          "candidates"
+        ],
+        "title": "CandidateCheckRequest",
+        "description": "The parts already chosen, the slot being picked for, and the variants on offer for it."
+      },
+      "CandidateStatus": {
+        "type": "string",
+        "enum": [
+          "COMPATIBLE",
+          "INCOMPATIBLE",
+          "UNKNOWN"
+        ],
+        "title": "CandidateStatus"
+      },
+      "CandidateVerdicts": {
+        "properties": {
+          "verdicts": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CandidateStatus"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Verdicts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verdicts"
+        ],
+        "title": "CandidateVerdicts"
+      },
+      "CheckStatus": {
+        "type": "string",
+        "enum": [
+          "OK",
+          "WARNING",
+          "UNKNOWN",
+          "INCOMPATIBLE"
+        ],
+        "title": "CheckStatus"
       },
       "ClarificationItemV1": {
         "properties": {
@@ -1975,6 +2406,25 @@
           "product_ids"
         ],
         "title": "CompareRequest"
+      },
+      "CompatibilityCheckRequest": {
+        "properties": {
+          "slots": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "object",
+            "maxProperties": 16,
+            "title": "Slots"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slots"
+        ],
+        "title": "CompatibilityCheckRequest",
+        "description": "The variant chosen for each slot; slots that are not hardware (monitor, mouse...) have nothing to check."
       },
       "ComponentCategory": {
         "type": "string",
@@ -2562,6 +3012,95 @@
           "created_at"
         ],
         "title": "MessageViewV1"
+      },
+      "OptimizeBuildRequest": {
+        "properties": {
+          "budget_vnd": {
+            "type": "integer",
+            "maximum": 500000000.0,
+            "minimum": 5000000.0,
+            "title": "Budget Vnd"
+          },
+          "use_case": {
+            "$ref": "#/components/schemas/UseCaseProfile",
+            "default": "GAMING_1440P"
+          },
+          "secondary_use_case": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UseCaseProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "secondary_use_case_weight": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.0,
+            "title": "Secondary Use Case Weight",
+            "default": 0.3
+          },
+          "objective": {
+            "$ref": "#/components/schemas/BuildObjective",
+            "default": "BALANCED"
+          },
+          "pinned_slots": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "object",
+            "maxProperties": 8,
+            "title": "Pinned Slots"
+          }
+        },
+        "type": "object",
+        "required": [
+          "budget_vnd"
+        ],
+        "title": "OptimizeBuildRequest"
+      },
+      "OptimizeBuildResponse": {
+        "properties": {
+          "selection": {
+            "additionalProperties": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "type": "object",
+            "title": "Selection"
+          },
+          "total_price": {
+            "type": "integer",
+            "title": "Total Price"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "use_case": {
+            "$ref": "#/components/schemas/UseCaseProfile"
+          },
+          "objective": {
+            "$ref": "#/components/schemas/BuildObjective"
+          },
+          "compatibility_status": {
+            "type": "string",
+            "title": "Compatibility Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "selection",
+          "total_price",
+          "score",
+          "use_case",
+          "objective",
+          "compatibility_status"
+        ],
+        "title": "OptimizeBuildResponse"
       },
       "OwnedPartRefV1": {
         "properties": {
@@ -3325,6 +3864,81 @@
         ],
         "title": "PublicFlexibleStateV2"
       },
+      "PublicModelInfo": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "gemini",
+              "openai",
+              "qwen"
+            ],
+            "title": "Provider"
+          },
+          "supported_thinking_modes": {
+            "items": {
+              "$ref": "#/components/schemas/ThinkingMode"
+            },
+            "type": "array",
+            "title": "Supported Thinking Modes"
+          },
+          "default_thinking_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThinkingMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_default": {
+            "type": "boolean",
+            "title": "Is Default",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "provider"
+        ],
+        "title": "PublicModelInfo",
+        "description": "Public UI-safe projection of an enabled model."
+      },
+      "PublicModelsCatalog": {
+        "properties": {
+          "default_model_id": {
+            "type": "string",
+            "title": "Default Model Id"
+          },
+          "models": {
+            "items": {
+              "$ref": "#/components/schemas/PublicModelInfo"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Models"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "default_model_id",
+          "models"
+        ],
+        "title": "PublicModelsCatalog"
+      },
       "PublicProposalChangeV2": {
         "properties": {
           "target": {
@@ -3704,10 +4318,73 @@
           "AI_MEMORIES_LISTED",
           "AI_MEMORY_SAVED",
           "AI_MEMORY_DELETED",
-          "AI_MEMORY_LIMIT_REACHED"
+          "AI_MEMORY_LIMIT_REACHED",
+          "AI_MODELS_LISTED"
         ],
         "title": "ResponseMessage",
         "description": "Stable top-level keys that the frontend maps to localized messages."
+      },
+      "RuleResult": {
+        "properties": {
+          "rule": {
+            "type": "string",
+            "title": "Rule"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CheckStatus"
+          },
+          "slot_a": {
+            "type": "string",
+            "title": "Slot A"
+          },
+          "slot_b": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot B"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion"
+          },
+          "missing_attributes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing Attributes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "rule",
+          "status",
+          "slot_a"
+        ],
+        "title": "RuleResult"
       },
       "RunCompletedV2": {
         "properties": {
@@ -4062,6 +4739,19 @@
         ],
         "title": "TextValue"
       },
+      "ThinkingMode": {
+        "type": "string",
+        "enum": [
+          "off",
+          "minimal",
+          "low",
+          "medium",
+          "high",
+          "on"
+        ],
+        "title": "ThinkingMode",
+        "description": "Unified reasoning/thinking control selectable per turn from the UI."
+      },
       "TurnRequestV2Body": {
         "properties": {
           "schema_version": {
@@ -4090,6 +4780,29 @@
             "maxLength": 4000,
             "minLength": 1,
             "title": "Message"
+          },
+          "model_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Id"
+          },
+          "thinking_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ThinkingMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "selected_product_ids": {
             "items": {
@@ -4362,6 +5075,67 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "WattageReport": {
+        "properties": {
+          "estimated_tdp_watts": {
+            "type": "integer",
+            "title": "Estimated Tdp Watts"
+          },
+          "recommended_psu_watts": {
+            "type": "integer",
+            "title": "Recommended Psu Watts"
+          },
+          "selected_psu_watts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Psu Watts"
+          },
+          "is_sufficient": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Sufficient"
+          },
+          "headroom_watts": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headroom Watts"
+          },
+          "efficiency_rating_recommended": {
+            "type": "string",
+            "title": "Efficiency Rating Recommended",
+            "default": "80 Plus Bronze / Gold"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "estimated_tdp_watts",
+          "recommended_psu_watts",
+          "note"
+        ],
+        "title": "WattageReport"
       }
     },
     "securitySchemes": {
