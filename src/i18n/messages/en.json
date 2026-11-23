@@ -594,6 +594,16 @@
       "high": "High",
       "on": "On"
     },
+    "activity": {
+      "THINKING": "Analyzing your request…",
+      "SEARCHING_CATALOG": "Searching store catalog",
+      "LOADING_DETAILS": "Reading product specifications",
+      "COMPARING": "Comparing products",
+      "CHECKING_COMPATIBILITY": "Checking hardware compatibility",
+      "BUILDING_PC": "Optimizing PC build",
+      "SEARCHING_WEB": "Researching web benchmarks",
+      "VERIFYING": "Verifying and finalizing answer"
+    },
     "build": {
       "title": "Your optimized PC build",
       "subtitle": "Parts selected by the MCKP-PCC optimizer and checked for compatibility",

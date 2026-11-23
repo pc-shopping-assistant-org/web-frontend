@@ -594,6 +594,16 @@
       "high": "Cao",
       "on": "Bật"
     },
+    "activity": {
+      "THINKING": "Đang phân tích yêu cầu…",
+      "SEARCHING_CATALOG": "Đang tìm sản phẩm trong cửa hàng",
+      "LOADING_DETAILS": "Đang xem thông số sản phẩm",
+      "COMPARING": "Đang so sánh sản phẩm",
+      "CHECKING_COMPATIBILITY": "Đang kiểm tra tương thích phần cứng",
+      "BUILDING_PC": "Đang tối ưu cấu hình PC",
+      "SEARCHING_WEB": "Đang tra cứu thông tin tham khảo",
+      "VERIFYING": "Đang kiểm chứng và hoàn thiện câu trả lời"
+    },
     "build": {
       "title": "Cấu hình PC tối ưu cho bạn",
       "subtitle": "Các linh kiện đã được thuật toán MCKP-PCC tính toán và kiểm tra tương thích",

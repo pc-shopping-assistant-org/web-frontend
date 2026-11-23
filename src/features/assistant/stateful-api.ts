@@ -141,7 +141,13 @@ async function readStream(
     const parsed = statefulEventSchema.safeParse(envelope.data);
     if (!parsed.success) throw invalidStream();
     const event = parsed.data;
-    if (event.conversation_id !== conversationId || event.run_id !== runId || event.sequence !== sequence + 1)
+    if (event.conversation_id !== conversationId || event.run_id !== runId)
+      throw invalidStream();
+    if (event.event === ChatStreamEventType.Status) {
+      handlers.onStatus?.(event);
+      continue;
+    }
+    if (event.sequence !== sequence + 1)
       throw invalidStream();
     sequence = event.sequence;
     if (event.event === ChatStreamEventType.Error)

@@ -11,8 +11,20 @@ export enum AiMode {
 export enum ChatStreamEventType {
   Start = "START",
   Delta = "DELTA",
+  Status = "STATUS",
   Completed = "COMPLETED",
   Error = "ERROR",
+}
+
+export enum AgentActivityStage {
+  Thinking = "THINKING",
+  SearchingCatalog = "SEARCHING_CATALOG",
+  LoadingDetails = "LOADING_DETAILS",
+  Comparing = "COMPARING",
+  CheckingCompatibility = "CHECKING_COMPATIBILITY",
+  BuildingPc = "BUILDING_PC",
+  SearchingWeb = "SEARCHING_WEB",
+  Verifying = "VERIFYING",
 }
 
 export enum AssistantFailureReason {

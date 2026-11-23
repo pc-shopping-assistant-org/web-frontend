@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {ChatStreamEventType, FlexibleTurnStatus, RequirementOperation, RequirementValueKind, ThinkingMode} from "@/lib/domain/assistant-enums";
+import {AgentActivityStage, ChatStreamEventType, FlexibleTurnStatus, RequirementOperation, RequirementValueKind, ThinkingMode} from "@/lib/domain/assistant-enums";
 import {MAX_SELECTED_PRODUCTS, MAX_TURN_MESSAGE_CHARS, STATEFUL_SCHEMA_VERSION} from "../constants";
 import {productCardStreamSchema} from "./stream";
 
@@ -139,10 +139,20 @@ export const turnResultSchema = conversationSchema.omit({conversation_id: true})
   products: z.array(productCardStreamSchema).default([]),
 });
 
+export const statusEventSchema = z.object({
+  conversation_id: z.uuid(),
+  run_id: z.uuid(),
+  event: z.literal(ChatStreamEventType.Status),
+  stage: z.enum(AgentActivityStage),
+  tool: z.string().nullable().optional(),
+  detail: z.string().nullable().optional(),
+});
+
 const identity = z.object({conversation_id: z.uuid(), run_id: z.uuid(), sequence: z.number().int().positive()});
 export const statefulEventSchema = z.discriminatedUnion("event", [
   identity.extend({event: z.literal(ChatStreamEventType.Start), run: runSchema}),
   identity.extend({event: z.literal(ChatStreamEventType.Delta), delta: z.string(), replace: z.boolean().optional(), is_draft: z.boolean().optional()}),
+  statusEventSchema,
   identity.extend({event: z.literal(ChatStreamEventType.Completed), result: turnResultSchema}),
   identity.extend({event: z.literal(ChatStreamEventType.Error), code: z.string(), reason: z.string().nullable().optional()}),
 ]);
@@ -151,3 +161,4 @@ export type Confirmation = z.infer<typeof confirmationSchema>;
 export type StatefulTurnResult = z.infer<typeof turnResultSchema>;
 export type PublicModelInfo = z.infer<typeof publicModelInfoSchema>;
 export type PublicModelsCatalog = z.infer<typeof publicModelsCatalogSchema>;
+export type AgentActivityEvent = z.infer<typeof statusEventSchema>;

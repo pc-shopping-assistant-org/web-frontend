@@ -27,7 +27,7 @@ import {ApiClientError} from "@/lib/api/envelope";
 import {STATIC_MESSAGE_KEYS} from "@/lib/api/contracts/common";
 import {AssistantFailureReason, AssistantTaskKind, ThinkingMode} from "@/lib/domain/assistant-enums";
 import {getAssistantModels, streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
-import type {Confirmation} from "./contracts/stateful";
+import type {AgentActivityEvent, Confirmation} from "./contracts/stateful";
 import {
   ACTIVE_CONVERSATION_STORAGE_KEY,
   CHAT_FOLLOW_BOTTOM_DISTANCE_PX,
@@ -39,6 +39,7 @@ import {
   SELECTED_THINKING_MODE_STORAGE_KEY,
 } from "./constants";
 import {AssistantMarkdown} from "./assistant-markdown";
+import {AgentActivity} from "./components/agent-activity";
 import {AssistantProductCarousel} from "./components/assistant-product-carousel";
 import {ModelSelector, resolveModelSelection} from "./components/model-selector";
 import {loadConversationHistory, setConversationUrl, setStoredConversationId} from "./conversation-history";
@@ -154,6 +155,7 @@ export function AssistantPage({
   });
   const [streamingPrompt, setStreamingPrompt] = useState("");
   const [streamingAnswer, setStreamingAnswer] = useState("");
+  const [streamingActivities, setStreamingActivities] = useState<AgentActivityEvent[]>([]);
   const [streamingProductIds, setStreamingProductIds] = useState<string[]>([]);
   const [streamState, setStreamState] = useState<StreamState>(StreamState.STREAMING);
   const [streamError, setStreamError] = useState<unknown>(null);
@@ -180,7 +182,7 @@ export function AssistantPage({
 
   useEffect(() => {
     if (followBottom.current && scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [chatTurns, streamingPrompt, streamingAnswer, error]);
+  }, [chatTurns, streamingPrompt, streamingAnswer, streamingActivities, error]);
 
   useEffect(() => {
     const targetId = initialConversationId ?? initialTargetIdRef.current;
@@ -226,6 +228,7 @@ export function AssistantPage({
     setChatTurns((current) => [...current, {prompt: message, response: data, selectedProductIds: attachments}]);
     setStreamingPrompt("");
     setStreamingAnswer("");
+    setStreamingActivities([]);
     setPrompt("");
     setProductIds([]);
     setPendingDelivery(null);
@@ -245,6 +248,7 @@ export function AssistantPage({
     setError(null);
     setStreamingPrompt(submittedPrompt);
     setStreamingAnswer("");
+    setStreamingActivities([]);
     setStreamingProductIds(submittedProductIds);
     setStreamState("streaming");
     setStreamError(null);
@@ -262,6 +266,17 @@ export function AssistantPage({
             if (!controller.signal.aborted) {
               setConversationId(id);
               persistConversation(id);
+            }
+          },
+          onStatus: (status) => {
+            if (!controller.signal.aborted) {
+              setStreamingActivities((current) => {
+                const last = current[current.length - 1];
+                if (last && last.stage === status.stage && last.tool === status.tool && last.detail === status.detail) {
+                  return current;
+                }
+                return [...current, status];
+              });
             }
           },
           onDelta: (delta, replace) => {
@@ -338,6 +353,7 @@ export function AssistantPage({
   function dismissStreamError() {
     setStreamingPrompt("");
     setStreamingAnswer("");
+    setStreamingActivities([]);
     setStreamError(null);
     lastConfirmationRef.current = undefined;
     setPendingDelivery(null);
@@ -495,9 +511,11 @@ export function AssistantPage({
             <StreamingChatTurn
               prompt={streamingPrompt}
               answer={streamingAnswer}
+              activities={streamingActivities}
               selectedProductIds={streamingProductIds}
               state={streamState}
               error={streamError}
+              compact={isWidget}
               onRetry={retryLastSend}
               onDismiss={dismissStreamError}
               onResume={pendingDelivery ? resumeDelivery : undefined}
@@ -934,18 +952,22 @@ function ChatTranscript({
 function StreamingChatTurn({
   prompt,
   answer,
+  activities = [],
   selectedProductIds,
   state,
   error,
+  compact = false,
   onRetry,
   onDismiss,
   onResume,
 }: {
   prompt: string;
   answer: string;
+  activities?: AgentActivityEvent[];
   selectedProductIds: string[];
   state: StreamState;
   error: unknown;
+  compact?: boolean;
   onRetry: () => void;
   onDismiss: () => void;
   onResume?: () => void;
@@ -973,7 +995,12 @@ function StreamingChatTurn({
             {t("assistantLabel")}
             {!failed ? <span className="size-1.5 animate-pulse rounded-full bg-primary" /> : null}
           </div>
-          {answer ? <AssistantMarkdown>{answer}</AssistantMarkdown> : !failed ? <AssistantMarkdown>{t("streaming")}</AssistantMarkdown> : null}
+          {!failed && activities.length > 0 ? <AgentActivity steps={activities} compact={compact} /> : null}
+          {answer ? (
+            <AssistantMarkdown>{answer}</AssistantMarkdown>
+          ) : !failed && activities.length === 0 ? (
+            <AssistantMarkdown>{t("streaming")}</AssistantMarkdown>
+          ) : null}
           {!failed && state === "reconnecting" ? (
             <div role="status" className="mt-3 rounded-xl border border-border/60 bg-muted/40 p-3 text-sm">
               <p className="flex items-center gap-2 font-medium"><Loader2 className="size-3.5 animate-spin text-primary" />{t("reconnecting")}</p>

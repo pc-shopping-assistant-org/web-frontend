@@ -4287,6 +4287,7 @@
           "AI_CHAT_COMPLETED",
           "AI_CHAT_STREAM_STARTED",
           "AI_CHAT_STREAM_DELTA",
+          "AI_CHAT_STREAM_STATUS",
           "AI_CHAT_STREAM_COMPLETED",
           "AI_CHAT_STREAM_FAILED",
           "AI_SEARCH_COMPLETED",

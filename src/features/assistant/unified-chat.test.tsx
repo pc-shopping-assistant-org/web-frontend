@@ -4,7 +4,7 @@ import {afterEach, expect, it, vi} from "vitest";
 import {QueryClient, QueryClientProvider} from "@tanstack/react-query";
 import {AssistantPage} from "./assistant-page";
 import {ApiClientError} from "@/lib/api/envelope";
-import {AiMode, AssistantTaskKind, ThinkingMode} from "@/lib/domain/assistant-enums";
+import {AgentActivityStage, AiMode, AssistantTaskKind, ChatStreamEventType, ThinkingMode} from "@/lib/domain/assistant-enums";
 import {loadConversationHistory} from "./conversation-history";
 import {waitForRunResult} from "./stateful-api";
 import {getProductById} from "@/features/catalog/api";
@@ -486,4 +486,38 @@ it("lets users switch models and thinking modes from the YAML catalog and sends 
     modelId: "qwen3.5-ollama",
     thinkingMode: ThinkingMode.Off,
   });
+});
+
+it("displays live agent activity steps while streaming and clears them on completion", async () => {
+  let handlers!: Parameters<typeof streamChat>[2];
+  let finish!: (value: Awaited<ReturnType<typeof streamChat>>) => void;
+  vi.mocked(streamChat).mockImplementationOnce(async (_message, _conversation, nextHandlers) => {
+    handlers = nextHandlers;
+    return new Promise((resolve) => {finish = resolve;});
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Tìm VGA 2K" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+  await act(async () => {
+    handlers?.onStatus?.({
+      conversation_id: "00000000-0000-4000-8000-000000000001",
+      run_id: "00000000-0000-4000-8000-000000000002",
+      event: ChatStreamEventType.Status,
+      stage: AgentActivityStage.Thinking,
+    });
+    handlers?.onStatus?.({
+      conversation_id: "00000000-0000-4000-8000-000000000001",
+      run_id: "00000000-0000-4000-8000-000000000002",
+      event: ChatStreamEventType.Status,
+      stage: AgentActivityStage.SearchingCatalog,
+      tool: "search_catalog",
+      detail: "RTX 4070",
+    });
+  });
+  expect(screen.getByText("activity.THINKING")).toBeInTheDocument();
+  expect(screen.getByText("activity.SEARCHING_CATALOG")).toBeInTheDocument();
+  expect(screen.getByText("RTX 4070")).toBeInTheDocument();
+  await act(async () => finish({conversation_id: "test", intent: AiMode.Chat, answer: "Đã tìm xong.", products: []}));
+  expect(await screen.findByText("Đã tìm xong.")).toBeInTheDocument();
+  expect(screen.queryByText("activity.SEARCHING_CATALOG")).not.toBeInTheDocument();
 });
