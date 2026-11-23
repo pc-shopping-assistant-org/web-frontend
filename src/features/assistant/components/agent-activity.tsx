@@ -1,23 +1,31 @@
 "use client";
 
 import {
-  Check,
   CheckCircle2,
   Cpu,
   FileText,
   Globe,
-  Loader2,
   Scale,
   Search,
   ShieldCheck,
   Sparkles,
+  type LucideIcon,
 } from "lucide-react";
 import {useTranslations} from "next-intl";
 
+import {
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtHeader,
+  ChainOfThoughtSearchResult,
+  ChainOfThoughtSearchResults,
+  ChainOfThoughtStep,
+} from "@/components/ai-elements/chain-of-thought";
+import {Spinner} from "@/components/ui/spinner";
 import {AgentActivityStage} from "@/lib/domain/assistant-enums";
 import type {AgentActivityEvent} from "../contracts/stateful";
 
-const STAGE_ICONS: Record<AgentActivityStage, typeof Sparkles> = {
+const STAGE_ICONS: Record<AgentActivityStage, LucideIcon> = {
   [AgentActivityStage.Thinking]: Sparkles,
   [AgentActivityStage.SearchingCatalog]: Search,
   [AgentActivityStage.LoadingDetails]: FileText,
@@ -38,47 +46,39 @@ export function AgentActivity({
   const t = useTranslations("assistant");
   if (!steps.length) return null;
 
-  const active = steps[steps.length - 1];
-  const previous = steps.slice(Math.max(0, steps.length - (compact ? 3 : 5)), -1);
-  const ActiveIcon = STAGE_ICONS[active.stage] ?? Sparkles;
+  const visibleSteps = steps.slice(-(compact ? 4 : 6));
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="mb-2 space-y-1.5 rounded-xl border border-primary/15 bg-primary/[0.03] px-3 py-2 text-xs"
+    <ChainOfThought
+      defaultOpen
+      className="mb-2 space-y-2 rounded-xl border border-border/60 bg-muted/25 px-3 py-2"
     >
-      {previous.length > 0 ? (
-        <ul className="space-y-1">
-          {previous.map((step, index) => (
-            <li
-              key={`${step.stage}-${step.detail ?? ""}-${index}`}
-              className="flex items-center gap-2 text-muted-foreground/85"
-            >
-              <Check className="size-3.5 shrink-0 text-emerald-600" />
-              <span className="truncate">{t(`activity.${step.stage}`)}</span>
-              {step.detail ? (
-                <span className="max-w-[45%] truncate rounded bg-muted/70 px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                  {step.detail}
-                </span>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="flex items-center gap-2 font-medium text-foreground">
-        <span className="relative flex size-4 shrink-0 items-center justify-center text-primary">
-          <Loader2 className="size-3.5 animate-spin" />
+      <ChainOfThoughtHeader className="text-xs font-medium text-foreground">
+        <span className="inline-flex items-center gap-2">
+          <Spinner className="size-3.5 text-primary" />
+          <span>{t("streaming")}</span>
         </span>
-        <ActiveIcon className="size-3.5 shrink-0 text-primary/80" />
-        <span className="min-w-0 truncate">{t(`activity.${active.stage}`)}</span>
-        {active.detail ? (
-          <span className="max-w-[50%] truncate rounded-md border border-primary/20 bg-background/80 px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground">
-            {active.detail}
-          </span>
-        ) : null}
-      </div>
-    </div>
+      </ChainOfThoughtHeader>
+      <ChainOfThoughtContent className="mt-1 space-y-2">
+        {visibleSteps.map((step, index) => {
+          const isActive = index === visibleSteps.length - 1;
+          return (
+            <ChainOfThoughtStep
+              key={`${step.stage}-${step.detail ?? ""}-${index}`}
+              icon={STAGE_ICONS[step.stage] ?? Sparkles}
+              label={t(`activity.${step.stage}`)}
+              status={isActive ? "active" : "complete"}
+              className="text-xs"
+            >
+              {step.detail ? (
+                <ChainOfThoughtSearchResults>
+                  <ChainOfThoughtSearchResult>{step.detail}</ChainOfThoughtSearchResult>
+                </ChainOfThoughtSearchResults>
+              ) : null}
+            </ChainOfThoughtStep>
+          );
+        })}
+      </ChainOfThoughtContent>
+    </ChainOfThought>
   );
 }
