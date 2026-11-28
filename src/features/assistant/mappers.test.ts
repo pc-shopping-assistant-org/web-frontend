@@ -34,3 +34,45 @@ it("maps flexible task_outcomes kinds for context-aware UI rendering", () => {
 
   expect(mapped.stateful?.taskKinds).toEqual([AssistantTaskKind.Compare]);
 });
+
+it("splits unit clarification options into individual clickable chips", () => {
+  const mapped = mapStatefulTurn({
+    schema_version: 2,
+    revision: 4,
+    run: {
+      conversation_id: "00000000-0000-4000-8000-000000000001",
+      run_id: "00000000-0000-4000-8000-000000000002",
+      request_id: "00000000-0000-4000-8000-000000000003",
+      status: "WAITING_INPUT",
+      base_revision: 3,
+    },
+    answer: "Bạn muốn RAM 32 theo đơn vị nào?",
+    products: [],
+    flexible: {
+      status: FlexibleTurnStatus.WaitingInput,
+      answer: "Bạn muốn RAM 32 theo đơn vị nào?",
+      task_outcomes: [],
+      proposal: null,
+      clarification: {
+        items: [
+          {
+            reason: "QUANTITY_UNIT_REQUIRED",
+            quantity_amount: 32,
+            options: [],
+            unit_options: ["GB", "TB"],
+          },
+          {
+            reason: "QUANTITY_UNIT_REQUIRED",
+            quantity_amount: null,
+            options: [],
+            unit_options: ["MHz", "GHz"],
+          },
+        ],
+      },
+      task_clarification: null,
+    },
+    build: null,
+  });
+
+  expect(mapped.stateful?.clarificationOptions).toEqual(["32 GB", "32 TB", "MHz", "GHz"]);
+});

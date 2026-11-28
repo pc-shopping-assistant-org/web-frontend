@@ -43,7 +43,7 @@ export function mapStatefulTurn(dto: StatefulTurnResult): ChatData {
       clarificationOptions: [
         ...(dto.flexible?.clarification?.items.flatMap((item) => [
           ...item.options.map((option, index) => `${index + 1}. ${option.name} (${option.sku})`),
-          ...(item.unit_options.length ? [`${item.quantity_amount ?? ""}: ${item.unit_options.join(" / ")}`] : []),
+          ...item.unit_options.map((unit) => (item.quantity_amount != null ? `${item.quantity_amount} ${unit}` : unit)),
         ]) ?? []),
         ...(dto.flexible?.task_clarification?.items.flatMap((item) =>
           item.options.map((option, index) => `${item.mention} — ${index + 1}. ${option.name}`),
