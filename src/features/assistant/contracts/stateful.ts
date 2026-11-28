@@ -11,6 +11,11 @@ export const confirmationSchema = z.object({
   base_requirements_hash: z.string().regex(/^[0-9a-f]{64}$/),
 });
 
+export const proposalPendingCommandSchema = confirmationSchema.extend({
+  target: z.literal("PROPOSAL"),
+  action: z.enum(["REPLACE", "DISCARD"]),
+});
+
 export const proposalSchema = confirmationSchema.omit({schema_version: true}).extend({
   changes: z
     .array(
@@ -20,6 +25,8 @@ export const proposalSchema = confirmationSchema.omit({schema_version: true}).ex
           target: z.string(),
           subject: z.string().nullable().optional(),
           predicate: z.string().nullable().optional(),
+          operator: z.enum(["EQ", "GTE", "LTE"]).nullable().optional(),
+          strength: z.enum(["HARD", "SOFT"]).nullable().optional(),
           variant_id: z.uuid().nullable().optional(),
           value: z
             .union([
@@ -130,6 +137,7 @@ export const turnRequestSchema = z
     thinking_mode: z.enum(ThinkingMode).optional(),
     selected_product_ids: z.array(z.uuid()).max(MAX_SELECTED_PRODUCTS).optional(),
     confirmation: confirmationSchema.optional(),
+    pending_action: proposalPendingCommandSchema.optional(),
   })
   .strict();
 
@@ -158,6 +166,7 @@ export const statefulEventSchema = z.discriminatedUnion("event", [
 ]);
 
 export type Confirmation = z.infer<typeof confirmationSchema>;
+export type ProposalPendingCommand = z.infer<typeof proposalPendingCommandSchema>;
 export type StatefulTurnResult = z.infer<typeof turnResultSchema>;
 export type PublicModelInfo = z.infer<typeof publicModelInfoSchema>;
 export type PublicModelsCatalog = z.infer<typeof publicModelsCatalogSchema>;

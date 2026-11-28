@@ -16,6 +16,7 @@ import {
   statefulEventSchema,
   turnRequestSchema,
   type Confirmation,
+  type ProposalPendingCommand,
   type PublicModelsCatalog,
   type StatefulTurnResult,
 } from "./contracts/stateful";
@@ -23,6 +24,7 @@ import {
 export type ChatTurnOptions = {
   selectedProductIds?: string[];
   confirmation?: Confirmation;
+  pendingAction?: ProposalPendingCommand;
   modelId?: string;
   thinkingMode?: ThinkingMode;
 };
@@ -60,6 +62,7 @@ export async function streamChat(
     ...(options.thinkingMode ? {thinking_mode: options.thinkingMode} : {}),
     ...(options.selectedProductIds?.length ? {selected_product_ids: options.selectedProductIds} : {}),
     ...(options.confirmation ? {confirmation: options.confirmation} : {}),
+    ...(options.pendingAction ? {pending_action: options.pendingAction} : {}),
   }) satisfies AiSchema["TurnRequestV2Body"];
   let rawRun: unknown;
   try {

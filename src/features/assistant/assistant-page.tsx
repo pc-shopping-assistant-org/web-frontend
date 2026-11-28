@@ -1,7 +1,7 @@
 "use client";
 
 import {useQuery} from "@tanstack/react-query";
-import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, Maximize2, PackageSearch, Plus, RotateCcw, Search, Sparkles, WifiOff, X} from "lucide-react";
+import {ArrowRight, ArrowUpRight, Bot, Check, ExternalLink, Loader2, Maximize2, PackageSearch, Plus, RotateCcw, Search, Sparkles, Square, WifiOff, X} from "lucide-react";
 import {useLocale, useTranslations} from "next-intl";
 import Image from "next/image";
 import {useEffect, useRef, useState, type FormEvent} from "react";
@@ -27,7 +27,7 @@ import {ApiClientError} from "@/lib/api/envelope";
 import {STATIC_MESSAGE_KEYS} from "@/lib/api/contracts/common";
 import {AssistantFailureReason, AssistantTaskKind, ThinkingMode} from "@/lib/domain/assistant-enums";
 import {getAssistantModels, streamChat, type ChatData, type CompareData, type ConsultData, type EvaluateData, type SearchData} from "./api";
-import type {AgentActivityEvent, Confirmation} from "./contracts/stateful";
+import type {AgentActivityEvent, Confirmation, ProposalPendingCommand} from "./contracts/stateful";
 import {
   ACTIVE_CONVERSATION_STORAGE_KEY,
   CHAT_FOLLOW_BOTTOM_DISTANCE_PX,
@@ -43,9 +43,10 @@ import {AgentActivity} from "./components/agent-activity";
 import {AssistantProductCarousel} from "./components/assistant-product-carousel";
 import {ModelSelector, resolveModelSelection} from "./components/model-selector";
 import {loadConversationHistory, setConversationUrl, setStoredConversationId} from "./conversation-history";
-import {waitForRunResult} from "./stateful-api";
+import {cancelRun, waitForRunResult} from "./stateful-api";
 import type {AssistantProduct, ChatTurn} from "./models";
 import {PcBuildSummary} from "./components/pc-build-summary";
+import {ProposalCard} from "./components/proposal-card";
 import {ProductQuickViewDialog} from "./components/product-quick-view-dialog";
 import {formatSpecLabel, formatSpecValue} from "./mappers";
 import {MessageAttachments} from "./components/message-attachments";
@@ -161,7 +162,9 @@ export function AssistantPage({
   const [streamError, setStreamError] = useState<unknown>(null);
   const [pendingDelivery, setPendingDelivery] = useState<{conversationId: string; runId: string} | null>(null);
   const lastConfirmationRef = useRef<Confirmation | undefined>(undefined);
+  const lastPendingActionRef = useRef<ProposalPendingCommand | undefined>(undefined);
   const [loading, setLoading] = useState(() => Boolean(conversationId));
+  const [restoringHistory, setRestoringHistory] = useState(() => Boolean(conversationId));
   const [error, setError] = useState<unknown>(null);
   const streamController = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -170,8 +173,15 @@ export function AssistantPage({
   const initialTargetIdRef = useRef<string | undefined>(conversationId);
   const lastResponse = chatTurns.findLast((turn) => turn.response)?.response;
   const proposal = lastResponse && "stateful" in lastResponse ? lastResponse.stateful?.proposal : null;
-  const proposalChanges = proposal?.changes ?? [];
   const clarificationOptions = lastResponse && "stateful" in lastResponse ? (lastResponse.stateful?.clarificationOptions ?? []) : [];
+  const partNamesByVariantId = new Map<string, string>();
+  for (const turn of chatTurns) {
+    if (turn.response && "stateful" in turn.response && turn.response.stateful?.build) {
+      for (const part of turn.response.stateful.build.parts) {
+        if (part.variantId) partNamesByVariantId.set(part.variantId, part.name);
+      }
+    }
+  }
 
   function handleAskAboutProduct(id: string) {
     setProductIds((prev) => (prev.includes(id) || prev.length >= MAX_SELECTED_PRODUCTS ? prev : [...prev, id]));
@@ -196,9 +206,12 @@ export function AssistantPage({
         if (controller.signal.aborted) return;
         setChatTurns(history.turns);
         if (history.pendingRunId) {
+          setPendingDelivery({conversationId: targetId, runId: history.pendingRunId});
           const result = await waitForRunResult(targetId, history.pendingRunId, controller.signal);
-          if (!controller.signal.aborted)
+          if (!controller.signal.aborted) {
             setChatTurns((turns) => turns.map((turn) => turn.runId === history.pendingRunId ? {...turn, response: result} : turn));
+            setPendingDelivery(null);
+          }
         }
       } catch (cause) {
         if (!controller.signal.aborted) {
@@ -209,7 +222,10 @@ export function AssistantPage({
           } else setError(cause);
         }
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+          setRestoringHistory(false);
+        }
         if (streamController.current === controller) streamController.current = null;
       }
     })();
@@ -234,17 +250,23 @@ export function AssistantPage({
     setPendingDelivery(null);
   }
 
-  async function send(submittedPrompt: string, confirmation?: Confirmation, attachments = productIds) {
+  async function send(
+    submittedPrompt: string,
+    confirmation?: Confirmation,
+    attachments = productIds,
+    pendingAction?: ProposalPendingCommand,
+  ) {
     if (streamController.current) return;
     if (profile.error instanceof ApiClientError && profile.error.status === 401) {
       setSignInOpen(true);
       return;
     }
     const controller = new AbortController();
-    const submittedProductIds = confirmation ? [] : [...attachments];
+    const submittedProductIds = confirmation || pendingAction ? [] : [...attachments];
     followBottom.current = true;
     streamController.current = controller;
     setLoading(true);
+    setRestoringHistory(false);
     setError(null);
     setStreamingPrompt(submittedPrompt);
     setStreamingAnswer("");
@@ -254,6 +276,7 @@ export function AssistantPage({
     setStreamError(null);
     setPendingDelivery(null);
     lastConfirmationRef.current = confirmation;
+    lastPendingActionRef.current = pendingAction;
     try {
       const data = await streamChat(
         submittedPrompt,
@@ -288,7 +311,11 @@ export function AssistantPage({
         },
         controller.signal,
         {
-          ...(confirmation ? {confirmation} : {selectedProductIds: submittedProductIds}),
+          ...(pendingAction
+            ? {pendingAction}
+            : confirmation
+              ? {confirmation}
+              : {selectedProductIds: submittedProductIds}),
           ...(resolvedModel.modelId ? {modelId: resolvedModel.modelId} : {}),
           ...(resolvedModel.thinkingMode ? {thinkingMode: resolvedModel.thinkingMode} : {}),
         },
@@ -321,7 +348,25 @@ export function AssistantPage({
   async function retryLastSend() {
     if (!streamingPrompt || streamController.current) return;
     if (pendingDelivery) { await resumeDelivery(); return; }
-    await send(streamingPrompt, lastConfirmationRef.current, streamingProductIds);
+    await send(streamingPrompt, lastConfirmationRef.current, streamingProductIds, lastPendingActionRef.current);
+  }
+
+  function stopActiveRun() {
+    const delivery = pendingDelivery;
+    streamController.current?.abort();
+    streamController.current = null;
+    setLoading(false);
+    setRestoringHistory(false);
+    setStreamingPrompt("");
+    setStreamingAnswer("");
+    setStreamingActivities([]);
+    setStreamError(null);
+    setPendingDelivery(null);
+    lastConfirmationRef.current = undefined;
+    lastPendingActionRef.current = undefined;
+    if (delivery) {
+      void cancelRun(delivery.conversationId, delivery.runId).catch(() => undefined);
+    }
   }
 
   async function resumeDelivery() {
@@ -356,17 +401,18 @@ export function AssistantPage({
     setStreamingActivities([]);
     setStreamError(null);
     lastConfirmationRef.current = undefined;
+    lastPendingActionRef.current = undefined;
     setPendingDelivery(null);
   }
 
   function newConversation() {
+    stopActiveRun();
     persistConversation();
     setConversationId(undefined);
     setChatTurns([]);
     setProductIds([]);
     setError(null);
     setPrompt("");
-    dismissStreamError();
   }
 
   const fullPageHref = conversationId
@@ -425,8 +471,8 @@ export function AssistantPage({
                 </Link>
               </>
             ) : null}
-            <Button size="sm" variant="outline" onClick={newConversation} disabled={loading} aria-label={t("newConversation")} title={t("newConversation")} className={isWidget ? "size-8 rounded-lg p-0" : "h-8 gap-1.5 rounded-lg px-2.5 text-xs"}>
-              <Plus className="size-3.5" />
+            <Button size="sm" variant="outline" onClick={newConversation} aria-label={t("newConversation")} title={t("newConversation")} className={isWidget ? "size-8 rounded-lg p-0" : "h-8 gap-1.5 rounded-lg px-2.5 text-xs"}>
+              <Plus className="size-3.5" aria-hidden="true" />
               {!isWidget ? <span className="hidden sm:inline">{t("newConversation")}</span> : null}
             </Button>
             {isWidget ? (
@@ -519,41 +565,29 @@ export function AssistantPage({
               onRetry={retryLastSend}
               onDismiss={dismissStreamError}
               onResume={pendingDelivery ? resumeDelivery : undefined}
+              onStop={loading ? stopActiveRun : undefined}
             />
           ) : null}
+          {restoringHistory && !streamingPrompt ? (
+            <div role="status" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-card/85 px-3.5 py-2.5 text-sm shadow-2xs">
+              <span className="flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="size-4 animate-spin text-primary" aria-hidden="true" />
+                {t("restoringConversation")}
+              </span>
+              <Button type="button" size="sm" variant="outline" onClick={stopActiveRun} className="min-h-8 gap-1.5 text-xs">
+                <Square className="size-3 fill-current" aria-hidden="true" />
+                {t("stop")}
+              </Button>
+            </div>
+          ) : null}
           {error ? <ErrorMessage error={error} /> : null}
-          {proposalChanges.length ? (
-            <ul className="space-y-1.5 rounded-xl border border-primary/25 bg-primary/5 p-3.5 text-sm">
-              {proposalChanges.map((change, index) => (
-                <li key={index} className="flex items-start gap-2">
-                  <Check className="mt-1 size-3.5 shrink-0 text-primary" />
-                  <span>{change}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {clarificationOptions.length ? (
-            <ul className="flex flex-wrap gap-2">
-              {clarificationOptions.map((option, index) => (
-                <li key={index}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPrompt(option);
-                      textareaRef.current?.focus();
-                    }}
-                    className="rounded-full border border-primary/25 bg-primary/5 px-3 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/50 hover:bg-primary/10"
-                  >
-                    {option}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {proposal ? (
-            <Button
+          {proposal && !loading && !streamingPrompt ? (
+            <ProposalCard
+              proposal={proposal}
               disabled={loading}
-              onClick={() =>
+              compact={isWidget}
+              partNamesByVariantId={partNamesByVariantId}
+              onConfirm={() =>
                 void send(t("confirmProposal"), {
                   schema_version: 2,
                   proposal_id: proposal.proposalId,
@@ -562,9 +596,36 @@ export function AssistantPage({
                   base_requirements_hash: proposal.baseRequirementsHash,
                 })
               }
-            >
-              {t("confirmProposal")}
-            </Button>
+              onDiscard={() =>
+                void send(t("discardProposal"), undefined, [], {
+                  schema_version: 2,
+                  target: "PROPOSAL",
+                  action: "DISCARD",
+                  proposal_id: proposal.proposalId,
+                  proposal_hash: proposal.proposalHash,
+                  target_revision: proposal.targetRevision,
+                  base_requirements_hash: proposal.baseRequirementsHash,
+                })
+              }
+            />
+          ) : null}
+          {clarificationOptions.length > 0 && !loading && !streamingPrompt ? (
+            <div className="space-y-2 rounded-2xl border border-border/70 bg-card/70 p-3 shadow-2xs">
+              <p className="text-xs font-medium text-muted-foreground">{t("quickRepliesLabel")}</p>
+              <ul role="list" className="flex flex-wrap gap-2">
+                {clarificationOptions.map((option, index) => (
+                  <li key={index}>
+                    <button
+                      type="button"
+                      onClick={() => void send(option)}
+                      className="min-h-8 rounded-full border border-primary/25 bg-primary/5 px-3.5 py-1.5 text-xs font-medium text-foreground transition hover:border-primary/50 hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                    >
+                      {option}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : null}
           </div>
         </div>
@@ -590,21 +651,22 @@ export function AssistantPage({
               </Button>
             </div>
           ) : null}
-          <fieldset disabled={loading} className="min-w-0 rounded-2xl border border-border/80 bg-card px-2.5 py-2 shadow-sm transition focus-within:border-primary/50 focus-within:ring-3 focus-within:ring-primary/10">
+          <div className="min-w-0 rounded-2xl border border-border/80 bg-card px-2.5 py-2 shadow-sm transition focus-within:border-primary/50 focus-within:ring-3 focus-within:ring-primary/10">
             {productIds.length ? <MessageAttachments productIds={productIds} onRemove={(id) => setProductIds((current) => current.filter((item) => item !== id))} /> : null}
             <div className="flex min-w-0 items-end gap-1.5">
               <Popover open={toolsOpen} onOpenChange={setToolsOpen}>
                 <PopoverTrigger type="button" disabled={loading} aria-label={t("addToChat")} className={buttonVariants({variant: "ghost", size: "icon", className: "size-9 shrink-0 rounded-xl text-muted-foreground hover:text-foreground"})}>
-                  <Plus className="size-4.5" />
+                  <Plus className="size-4.5" aria-hidden="true" />
                 </PopoverTrigger>
                 <PopoverContent side="top" align="start" sideOffset={8} className={`${styles.palette} w-auto min-w-56 rounded-xl p-1.5 shadow-lg`}>
                   <Button type="button" variant="ghost" onClick={() => {setToolsOpen(false); setPickerOpen(true);}} className="w-full justify-start gap-2.5 rounded-lg px-3 py-2 text-sm font-medium">
-                    <PackageSearch className="size-4 text-primary" />{t("attachProducts")}
+                    <PackageSearch className="size-4 text-primary" aria-hidden="true" />{t("attachProducts")}
                   </Button>
                 </PopoverContent>
               </Popover>
             <Textarea
               ref={textareaRef}
+              disabled={loading}
               aria-label={t("promptLabel")}
               value={prompt}
               onChange={(event) => setPrompt(event.target.value)}
@@ -620,9 +682,23 @@ export function AssistantPage({
               maxLength={productIds.length ? MAX_PRODUCT_QUESTION_CHARS : MAX_TURN_MESSAGE_CHARS}
               className="max-h-36 min-h-9 min-w-0 flex-1 resize-none border-0 bg-transparent px-1.5 py-1.5 text-sm leading-6 shadow-none focus-visible:ring-0 [field-sizing:content]"
             />
-              <Button type="submit" size="icon" aria-label={t("send")} className="size-9 shrink-0 rounded-xl shadow-xs" disabled={loading || (!prompt.trim() && !productIds.length)}>
-                {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
-              </Button>
+              {loading ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="destructive"
+                  aria-label={t("stop")}
+                  title={t("stop")}
+                  onClick={stopActiveRun}
+                  className="size-9 shrink-0 rounded-xl shadow-xs"
+                >
+                  <Square className="size-3.5 fill-current" aria-hidden="true" />
+                </Button>
+              ) : (
+                <Button type="submit" size="icon" aria-label={t("send")} className="size-9 shrink-0 rounded-xl shadow-xs" disabled={!prompt.trim() && !productIds.length}>
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </Button>
+              )}
             </div>
             {modelsQuery.data?.models.length ? (
               <div className="mt-1.5 flex items-center justify-between gap-2 border-t border-border/50 pt-1.5">
@@ -637,7 +713,7 @@ export function AssistantPage({
                 />
               </div>
             ) : null}
-          </fieldset>
+          </div>
           <p className="mt-1 hidden text-center text-[11px] text-muted-foreground/80 sm:block">{t("catalogGroundedHint")}</p>
         </form>
       </div>
@@ -960,6 +1036,7 @@ function StreamingChatTurn({
   onRetry,
   onDismiss,
   onResume,
+  onStop,
 }: {
   prompt: string;
   answer: string;
@@ -971,6 +1048,7 @@ function StreamingChatTurn({
   onRetry: () => void;
   onDismiss: () => void;
   onResume?: () => void;
+  onStop?: () => void;
 }) {
   const t = useTranslations("assistant");
   const failed = Boolean(error);
@@ -1003,9 +1081,17 @@ function StreamingChatTurn({
           ) : null}
           {!failed && state === "reconnecting" ? (
             <div role="status" className="mt-3 rounded-xl border border-border/60 bg-muted/40 p-3 text-sm">
-              <p className="flex items-center gap-2 font-medium"><Loader2 className="size-3.5 animate-spin text-primary" />{t("reconnecting")}</p>
+              <p className="flex items-center gap-2 font-medium"><Loader2 className="size-3.5 animate-spin text-primary" aria-hidden="true" />{t("reconnecting")}</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">{t("recoveringDescription")}</p>
-              {onResume ? <Button type="button" size="sm" variant="outline" className="mt-2" onClick={onResume}>{t("checkResult")}</Button> : null}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {onResume ? <Button type="button" size="sm" variant="outline" className="min-h-8" onClick={onResume}>{t("checkResult")}</Button> : null}
+                {onStop ? (
+                  <Button type="button" size="sm" variant="ghost" className="min-h-8 gap-1.5" onClick={onStop}>
+                    <Square className="size-3 fill-current" aria-hidden="true" />
+                    {t("stop")}
+                  </Button>
+                ) : null}
+              </div>
             </div>
           ) : null}
           {failed ? (
