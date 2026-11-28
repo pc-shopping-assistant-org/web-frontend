@@ -11,6 +11,30 @@ export type AssistantProduct = {
   status?: string;
 };
 
+export type ProposalChangeValue =
+  | {kind: "TEXT"; text: string}
+  | {kind: "QUANTITY"; amount: number; unit: string}
+  | {kind: "REFERENCE"; variantId: string};
+
+export type ProposalChange = {
+  operation: "SET" | "CLEAR";
+  target: string;
+  subject?: string | null;
+  predicate?: string | null;
+  operator?: "EQ" | "GTE" | "LTE" | null;
+  strength?: "HARD" | "SOFT" | null;
+  variantId?: string | null;
+  value?: ProposalChangeValue | null;
+};
+
+export type StatefulProposal = {
+  proposalId: string;
+  proposalHash: string;
+  targetRevision: number;
+  baseRequirementsHash: string;
+  changes: ProposalChange[];
+};
+
 export type ChatData = {
   answer: string;
   conversation_id: string;
@@ -19,7 +43,7 @@ export type ChatData = {
   stateful?: {
     revision: number;
     taskKinds?: string[];
-    proposal: {proposalId: string; proposalHash: string; targetRevision: number; baseRequirementsHash: string; changes: string[]} | null;
+    proposal: StatefulProposal | null;
     clarificationOptions: string[];
     build: {
       totalSpending: number;

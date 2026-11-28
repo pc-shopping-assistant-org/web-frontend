@@ -28,22 +28,30 @@ export function mapStatefulTurn(dto: StatefulTurnResult): ChatData {
             baseRequirementsHash: proposal.base_requirements_hash,
             changes: proposal.changes.map((change) => {
               const value = change.value;
-              const label =
-                value?.kind === RequirementValueKind.Text
-                  ? value.text
-                  : value?.kind === RequirementValueKind.Quantity
-                    ? `${value.amount} ${value.unit}`
-                    : value?.kind === RequirementValueKind.Reference
-                      ? value.variant_id
-                      : (change.variant_id ?? "");
-              return `${change.operation} ${change.subject ?? change.target} / ${change.predicate ?? ""}: ${label}`;
+              return {
+                operation: change.operation,
+                target: change.target,
+                subject: change.subject ?? null,
+                predicate: change.predicate ?? null,
+                operator: change.operator ?? null,
+                strength: change.strength ?? null,
+                variantId: change.variant_id ?? null,
+                value:
+                  value?.kind === RequirementValueKind.Text
+                    ? {kind: RequirementValueKind.Text, text: value.text}
+                    : value?.kind === RequirementValueKind.Quantity
+                      ? {kind: RequirementValueKind.Quantity, amount: value.amount, unit: value.unit}
+                      : value?.kind === RequirementValueKind.Reference
+                        ? {kind: RequirementValueKind.Reference, variantId: value.variant_id}
+                        : null,
+              };
             }),
           }
         : null,
       clarificationOptions: [
         ...(dto.flexible?.clarification?.items.flatMap((item) => [
           ...item.options.map((option, index) => `${index + 1}. ${option.name} (${option.sku})`),
-          ...(item.unit_options.length ? [`${item.quantity_amount ?? ""}: ${item.unit_options.join(" / ")}`] : []),
+          ...item.unit_options.map((unit) => (item.quantity_amount != null ? `${item.quantity_amount} ${unit}` : unit)),
         ]) ?? []),
         ...(dto.flexible?.task_clarification?.items.flatMap((item) =>
           item.options.map((option, index) => `${item.mention} — ${index + 1}. ${option.name}`),

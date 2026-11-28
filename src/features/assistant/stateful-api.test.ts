@@ -259,3 +259,44 @@ it("recovers from AI_CONVERSATION_BUSY by waiting for the prior run and resubmit
   const result = await streamChat("Lượt thứ 2", cid);
   expect(result.answer).toBe("Done second");
 });
+
+it("forwards pending_action when discarding a pending proposal", async () => {
+  const hash = "c".repeat(64);
+  const proposalId = "00000000-0000-4000-8000-000000000099";
+  const frames = [
+    {event: "START", sequence: 1, run},
+    {event: "COMPLETED", sequence: 2, result: completedResult},
+  ]
+    .map((event) => `data: ${JSON.stringify(envelope({...event, conversation_id: cid, run_id: rid}))}\n\n`)
+    .join("");
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(Response.json(envelope({schema_version: 2, conversation_id: cid, revision: 0})))
+    .mockResolvedValueOnce(Response.json(envelope(run)))
+    .mockResolvedValueOnce(new Response(frames, {headers: {"content-type": "text/event-stream"}}));
+  vi.stubGlobal("fetch", fetch);
+
+  await streamChat("Hủy đề xuất", cid, {}, undefined, {
+    pendingAction: {
+      schema_version: 2,
+      target: "PROPOSAL",
+      action: "DISCARD",
+      proposal_id: proposalId,
+      proposal_hash: hash,
+      target_revision: 0,
+      base_requirements_hash: hash,
+    },
+  });
+
+  const submitted = JSON.parse(fetch.mock.calls[1][1].body);
+  expect(submitted.pending_action).toEqual({
+    schema_version: 2,
+    target: "PROPOSAL",
+    action: "DISCARD",
+    proposal_id: proposalId,
+    proposal_hash: hash,
+    target_revision: 0,
+    base_requirements_hash: hash,
+  });
+  expect(submitted.confirmation).toBeUndefined();
+});

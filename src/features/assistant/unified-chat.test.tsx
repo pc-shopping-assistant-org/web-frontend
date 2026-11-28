@@ -6,7 +6,7 @@ import {AssistantPage} from "./assistant-page";
 import {ApiClientError} from "@/lib/api/envelope";
 import {AgentActivityStage, AiMode, AssistantTaskKind, ChatStreamEventType, ThinkingMode} from "@/lib/domain/assistant-enums";
 import {loadConversationHistory} from "./conversation-history";
-import {waitForRunResult} from "./stateful-api";
+import {cancelRun, waitForRunResult} from "./stateful-api";
 import {getProductById} from "@/features/catalog/api";
 
 function render(ui: React.ReactElement) {
@@ -17,7 +17,7 @@ function render(ui: React.ReactElement) {
 }
 
 vi.mock("./conversation-history", () => ({loadConversationHistory: vi.fn(), setConversationUrl: vi.fn()}));
-vi.mock("./stateful-api", () => ({waitForRunResult: vi.fn()}));
+vi.mock("./stateful-api", () => ({waitForRunResult: vi.fn(), cancelRun: vi.fn(async () => undefined)}));
 
 const profile = vi.hoisted(() => ({data: {id: "user"} as {id: string} | undefined, error: null as unknown}));
 vi.mock("@/features/auth/queries", () => ({useProfile: () => profile}));
@@ -520,4 +520,103 @@ it("displays live agent activity steps while streaming and clears them on comple
   await act(async () => finish({conversation_id: "test", intent: AiMode.Chat, answer: "Đã tìm xong.", products: []}));
   expect(await screen.findByText("Đã tìm xong.")).toBeInTheDocument();
   expect(screen.queryByText("activity.SEARCHING_CATALOG")).not.toBeInTheDocument();
+});
+
+it("renders ProposalCard cleanly, hides it while submitting, and supports discarding the proposal", async () => {
+  const hash = "b".repeat(64);
+  const proposalId = "00000000-0000-4000-8000-000000000044";
+  vi.mocked(streamChat).mockResolvedValueOnce({
+    conversation_id: "conv-1",
+    intent: AiMode.Chat,
+    answer: "Bạn xác nhận ngân sách 25 triệu chứ?",
+    products: [],
+    stateful: {
+      revision: 1,
+      proposal: {
+        proposalId,
+        proposalHash: hash,
+        targetRevision: 1,
+        baseRequirementsHash: hash,
+        changes: [
+          {
+            operation: "SET",
+            target: "REQUIREMENT",
+            subject: "SETUP",
+            predicate: "budget",
+            operator: "LTE",
+            strength: "HARD",
+            value: {kind: "QUANTITY", amount: 25_000_000, unit: "VND"},
+          },
+        ],
+      },
+      clarificationOptions: [],
+      build: null,
+    },
+  });
+
+  let finishDiscard!: (value: Awaited<ReturnType<typeof streamChat>>) => void;
+  vi.mocked(streamChat).mockImplementationOnce(
+    () => new Promise((resolve) => {finishDiscard = resolve;}),
+  );
+
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Build PC 25 triệu" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+
+  expect(await screen.findByText("proposal.title")).toBeInTheDocument();
+  expect(screen.queryByText(/SET SETUP/)).not.toBeInTheDocument();
+  expect(screen.getByRole("button", {name: "confirmProposal"})).toBeInTheDocument();
+  const discardButton = screen.getByRole("button", {name: "discardProposal"});
+
+  await user.click(discardButton);
+  // Proposal card hides immediately while the discard turn is running so the UI never looks stuck.
+  expect(screen.queryByText("proposal.title")).not.toBeInTheDocument();
+  expect(streamChat).toHaveBeenLastCalledWith(
+    "discardProposal",
+    "conv-1",
+    expect.any(Object),
+    expect.any(AbortSignal),
+    {
+      pendingAction: {
+        schema_version: 2,
+        target: "PROPOSAL",
+        action: "DISCARD",
+        proposal_id: proposalId,
+        proposal_hash: hash,
+        target_revision: 1,
+        base_requirements_hash: hash,
+      },
+    },
+  );
+
+  await act(async () =>
+    finishDiscard({
+      conversation_id: "conv-1",
+      intent: AiMode.Chat,
+      answer: "Đã hủy đề xuất.",
+      products: [],
+      stateful: {revision: 2, proposal: null, clarificationOptions: [], build: null},
+    }),
+  );
+  expect(await screen.findByText("Đã hủy đề xuất.")).toBeInTheDocument();
+  expect(screen.queryByText("proposal.title")).not.toBeInTheDocument();
+});
+
+it("lets the user stop an in-flight run to unlock the UI and cancels the admitted run", async () => {
+  vi.mocked(streamChat).mockImplementationOnce(async (_message, _conversation, handlers) => {
+    handlers?.onRunAdmitted?.("conv-stuck", "run-stuck");
+    return new Promise(() => {});
+  });
+  const user = userEvent.setup();
+  render(<AssistantPage initialPrompt="Build PC 30 triệu" />);
+  await user.click(screen.getByRole("button", {name: /send/}));
+
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeDisabled();
+  const stopButton = await screen.findByRole("button", {name: "stop"});
+  expect(stopButton).toBeEnabled();
+  expect(screen.getByRole("button", {name: "newConversation"})).toBeEnabled();
+
+  await user.click(stopButton);
+  expect(screen.getByRole("textbox", {name: "promptLabel"})).toBeEnabled();
+  expect(cancelRun).toHaveBeenCalledWith("conv-stuck", "run-stuck");
 });
